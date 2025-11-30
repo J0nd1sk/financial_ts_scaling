@@ -1,0 +1,121 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# PyTorch models and checkpoints
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+checkpoints/
+outputs/checkpoints/
+models/saved/
+models/checkpoints/
+
+# Data files - DO NOT COMMIT
+data/raw/
+data/processed/
+data/cache/
+*.parquet
+*.feather
+*.hdf5
+*.h5
+*.pkl
+*.pickle
+
+# Keep CSV samples only (for LLM analysis)
+# Uncomment if you want to exclude all CSVs:
+# *.csv
+
+# Experiment tracking
+mlruns/
+wandb/
+.wandb/
+lightning_logs/
+tb_logs/
+tensorboard/
+comet_data/
+
+# Optuna
+optuna_studies/
+*.db
+*.sqlite
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+secrets.json
+config/secrets.yaml
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Cache
+.cache/
+*.cache
+.pytest_cache/
+
+# OS
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Documentation builds (if using Sphinx/MkDocs)
+docs/_build/
+site/
+
+# Project-specific
+outputs/models/
+outputs/predictions/
+outputs/analysis/
+scratch/
+experiments/archive/
