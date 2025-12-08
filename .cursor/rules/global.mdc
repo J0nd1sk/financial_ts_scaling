@@ -1,0 +1,171 @@
+---
+description: Global rules index and universal development rules
+globs: 
+alwaysApply: true
+---
+# Global Rules
+
+## Rule Files Index
+
+See these files for specific rules:
+- `experimental-protocol.mdc` - Scaling law constraints, parameter budgets
+- `testing.mdc` - TDD enforcement, make test requirements
+- `development-discipline.mdc` - Approval gates, RACI matrix
+- `context-handoff.mdc` - Session continuity protocols
+
+---
+
+## Manual Workflow Invocation
+
+Cursor does not have Superpowers skills. Trigger these workflows with explicit commands:
+
+### Session Handoff
+**Trigger:** "handoff", "session handoff", "save context"
+
+**Do:**
+1. Capture git state (branch, uncommitted changes)
+2. Note current task and status
+3. List completed and pending work
+4. Write to `.claude/context/session_context.md`
+5. Update `.claude/context/phase_tracker.md` if progress made
+6. Report summary to user
+
+### Session Restore
+**Trigger:** "restore", "session restore", "where were we", "continue"
+
+**Do:**
+1. Read `.claude/context/session_context.md`
+2. Read `.claude/context/phase_tracker.md`
+3. Run `make test` to verify environment
+4. Summarize state to user
+5. Confirm priorities before proceeding
+
+### Planning Session
+**Trigger:** "plan", "let's plan", "planning session"
+
+**Do:**
+1. Define objective (one sentence)
+2. Define success criteria (testable)
+3. Surface assumptions
+4. Identify risks
+5. Define test plan (what tests change/add)
+6. Present for approval
+7. Wait for explicit approval before any code
+
+### Test First
+**Trigger:** "test first", "TDD", "write tests first"
+
+**Do:**
+1. Define test cases before implementation
+2. Write failing tests
+3. Run `make test` to confirm failure
+4. Present for approval
+5. Only after approval: write implementation
+6. Run `make test` to confirm all pass
+
+### Approval Gate
+**Trigger:** Before ANY change (automatic, not user-triggered)
+
+**Do:**
+1. Propose the change with rationale
+2. List affected files and tests
+3. State risks
+4. Wait for explicit "yes" / "approved"
+5. Execute exactly what was approved
+6. Report completion
+
+### Thermal Check
+**Trigger:** "thermal check", "check temperature", "how hot"
+
+**Do:**
+1. Run `sudo powermetrics --samplers smc -i 1000 -n 1 | grep temp`
+2. Report temperature and status (🟢/🟡/🟠/🔴)
+3. Recommend action if needed
+
+### Task Breakdown
+**Trigger:** "break down", "decompose", "smaller pieces"
+
+**Do:**
+1. List full scope of task
+2. Identify natural boundaries
+3. Define atomic subtasks (one sentence each)
+4. Order by dependencies
+5. Present breakdown for approval
+6. Execute subtasks sequentially with approval gates
+
+---
+
+## Git Workflow
+
+### Always Use `git add -A`
+```bash
+# ✅ CORRECT
+git add -A
+
+# ❌ FORBIDDEN
+git add .
+git add specific_file.py
+git add -p
+```
+
+### Test Before Stage
+Run `make test` BEFORE any `git add` command, not after.
+
+### Commit Messages
+```
+[type]: Brief description (50 chars max)
+
+Detailed explanation if needed:
+- What changed
+- Why it changed
+
+Related: phase-N-task-M
+```
+
+Types: `feat`, `fix`, `test`, `refactor`, `docs`, `data`, `exp`
+
+---
+
+## File Preservation
+
+### Never Delete Without Approval
+- pyproject.toml
+- requirements.txt
+- Makefile
+- Any configuration file
+- Any test file
+- Any data file
+
+### Never Mass Delete
+No `git clean`, `rm -rf`, or bulk deletions without explicit approval.
+
+---
+
+## Filesystem Rules
+
+Before creating or deleting any file or directory:
+1. State what you intend to create/delete
+2. State why
+3. Wait for explicit approval
+
+---
+
+## Dependency Rules
+
+Before adding any dependency:
+1. State what package and version
+2. State why it's needed
+3. State alternatives considered
+4. Wait for explicit approval
+
+---
+
+## Configuration Rules
+
+Never modify without approval:
+- pyproject.toml
+- requirements.txt
+- Makefile
+- .gitignore
+- pytest.ini / pyproject.toml [tool.pytest]
+- Any YAML config

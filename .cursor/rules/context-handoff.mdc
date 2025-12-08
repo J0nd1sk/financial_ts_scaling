@@ -1,0 +1,158 @@
+---
+description: Session handoff and restore protocols for context continuity
+globs:
+alwaysApply: false
+---
+# Context Handoff Rules
+
+## Purpose
+
+Sessions end. Context windows fill. Continuity must be maintained.
+
+---
+
+## Handoff Triggers
+
+Initiate handoff when:
+- User requests it
+- Session ending
+- Context window ~80% full
+- Switching to different task area
+- Before any extended break
+
+---
+
+## Handoff Protocol
+
+### Step 1: Capture State
+
+Write to `.claude/context/session_context.md`:
+
+```markdown
+# Session Handoff - [YYYY-MM-DD HH:MM]
+
+## Current State
+
+### Branch & Git
+- Branch: [current branch name]
+- Last commit: [short hash] [message]
+- Uncommitted changes: [list files or "none"]
+- Staged files: [list or "none"]
+
+### Task Status
+- Current task: [what you're working on]
+- Status: [in progress / blocked / ready for review]
+- Blockers: [if any]
+
+## Test Status
+- Last `make test`: [timestamp]
+- Result: [pass / fail]
+- Failing tests: [list if any]
+
+## Completed This Session
+1. [Task completed]
+2. [Task completed]
+
+## In Progress
+- [Task]: [status and what remains]
+
+## Pending (Not Started)
+1. [Next task]
+2. [Following task]
+
+## Files Modified This Session
+- `path/to/file.py`: [nature of changes]
+- `tests/test_file.py`: [what was added/modified]
+
+## Key Decisions Made
+- [Decision]: [Rationale]
+
+## Important Context
+[Anything that would be lost without explicit capture:
+- Discoveries made during debugging
+- Rejected approaches and why
+- Dependencies between tasks
+- User preferences expressed]
+
+## Next Session Should
+1. [First priority]
+2. [Second priority]
+3. [Third priority]
+
+## Commands to Run First
+```bash
+source venv/bin/activate
+make test
+git status
+```
+```
+
+### Step 2: Update Phase Tracker
+
+If phase progress changed, update `.claude/context/phase_tracker.md`:
+
+```markdown
+## Phase N: [Phase Name] [STATUS]
+- Task A: ✅ Complete [date]
+- Task B: 🔄 In Progress (50%)
+- Task C: ⏸️ Pending
+```
+
+### Step 3: Confirm
+
+Report to user:
+- Handoff file location
+- Summary of state
+- Any uncommitted work warning
+
+---
+
+## Restore Protocol
+
+### At Session Start
+
+1. **Read context files**
+   ```
+   .claude/context/session_context.md
+   .claude/context/phase_tracker.md
+   ```
+
+2. **Verify environment**
+   ```bash
+   source venv/bin/activate
+   make test
+   git status
+   ```
+
+3. **Summarize to user**
+   - Where we left off
+   - Current task status
+   - Test status
+   - Proposed next steps
+
+4. **Confirm priorities**
+   - Do not assume previous priorities still hold
+   - Ask user to confirm or redirect
+
+5. **Only then proceed**
+
+---
+
+## Context File Locations
+
+| File | Purpose | Git-tracked |
+|------|---------|-------------|
+| `.claude/context/session_context.md` | Latest session state | Yes |
+| `.claude/context/phase_tracker.md` | Phase progress | Yes |
+| `.claude/context/decision_log.md` | Architectural decisions | Yes |
+
+---
+
+## User Commands
+
+Users can trigger protocols with:
+
+- `"handoff"` or `"session handoff"` → Run handoff protocol
+- `"restore"` or `"session restore"` → Run restore protocol
+- `"status"` → Quick summary without full restore
+- `"where were we"` → Restore and summarize

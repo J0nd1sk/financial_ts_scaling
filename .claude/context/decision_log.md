@@ -1,0 +1,15 @@
+# Decision Log
+
+## 2025-12-07 Context File Enforcement
+
+**Context**: Rules review showed `.claude/context` artifacts existed but lacked explicit usage requirements.
+
+**Decision**: Added mandatory read/write conditions for `session_context.md`, `phase_tracker.md`, and `decision_log.md` across both Claude and Cursor rule sets.
+
+**Rationale**: Ensure every session start, end, phase change, and architectural decision is captured, keeping restore/handoff workflows reliable.
+
+**Alternatives Considered**:
+- Rely on skills alone — rejected because Cursor lacks Superpowers automation.
+- Update docs only — rejected since enforcement belongs in active rules.
+
+**Implications**: Agents must now update context files whenever the defined triggers occur; omissions are treated as process violations.
