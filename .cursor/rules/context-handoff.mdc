@@ -87,6 +87,13 @@ git status
 ```
 ```
 
+### Data Version Snapshot
+
+- Capture latest raw manifest entry (dataset, file, md5, timestamp)
+- Capture latest processed manifest entry (dataset, version, tier, md5)
+- Note any datasets awaiting manifest registration or checksum updates
+- If manifests changed this session, explicitly list the files updated
+
 ### Step 2: Update Phase Tracker
 
 If phase progress changed, update `.claude/context/phase_tracker.md`:
@@ -122,12 +129,14 @@ Report to user:
    source venv/bin/activate
    make test
    git status
+   make verify
    ```
 
 3. **Summarize to user**
    - Where we left off
    - Current task status
    - Test status
+   - Data manifest status (latest versions, outstanding work)
    - Proposed next steps
 
 4. **Confirm priorities**

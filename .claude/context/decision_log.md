@@ -41,3 +41,17 @@
 - Update docs only — rejected since enforcement belongs in active rules.
 
 **Implications**: Agents must now update context files whenever the defined triggers occur; omissions are treated as process violations.
+
+## 2025-12-08 Data Version Manifest System
+
+**Context**: Need reproducible tracking of raw/processed datasets before Phase 2 pipeline work.
+
+**Decision**: Introduced JSON manifests (`data/raw/manifest.json`, `data/processed/manifest.json`) plus `scripts/manage_data_versions.py` and `make verify` integration to register artifacts with MD5 checksums.
+
+**Rationale**: Guarantees provenance for every dataset, enables automated verification, and ensures session handoffs capture latest data state.
+
+**Alternatives Considered**:
+- Git LFS or DVC — rejected for added tooling overhead at this stage.
+- Manual spreadsheets — rejected due to high risk of drift and poor automation.
+
+**Implications**: All future data downloads/processing steps must register manifest entries; handoff/restore summaries must note latest entries; verification failures block merges.

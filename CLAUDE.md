@@ -186,6 +186,15 @@ experiment/*  # Individual experiment runs
 
 ---
 
+## Data Versioning Policy
+
+- **Manifests**: `data/raw/manifest.json` and `data/processed/manifest.json` track every dataset artifact with `{dataset, path, md5, timestamp}` (processed entries also store `version`, `tier`, `source_raw_md5s`).
+- **Registration**: Use `python scripts/manage_data_versions.py register-raw ...` (or `register-processed`) immediately after writing new parquet files. Raw artifacts are immutable—new downloads get new files + manifest entries.
+- **Verification**: `make verify` now runs both environment checks and `python scripts/manage_data_versions.py verify`. Handoff/restore summaries must include latest manifest entries and pending registrations.
+- **Processed versions**: Increment `version` whenever processing logic, feature tiers, or source data change; capture the raw md5 list for reproducibility.
+
+---
+
 ## Key Commands
 
 ```bash

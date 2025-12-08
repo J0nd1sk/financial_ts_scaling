@@ -5,7 +5,7 @@ help:
 	@echo "Available targets:"
 	@echo "  make test       - Run all tests (REQUIRED before any git operations)"
 	@echo "  make test-cov   - Run tests with coverage report"
-	@echo "  make verify     - Run environment verification script"
+	@echo "  make verify     - Run environment + data verification"
 	@echo "  make lint       - Run ruff linter"
 	@echo "  make type-check - Run mypy type checker"
 	@echo "  make clean      - Remove cache and build artifacts"
@@ -25,6 +25,8 @@ test-cov:
 verify:
 	@echo "Verifying development environment..."
 	python scripts/verify_environment.py
+	@echo "Verifying data manifests..."
+	python scripts/manage_data_versions.py verify
 
 # Linting
 lint:

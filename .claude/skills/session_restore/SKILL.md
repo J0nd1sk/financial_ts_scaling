@@ -31,6 +31,7 @@ Restore context and verify readiness for continued work.
    source venv/bin/activate
    make test
    git status
+   make verify
    git branch --show-current
    ```
 
@@ -60,6 +61,10 @@ Restore context and verify readiness for continued work.
    **Test Status:**
    - Saved: [pass/fail]
    - Current: [pass/fail from make test]
+   
+   **Data Manifests:**
+   - Raw: [latest entry summary or "none"]
+   - Processed: [latest entry summary or "none"]
    
    ### Pending Work
    1. [item from saved context]
@@ -102,6 +107,11 @@ Restore context and verify readiness for continued work.
 - venv: ✅ activated
 - make test: ✅ pass / ❌ [N] failing
 - git status: ✅ clean / ⚠️ [N] uncommitted files
+- make verify: ✅ pass / ❌ errors
+
+## Data Manifests
+- Raw: [latest dataset/file/md5 or "no entries"]
+- Processed: [latest dataset/version/tier or "none"]
 
 ## Pending from Last Session
 1. [item]

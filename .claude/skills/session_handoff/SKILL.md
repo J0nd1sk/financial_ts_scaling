@@ -35,11 +35,16 @@ Capture current session state for seamless continuation.
    - What remains pending?
    - What files were modified?
 
-4. **Capture Decisions**
+4. **Capture Data Version Status**
+   - Latest raw manifest entry (dataset, file, md5, timestamp)
+   - Latest processed manifest entry (dataset, version, tier, md5)
+   - Any datasets waiting to be registered or checksums to recompute
+
+5. **Capture Decisions**
    - Any architectural decisions made?
    - Any approaches rejected and why?
 
-5. **Write Context File**
+6. **Write Context File**
    
    Create/update `.claude/context/session_context.md`:
 
@@ -83,19 +88,25 @@ Capture current session state for seamless continuation.
    1. [priority 1]
    2. [priority 2]
 
+   ## Data Versions
+   - Raw manifest: [latest dataset/file/md5 or "no entries"]
+   - Processed manifest: [latest dataset/version/tier or "none"]
+   - Pending registrations: [list or "none"]
+
    ## Commands to Run
    ```bash
    source venv/bin/activate
    make test
    git status
+   make verify
    ```
    ```
 
-6. **Update Phase Tracker** (if progress made)
+7. **Update Phase Tracker** (if progress made)
    
    Update `.claude/context/phase_tracker.md` with completion status.
 
-7. **Report to User**
+8. **Report to User**
    - Confirm file written
    - Summarize key state
    - Warn of any uncommitted work
@@ -114,6 +125,7 @@ Summary:
 - Branch: [branch]
 - Task: [current task] ([status])
 - Tests: [pass/fail]
+- Data manifests: [latest raw + processed summaries]
 - Uncommitted: [count] files
 
 ⚠️ [Any warnings about uncommitted work]

@@ -311,6 +311,14 @@ Agent must respect these thresholds during training runs.
    - git commit with descriptive message
 ```
 
+### Data Versioning Requirements
+
+- **Manifests**: `data/raw/manifest.json` and `data/processed/manifest.json` store every dataset entry with `schema_version`, `entries[]`.
+- **Registration**: Use `python scripts/manage_data_versions.py register-raw --dataset SPY --file data/raw/spy_YYYYMMDD.parquet` (and `register-processed`) whenever new files are written.
+- **Checksums**: MD5 hashes are mandatory for every entry; files are immutable once registered.
+- **Verification**: `make verify` runs both environment checks and `python scripts/manage_data_versions.py verify`. Restore/handoff summaries must include latest manifest entries and pending registrations.
+- **Processed Versions**: Increment `version` whenever transformation logic, feature tier, or upstream data changes. Record `source_raw_md5s` so provenance is auditable.
+
 ### Session Lifecycle
 
 ```
