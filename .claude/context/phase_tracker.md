@@ -15,13 +15,15 @@
 - Verification tooling (`scripts/verify_environment.py` + `make verify`): ✅ 2025-12-08
 - Agentic tools documentation: ✅ Present in docs/rules_and_skills_background.md
 
-## Phase 2: Data Pipeline ✅ PLANNED, Ready for Implementation - 2025-12-07
+## Phase 2: Data Pipeline ✅ COMPLETE (2025-12-08)
 - Planning session completed: ✅ 2025-12-07
 - Plan documented in docs/project_phase_plans.md: ✅ 2025-12-07
-- Test plan defined (5 test cases): ✅ 2025-12-07
-- Implementation tasks outlined: ✅ 2025-12-07
-- Branching strategy defined: ✅ 2025-12-07
-- Awaiting approval to begin implementation: ⏸️
+- Test plan defined (8 test cases): ✅ 2025-12-08
+- TDD cycle (RED→GREEN): ✅ 2025-12-08
+- `scripts/download_ohlcv.py` implemented: ✅ 2025-12-08
+- Data directories created (raw, processed, samples): ✅ 2025-12-08
+- SPY.OHLCV.daily downloaded (8,272 rows, 1993-2025): ✅ 2025-12-08
+- Manifest registered with MD5: ✅ 2025-12-08
 
 ## Phase 3: Pipeline Design ⏸️ NOT STARTED
 

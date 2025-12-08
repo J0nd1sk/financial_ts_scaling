@@ -1,66 +1,66 @@
-# Session Handoff - 2025-12-08 15:45
+# Session Handoff - 2025-12-08 10:45
 
 ## Current State
 
 ### Branch & Git
-- Branch: feature/data-versioning
-- Last commit: bc69466 (working tree ahead with manifest + rules updates)
-- Uncommitted changes: Makefile, scripts/manage_data_versions.py, tests/test_data_manifest.py, data manifests, docs/rules, CLAUDE.md, rules/skills, decision_log, session_context
+- Branch: main
+- Last commit: e8bcc6f "feat: implement SPY OHLCV download pipeline"
+- Uncommitted changes: data/raw/SPY.parquet, data/raw/manifest.json, context files
 
 ### Task Status
-- Working on: Data versioning manifests + rule/skill updates
-- Status: Implementation complete, awaiting review/merge
+- Working on: Phase 2 Data Pipeline
+- Status: ✅ COMPLETE
 - Blockers: None
 
 ## Test Status
-- Last `make test`: 2025-12-08 15:40 — PASS (tests/test_verify_environment.py, tests/test_data_manifest.py)
-- Last `make verify`: 2025-12-08 15:41 — PASS (environment + data manifests)
+- Last `make test`: 2025-12-08 10:35 — PASS (13 tests)
+- Last `make verify`: 2025-12-08 10:42 — PASS
 - Failing tests: None
 
 ## Completed This Session
-1. Added manifest scaffolding (`data/raw/manifest.json`, `data/processed/manifest.json`)
-2. Implemented `scripts/manage_data_versions.py` with register + verify commands
-3. Created TDD suite `tests/test_data_manifest.py`
-4. Extended `Makefile` `verify` target to run manifest verification
-5. Updated docs (`docs/rules_and_skills_background.md`, `CLAUDE.md`) with versioning policy
-6. Updated rules/skills (`.claude/.cursor context-handoff`, session_handoff, session_restore) to capture manifest summaries + run `make verify`
-7. Logged decision in `.claude/context/decision_log.md`
-8. Updated `session_context.md` and `phase_tracker.md` to reflect Phase 1 completion + new policy
-
-## In Progress
-- Preparing summary + PR for feature/data-versioning branch
-
-## Pending (Not Started)
-1. Merge feature/data-versioning into main (after approval)
-2. Resume Phase 2 implementation planning/execution
+1. Session restore from previous handoff
+2. Merged feature/data-versioning into main
+3. Merged feature/phase-2-data-pipeline into main
+4. TDD cycle for data download:
+   - Wrote 8 tests (test_data_directories.py, test_data_download.py)
+   - Verified RED (tests failing)
+   - Implemented scripts/download_ohlcv.py
+   - Verified GREEN (13/13 tests passing)
+5. Downloaded SPY.OHLCV.daily data:
+   - 8,272 rows (1993-01-29 to 2025-12-08)
+   - 430KB parquet file
+   - Registered in manifest with MD5
+6. Updated context files (phase_tracker, decision_log, session_context)
 
 ## Data Versions
-- Raw manifest: initialized (no entries yet)
-- Processed manifest: initialized (no entries yet)
-- Pending registrations: first SPY download once Phase 2 pipeline runs
+- Raw manifest entries:
+  - SPY.OHLCV.daily: data/raw/SPY.parquet (md5: 805e73ad157e1654ec133f4fd66df51f)
+- Processed manifest: empty (no processed data yet)
 
-## Files Modified
-- `scripts/manage_data_versions.py`
-- `tests/test_data_manifest.py`
-- `Makefile`
-- `data/raw/manifest.json`, `data/processed/manifest.json`
-- `.claude/rules/context-handoff.md`, `.cursor/rules/context-handoff.mdc`
-- `.claude/skills/session_handoff/SKILL.md`, `.claude/skills/session_restore/SKILL.md`
-- `docs/rules_and_skills_background.md`, `CLAUDE.md`
-- `.claude/context/decision_log.md`, `.claude/context/session_context.md`, `.claude/context/phase_tracker.md`
+## Files Modified This Session
+- `tests/test_data_directories.py` (new)
+- `tests/test_data_download.py` (new)
+- `scripts/download_ohlcv.py` (new)
+- `data/samples/.gitkeep` (new)
+- `data/raw/SPY.parquet` (downloaded, not committed)
+- `data/raw/manifest.json` (updated with SPY entry)
+- `.claude/context/phase_tracker.md` (Phase 2 complete)
+- `.claude/context/decision_log.md` (added naming convention decision)
+- `.claude/context/session_context.md` (this file)
 
-## Key Decisions
-- 2025-12-08: Adopted manifest-based data versioning (see decision_log entry)
+## Key Decisions This Session
+- 2025-12-08: Dataset naming convention `{TICKER}.{DATA_TYPE}.{FREQUENCY}` (see decision_log)
 
 ## Important Context
-- `make verify` now must pass both environment and manifest checks before handoffs/merges
-- Session handoff/restore templates include data version summaries
-- Future data downloads must call `scripts/manage_data_versions.py register-*` to stay compliant
+- Phase 2 Data Pipeline is now COMPLETE
+- SPY data covers 32 years (1993-2025) of daily OHLCV
+- Data splits per CLAUDE.md: train ≤2020, val 2021-2022, test 2023+
+- All 13 tests passing, manifest verified
 
 ## Next Session Should
-1. Review + merge feature/data-versioning into main
-2. Confirm documentation/rule updates with user
-3. Proceed to Phase 2 implementation once merged
+1. Commit data manifest updates
+2. Plan Phase 3: Pipeline Design (indicator calculations)
+3. Or plan multi-asset expansion (DIA, QQQ per Phase 5)
 
 ## Commands to Run First
 ```bash

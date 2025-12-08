@@ -55,3 +55,17 @@
 - Manual spreadsheets — rejected due to high risk of drift and poor automation.
 
 **Implications**: All future data downloads/processing steps must register manifest entries; handoff/restore summaries must note latest entries; verification failures block merges.
+
+## 2025-12-08 Dataset Naming Convention
+
+**Context**: Registering first SPY download in manifest required choosing a dataset identifier format.
+
+**Decision**: Adopt hierarchical naming: `{TICKER}.{DATA_TYPE}.{FREQUENCY}` (e.g., `SPY.OHLCV.daily`).
+
+**Rationale**: Enables future expansion to multiple data types (fundamentals, options, sentiment) and frequencies (1min, hourly, weekly) while maintaining clear provenance.
+
+**Alternatives Considered**:
+- Simple ticker name (`SPY`) — rejected as ambiguous when multiple data types exist.
+- Filename-based (`SPY.parquet`) — rejected as it conflates storage with logical identity.
+
+**Implications**: All manifest registrations must follow this convention; scripts should validate format on registration.
