@@ -7,15 +7,26 @@ for financial instruments using the yfinance library.
 
 import logging
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 import yfinance as yf
 
+from scripts import manage_data_versions as dv
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+DEFAULT_DATASET_NAME = "SPY.OHLCV.daily"
 
-def download_spy(output_path: str = "data/raw/SPY.parquet") -> pd.DataFrame:
+
+def download_spy(
+    output_path: str = "data/raw/SPY.parquet",
+    *,
+    dataset_name: str = DEFAULT_DATASET_NAME,
+    register_manifest: bool = True,
+    manifest_path: Optional[Path] = None,
+) -> pd.DataFrame:
     """Download SPY OHLCV data from Yahoo Finance.
 
     Parameters
@@ -86,6 +97,11 @@ def download_spy(output_path: str = "data/raw/SPY.parquet") -> pd.DataFrame:
     # Save to parquet
     df.to_parquet(output_path, index=False)
     logger.info(f"Saved to {output_path}")
+
+    if register_manifest:
+        target_manifest = manifest_path or dv.RAW_MANIFEST
+        dv.register_raw_entry(dataset_name, output_file, manifest_path=target_manifest)
+        logger.info("Registered %s in manifest %s", dataset_name, target_manifest)
 
     return df
 

@@ -10,9 +10,17 @@ These tests verify that the download script:
 
 from datetime import datetime, timedelta
 from pathlib import Path
+import json
+import sys
 
 import pandas as pd
 import pytest
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from scripts import manage_data_versions as dv
 
 
 class TestDownloadSpyBasic:
@@ -23,7 +31,7 @@ class TestDownloadSpyBasic:
         from scripts.download_ohlcv import download_spy
 
         output_path = tmp_path / "SPY.parquet"
-        df = download_spy(output_path=str(output_path))
+        df = download_spy(output_path=str(output_path), register_manifest=False)
 
         # File should exist
         assert output_path.exists(), "Parquet file was not created"
@@ -44,7 +52,7 @@ class TestSpyDataColumns:
         from scripts.download_ohlcv import download_spy
 
         output_path = tmp_path / "SPY.parquet"
-        df = download_spy(output_path=str(output_path))
+        df = download_spy(output_path=str(output_path), register_manifest=False)
 
         expected_columns = ["Date", "Open", "High", "Low", "Close", "Volume"]
         assert list(df.columns) == expected_columns, (
@@ -56,7 +64,7 @@ class TestSpyDataColumns:
         from scripts.download_ohlcv import download_spy
 
         output_path = tmp_path / "SPY.parquet"
-        df = download_spy(output_path=str(output_path))
+        df = download_spy(output_path=str(output_path), register_manifest=False)
 
         # Date should be datetime
         assert pd.api.types.is_datetime64_any_dtype(df["Date"]), (
@@ -83,7 +91,7 @@ class TestSpyDataCompleteness:
         from scripts.download_ohlcv import download_spy
 
         output_path = tmp_path / "SPY.parquet"
-        df = download_spy(output_path=str(output_path))
+        df = download_spy(output_path=str(output_path), register_manifest=False)
 
         # Data should start before 2000
         min_date = df["Date"].min()
@@ -103,7 +111,7 @@ class TestSpyDataCompleteness:
         from scripts.download_ohlcv import download_spy
 
         output_path = tmp_path / "SPY.parquet"
-        df = download_spy(output_path=str(output_path))
+        df = download_spy(output_path=str(output_path), register_manifest=False)
 
         # Check for nulls in OHLCV columns
         ohlcv_cols = ["Open", "High", "Low", "Close", "Volume"]
@@ -122,7 +130,7 @@ class TestSpyDataSplits:
         from scripts.download_ohlcv import download_spy
 
         output_path = tmp_path / "SPY.parquet"
-        df = download_spy(output_path=str(output_path))
+        df = download_spy(output_path=str(output_path), register_manifest=False)
 
         # Define split boundaries (from CLAUDE.md)
         train_end = pd.Timestamp("2020-12-31")
@@ -169,10 +177,10 @@ class TestDownloadIdempotent:
         output_path = tmp_path / "SPY.parquet"
 
         # First download
-        df1 = download_spy(output_path=str(output_path))
+        df1 = download_spy(output_path=str(output_path), register_manifest=False)
 
         # Second download (should not raise)
-        df2 = download_spy(output_path=str(output_path))
+        df2 = download_spy(output_path=str(output_path), register_manifest=False)
 
         # Both should return valid DataFrames
         assert isinstance(df1, pd.DataFrame)
@@ -181,3 +189,23 @@ class TestDownloadIdempotent:
         # Data should be the same (or very similar - new data may have arrived)
         assert len(df1) > 0
         assert len(df2) > 0
+
+
+class TestManifestRegistration:
+    """Tests for manifest auto-registration."""
+
+    def test_download_registers_manifest_entry(self, tmp_path, monkeypatch):
+        """download_spy should append to manifest when register_manifest=True."""
+        from scripts.download_ohlcv import download_spy
+
+        manifest = tmp_path / "manifest.json"
+        monkeypatch.setattr(dv, "RAW_MANIFEST", manifest)
+
+        output_path = tmp_path / "SPY.parquet"
+        download_spy(output_path=str(output_path), manifest_path=manifest)
+
+        manifest_data = json.loads(manifest.read_text())
+        entry = manifest_data["entries"][-1]
+        assert entry["dataset"] == "SPY.OHLCV.daily"
+        assert entry["path"] == str(output_path)
+        assert entry["md5"]

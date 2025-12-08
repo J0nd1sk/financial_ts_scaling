@@ -69,3 +69,26 @@
 - Filename-based (`SPY.parquet`) — rejected as it conflates storage with logical identity.
 
 **Implications**: All manifest registrations must follow this convention; scripts should validate format on registration.
+
+## 2025-12-08 Testing & Manifest Automation Lessons
+
+**Context**: Phase 2 implementation had three critical issues identified by code review:
+1. Tests called real yfinance API (slow, flaky, non-reproducible)
+2. Each test downloaded full SPY history independently (8× redundant downloads)
+3. Manifest registration was manual, not automatic in download script
+
+**Decision**: Establish mandatory patterns:
+- **Data download tests must use mocks/fixtures**: Never call real APIs in tests; mock external dependencies for speed and reproducibility
+- **Shared test fixtures**: Use pytest fixtures to download/mock data once, reuse across tests
+- **Automatic manifest registration**: Download scripts must register artifacts programmatically, not rely on manual post-download steps
+
+**Rationale**: Tests must be fast, deterministic, and offline-capable per PRD reproducibility requirements. Manual registration steps violate automation principles and invite manifest drift.
+
+**Alternatives Considered**:
+- Live API tests in separate suite — adds complexity, still flaky
+- Optional manifest registration flag — easy to forget, defeats automation purpose
+
+**Implications**:
+- All future data-fetching code must include mocking strategy in test plan
+- Download scripts must integrate manifest registration before merge
+- CI/CD must run offline without external API dependencies
