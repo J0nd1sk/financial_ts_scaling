@@ -26,8 +26,28 @@ Without explicit planning:
 
 ## Execution Steps
 
+0. **Query Memory for Relevant Knowledge** (Memory MCP integration - additive)
+
+   Before planning, search Memory for relevant lessons and patterns:
+
+   ```
+   mcp__memory__search_nodes({
+     "query": "[task domain keywords: e.g., 'data pipeline', 'testing', 'feature engineering']"
+   })
+   ```
+
+   Look for:
+   - Lessons from similar tasks or same phase
+   - Anti-patterns to avoid
+   - Successful patterns to apply
+   - Relevant decisions that constrain the design
+
+   Include findings in planning considerations below.
+
+   **Note**: Memory supplements planning, doesn't replace it. Use findings to inform risks, assumptions, and test plans.
+
 1. **Define Objective**
-   
+
    Ask and answer:
    - What exactly are we trying to accomplish?
    - What will be different when we're done?
@@ -71,13 +91,41 @@ Without explicit planning:
    - Should this be decomposed?
 
 7. **Present for Approval**
-   
+
    Format plan and request explicit approval.
+
+8. **Store Finalized Plan in Memory** (after user approval)
+
+   Once user approves the plan, store it in Memory MCP:
+
+   ```
+   mcp__memory__create_entities({
+     "entities": [{
+       "name": "[Task Name] Plan",
+       "entityType": "planning_decision",
+       "observations": [
+         "Plan (YYYY-MM-DD, Phase N): [Objective summary]",
+         "Scope: [In scope items]",
+         "Test strategy: [Test plan summary]",
+         "Risks identified: [Key risks and mitigations]",
+         "Files affected: [N files, ~N lines, complexity level]"
+       ]
+     }]
+   })
+   ```
+
+   This enables future sessions to learn from planning outcomes and track what worked.
 
 ## Output Format
 
 ```markdown
 ## Planning Session: [Task Name]
+
+### Memory Findings (if relevant)
+📚 **Relevant knowledge from previous sessions:**
+- [Lesson/pattern from Memory with context]
+- [Anti-pattern to avoid]
+- [Decision that constrains design]
 
 ### Objective
 [Clear statement of what we're trying to accomplish]

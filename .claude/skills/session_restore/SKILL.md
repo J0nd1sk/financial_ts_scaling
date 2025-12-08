@@ -17,15 +17,39 @@ Restore context and verify readiness for continued work.
 ## Execution Steps
 
 1. **Read Context Files**
-   
+
    ```bash
    cat .claude/context/session_context.md
    cat .claude/context/phase_tracker.md
    ```
-   
+
    If files don't exist, inform user and start fresh.
 
-2. **Verify Environment**
+2. **Query Memory MCP for Relevant Knowledge** (additive - context files remain primary)
+
+   After reading context files, query Memory for lessons/patterns relevant to current work:
+
+   ```
+   mcp__memory__search_memory({
+     "query": "[current phase or task keywords]",
+     "limit": 5
+   })
+   ```
+
+   Look for:
+   - Lessons from same phase or similar tasks
+   - Patterns that apply to pending work
+   - Decisions that might affect current priorities
+   - Anti-patterns to avoid
+
+   Include relevant findings in summary to user. Examples:
+   - "📚 Memory: 3 lessons from Phase 2 work..."
+   - "⚠️ Reminder from previous session: [anti-pattern to avoid]"
+   - "✅ Pattern to apply: [successful approach from past]"
+
+   **Note**: This supplements (not replaces) context files. Memory provides agent-queryable knowledge; context files remain authoritative.
+
+3. **Verify Environment**
    
    ```bash
    source venv/bin/activate

@@ -103,10 +103,55 @@ Capture current session state for seamless continuation.
    ```
 
 7. **Update Phase Tracker** (if progress made)
-   
+
    Update `.claude/context/phase_tracker.md` with completion status.
 
-8. **Report to User**
+8. **Store Lessons in Memory MCP** (additive - context files remain primary)
+
+   Extract and store key learnings from this session:
+
+   - **Lessons learned** (mistakes and corrections):
+     ```
+     mcp__memory__store_memory({
+       "content": "Lesson: [specific lesson]",
+       "metadata": {
+         "type": "lesson",
+         "phase": "[current phase]",
+         "context": "[when/why this lesson applies]",
+         "session_date": "[YYYY-MM-DD]"
+       }
+     })
+     ```
+
+   - **Successful patterns** (what worked well):
+     ```
+     mcp__memory__store_memory({
+       "content": "Pattern: [successful approach]",
+       "metadata": {
+         "type": "pattern",
+         "phase": "[current phase]",
+         "context": "[where this pattern applies]",
+         "session_date": "[YYYY-MM-DD]"
+       }
+     })
+     ```
+
+   - **Key decisions** (architectural or process):
+     ```
+     mcp__memory__store_memory({
+       "content": "Decision: [what was decided]",
+       "metadata": {
+         "type": "decision",
+         "phase": "[current phase]",
+         "rationale": "[why this was chosen]",
+         "session_date": "[YYYY-MM-DD]"
+       }
+     })
+     ```
+
+   **Note**: This supplements (not replaces) decision_log.md. Memory MCP enables agent-queryable knowledge; decision_log.md remains the human-readable, version-controlled record.
+
+9. **Report to User**
    - Confirm file written
    - Summarize key state
    - Warn of any uncommitted work
