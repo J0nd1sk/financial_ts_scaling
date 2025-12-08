@@ -76,7 +76,7 @@ def download_spy(
     df = df[required_cols]
 
     # Ensure Date is datetime (remove timezone if present)
-    df["Date"] = pd.to_datetime(df["Date"]).dt.tz_localize(None)
+    df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.tz_localize(None)
 
     # Ensure OHLC are float
     for col in ["Open", "High", "Low", "Close"]:
