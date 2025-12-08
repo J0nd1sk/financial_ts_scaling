@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from scripts import manage_data_versions as dv
-from src.features.indicators import FEATURE_LIST, build_feature_dataframe, load_raw_data
+from src.features import tier_a20
 
 RAW_DATASET = "SPY.OHLCV.daily"
 PROCESSED_DATASET = "SPY.features.a20"
@@ -28,8 +28,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    raw_df = load_raw_data(args.raw_path)
-    feature_df = build_feature_dataframe(raw_df)
+    raw_df = tier_a20.load_raw_data(args.raw_path)
+    feature_df = tier_a20.build_feature_dataframe(raw_df)
     args.output_path.parent.mkdir(parents=True, exist_ok=True)
     feature_df.to_parquet(args.output_path, index=False)
 
@@ -41,7 +41,7 @@ def main() -> int:
         file_path=args.output_path,
         source_raw_md5s=[raw_md5],
     )
-    print(f"Wrote {len(feature_df)} feature rows with columns: {FEATURE_LIST}")
+    print(f"Wrote {len(feature_df)} feature rows with columns: {tier_a20.FEATURE_LIST}")
     return 0
 
 

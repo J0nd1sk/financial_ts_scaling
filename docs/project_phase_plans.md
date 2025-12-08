@@ -2020,6 +2020,100 @@ git commit -m "feat: add SPY data download pipeline with tests"
 
 ---
 
+## Training Infrastructure Decisions (2025-12-08)
+
+- **Configuration format**: Plain YAML files with lightweight `dataclass` loaders. We deliberately avoid OmegaConf or other heavy frameworks to keep configs simple, reviewable, and version-controlled alongside code.
+- **Execution model**: No generic launcher scripts. Every experiment is run explicitly via CLI (e.g., `python scripts/train.py --config configs/daily/threshold_1pct.yaml`) to preserve one-task-per-model discipline and make approval gates obvious.
+- **Tracking**: All runs log to both Weights & Biases (dashboards/sweeps) and local MLflow (artifacts + long-term retention). Config templates must include metadata for both systems.
+- **Thermal/MPS setup**: PyTorch 2.x with MPS backend enabled by default; the training loop includes the powermetrics-based thermal callback (warn ≥85 °C, abort ≥95 °C) before scaling to larger parameter budgets.
+- **Batch-size discovery**: `python scripts/find_batch_size.py --param-budget {2M|20M|200M}` remains mandatory whenever we change parameter budgets or significantly alter dataset/feature composition.
+
+### Training Stack & Infrastructure
+
+| Component | Decision |
+|-----------|----------|
+| Model | Hugging Face PatchTST, three config presets (~2M/20M/200M params) |
+| Framework | PyTorch 2.x with MPS backend; `torch.backends.mps` checked before every run |
+| Optimizer | AdamW + cosine schedule (configurable per YAML) |
+| Tracking | W&B (dashboards/sweeps) + MLflow (local `mlruns/` mirror) every run |
+| HPO | Optuna integrated with both trackers; trials respect approval gates |
+| Thermal | Powermetrics hook each epoch (warn ≥85 °C, stop ≥95 °C, log to W&B/MLflow) |
+
+### Task Explosion & Organization
+
+- Each binary question (e.g., “Will next day’s high exceed today’s close by 1%?”) is a separate model. For daily horizon alone: 5 thresholds × 1 horizon = 5 models per parameter budget. Extending to horizons 2d/3d/5d multiplies that out (20 tasks). Coupled with the 3 parameter budgets, the daily grid alone reaches 60 training runs.
+- Config layout: `configs/{horizon}/{threshold}.yaml`. YAML includes:
+  - Feature tier (a20 initially)
+  - Target definition (threshold %, horizon)
+  - Train/val/test ranges (per PRD)
+  - PatchTST parameter preset (2M/20M/200M)
+  - Logging + artifact paths (W&B project/run name, MLflow experiment)
+- Branching follows the experiment naming convention (`experiment/{budget}-{timescale}-{task}`) to keep approvals granular.
+
+### Config Schema & Example
+
+```yaml
+# configs/daily/threshold_1pct.yaml
+dataset:
+  features_path: data/processed/v1/SPY_features_a20.parquet
+  manifest_dataset: SPY.features.a20
+  feature_tier: a20
+target:
+  type: threshold
+  horizon_days: 1            # 2 / 3 / 5 for other horizons
+  pct_threshold: 0.01        # 0.02 / 0.03 / 0.05 variants
+training:
+  param_budget: 2M           # 20M / 200M configs reuse same schema
+  patchtst_config: configs/model/patchtst_2m.json
+  epochs: 100
+  batch_size: 32
+  optimizer: adamw
+  lr: 1e-4
+tracking:
+  wandb:
+    project: financial-ts-scaling
+    run_name: 2M-daily-threshold-1pct
+  mlflow:
+    experiment: financial-ts-scaling
+    run_name: 2M-daily-threshold-1pct
+```
+
+The loader (`src/config/training.py`) validates these fields via dataclasses; new configs must pass unit tests before use.
+
+### Target Construction Rules
+
+- For each example at index *t*, compute `future_max = max(close[t+1 : t+horizon])` using trading days only. Label = 1 if `future_max >= close[t] * (1 + pct_threshold)` else 0.
+- Horizons: 1-day (next trading day), 2-day, 3-day, 5-day. Additional horizons/timescales will follow the same rule.
+- Regression or multi-head tasks will have dedicated schemas later; Phase 2 focuses on binary thresholds.
+
+### First Task Checklist (Cold Start)
+
+1. Restore context via session_restore skill; confirm Phase 2 status in `session_context.md`.
+2. Activate environment + verification: `source venv/bin/activate`, `make test`, `make verify`.
+3. Ensure features exist: `python scripts/build_features_a20.py` (rebuild if manifest missing entry).
+4. Run batch-size discovery for the target budget: `python scripts/find_batch_size.py --param-budget {2M|20M|200M}`.
+5. Create or reuse the correct config YAML (per schema above).
+6. Launch training: `python scripts/train.py --config configs/daily/threshold_1pct.yaml`.
+7. Monitor console for thermal warnings; ensure W&B + MLflow runs are created.
+8. After completion, update manifests (if new processed artifacts), session_context, and phase_tracker.
+9. Repeat for the next task/horizon with the appropriate config/branch.
+
+### Testing & Optimization Strategy
+
+1. **Unit tests**: dataset builder (label generation per horizon/threshold), PatchTST wrapper (input/output shapes), thermal callback (mock powermetrics), config loader (YAML→dataclass).
+2. **Smoke tests**: micro-training on <30 days of data, ensuring forward/backward pass on MPS works for each parameter budget before long runs.
+3. **Batch-size discovery**: scripted command per budget before new feature/data tiers. Results logged to both trackers.
+4. **Regression checks**: `make test` covers data pipeline + config loader; `make verify` ensures environment and manifests are intact before training runs.
+5. **Thermal validation**: dedicated tests assert the callback pauses/aborts when simulated temp crosses thresholds; runs log the thermal state to both trackers for audit.
+
+### Tooling Notes
+
+- No centralized launcher: we prefer explicit CLI invocation for clarity, approvals, and to avoid hiding configuration changes.
+- Configs are plain YAML; we use standard `yaml.safe_load` + dataclasses to avoid OmegaConf complexity.
+- Any automation (e.g., shell scripts queuing multiple tasks) must still call the explicit training script per run and log to both W&B/MLflow; such scripts require their own approval gate.
+
+---
+
 # Appendix A: Code Proposition Disclaimer
 
 **ALL code in this document is a PROPOSITION requiring:**
