@@ -1700,15 +1700,298 @@ mkdir -p .speckit
 
 ---
 
-# Phase 2: IDE Rules & Configuration
+# Phase 2: Data Pipeline Foundation
 
-[Continue with remaining phases, applying same principles:
-- All code marked as PROPOSITIONS
-- Planning sessions required
-- Task breakdowns with RACI
-- Branching strategies
-- TDD requirements
-- Approval gates]
+## 2.1 Objectives
+
+- Minimal SPY OHLCV download pipeline
+- Parquet storage with data splits (train/val/test)
+- Comprehensive data validation tests
+- Foundation for multi-asset and indicator expansion
+
+## 2.2 Planning Session Output
+
+**Date:** 2025-12-07
+**Status:** Approved for implementation
+
+### Objective
+Create a minimal, testable data pipeline for downloading and validating SPY OHLCV data, establishing the foundation for scaling experiments.
+
+### In Scope
+- Data directory structure (raw/, processed/, samples/)
+- SPY OHLCV download script using yfinance
+- Basic data validation (completeness, date ranges, missing values)
+- Parquet storage format
+- Fixed data splits (train: through 2020, val: 2021-2022, test: 2023+)
+
+### Out of Scope
+- Multi-asset data (DIA, QQQ, stocks, econ) - Phase 5
+- Indicator calculations - separate task after download works
+- Data versioning system - separate task
+- Advanced validation (outliers, anomalies)
+- Data visualization/EDA tools
+
+### Success Criteria
+- [ ] `make test` passes with data pipeline tests
+- [ ] SPY data downloads successfully via yfinance
+- [ ] Data stored in parquet format at `data/raw/SPY.parquet`
+- [ ] Data contains expected columns: Date, Open, High, Low, Close, Volume
+- [ ] Data covers date range from earliest available through present
+- [ ] Data splits correctly into train/val/test by date boundaries
+- [ ] No missing values in OHLCV data
+- [ ] Script is idempotent (safe to re-run)
+
+### Assumptions
+1. yfinance 0.2.66 works for SPY historical data
+2. Yahoo Finance has SPY data from ~1993 to present
+3. Yahoo Finance OHLCV data is complete (no gaps in trading days)
+4. 2020/2021/2023 boundaries are appropriate for train/val/test
+5. Parquet format is best for this data
+6. Internet connection available for data downloads
+7. `data/`, `scripts/`, `tests/` directories exist
+
+### Risks & Mitigations
+
+| Risk | Likelihood | Mitigation |
+|------|------------|------------|
+| yfinance API changes/breaks | Medium | Error handling, version pin, document alternatives |
+| Missing data (market holidays) | Low | Validation checks, document expected gaps |
+| Date split boundaries incorrect | Medium | Make boundaries configurable, validate split sizes |
+| Download too slow for testing | Medium | Add caching, use small date ranges for tests |
+| Parquet write fails | Low | Error handling, validate write before return |
+| Network failures during download | High | Retry logic, timeout handling, clear error messages |
+
+## 2.3 Tasks
+
+### 2.3.1 Create Data Directory Structure
+
+> **PROPOSITION ONLY**: Requires approval before execution.
+
+**Task:** Create subdirectories for data organization
+**RACI:** Human (Approve), LLM (Execute)
+**Estimated time:** 5 minutes
+
+```bash
+mkdir -p data/raw data/processed data/samples
+touch data/raw/.gitkeep data/processed/.gitkeep data/samples/.gitkeep
+```
+
+**Deliverable:**
+- `data/raw/` exists
+- `data/processed/` exists
+- `data/samples/` exists
+- Each has `.gitkeep` file for git tracking
+
+### 2.3.2 Write Tests for Data Download
+
+> **PROPOSITION ONLY**: TDD - Write tests BEFORE implementation.
+
+**File:** `tests/test_data_download.py`
+
+**Test Cases:**
+
+1. **`test_download_spy_basic()`**
+   - Downloads SPY data
+   - Asserts: `data/raw/SPY.parquet` exists after download
+   - Asserts: File size > 0
+
+2. **`test_spy_data_columns()`**
+   - Validates column structure
+   - Asserts: Columns are ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
+   - Asserts: Date column is datetime type
+   - Asserts: OHLCV columns are numeric
+
+3. **`test_spy_data_completeness()`**
+   - Validates data coverage
+   - Asserts: Date range starts before 2000
+   - Asserts: Date range ends within last 7 days
+   - Asserts: No null values in OHLCV columns
+
+4. **`test_spy_data_splits()`**
+   - Validates train/val/test split
+   - Asserts: Train data ends at 2020-12-31
+   - Asserts: Val data covers 2021-01-01 to 2022-12-31
+   - Asserts: Test data starts at 2023-01-01
+
+5. **`test_download_idempotent()`**
+   - Validates safe re-runs
+   - Runs download twice
+   - Asserts: Second run doesn't error
+
+**Test for Directory Structure:**
+
+**File:** `tests/test_data_directories.py`
+
+1. **`test_data_directories_exist()`**
+   - Asserts: `data/raw/` exists
+   - Asserts: `data/processed/` exists
+   - Asserts: `data/samples/` exists
+
+### 2.3.3 Implement SPY Download Script
+
+> **PROPOSITION ONLY**: Implement AFTER tests are written and failing.
+
+**File:** `scripts/download_ohlcv.py`
+
+**Function signature:**
+```python
+def download_spy(output_path: str = "data/raw/SPY.parquet") -> pd.DataFrame:
+    """Download SPY OHLCV data from Yahoo Finance.
+
+    Parameters
+    ----------
+    output_path : str
+        Path to save parquet file
+
+    Returns
+    -------
+    pd.DataFrame
+        OHLCV data with columns: Date, Open, High, Low, Close, Volume
+
+    Raises
+    ------
+    ValueError
+        If download fails or data is invalid
+    """
+```
+
+**Implementation requirements:**
+- Use yfinance to download SPY data
+- Handle network errors with clear messages
+- Validate data before saving
+- Save to parquet format
+- Return DataFrame for testing
+- Log download progress
+- ~80 lines of code
+
+### 2.3.4 Run Tests (RED phase)
+
+```bash
+pytest tests/test_data_download.py -v
+pytest tests/test_data_directories.py -v
+```
+
+**Expected:** All tests FAIL (no implementation yet)
+
+### 2.3.5 Implement Download Script (GREEN phase)
+
+Write minimal code to make tests pass.
+
+**Execution:**
+```bash
+python scripts/download_ohlcv.py
+```
+
+**Expected output:**
+- `data/raw/SPY.parquet` created
+- All tests pass
+
+### 2.3.6 Run Tests (Verify GREEN)
+
+```bash
+make test
+```
+
+**Expected:** All tests PASS
+
+### 2.3.7 Refactor (if needed)
+
+Clean up code while keeping tests green.
+
+## 2.4 Test Plan Summary
+
+**New Files:**
+- `tests/test_data_directories.py` (~20 lines)
+- `tests/test_data_download.py` (~120 lines)
+- `scripts/download_ohlcv.py` (~80 lines)
+- `data/raw/.gitkeep`
+- `data/processed/.gitkeep`
+- `data/samples/.gitkeep`
+
+**Total:** 6 files, ~220 lines
+
+**Edge Cases Covered:**
+- Network timeout during download
+- yfinance returns partial data
+- File already exists
+- Invalid date ranges
+
+## 2.5 Execution Order
+
+1. Create data directories (2.3.1)
+2. Write directory structure tests (2.3.2 - directories)
+3. Write download tests (2.3.2 - download)
+4. Run tests - verify RED (2.3.4)
+5. Implement download script (2.3.3, 2.3.5)
+6. Run tests - verify GREEN (2.3.6)
+7. Refactor if needed (2.3.7)
+8. Commit with tests + implementation
+
+## 2.6 Branching Strategy
+
+**Branch name:** `feature/phase-2-data-pipeline`
+**Base:** `staging` (or `main` if staging doesn't exist yet)
+**Merge target:** `staging`
+
+**Workflow:**
+```bash
+git checkout main
+git checkout -b feature/phase-2-data-pipeline
+# Work on feature
+git add -A
+git commit -m "feat: add SPY data download pipeline with tests"
+# When complete:
+# PR to main (or staging if it exists)
+```
+
+## 2.7 Acceptance Criteria
+
+- [ ] Data directories created with .gitkeep files
+- [ ] `tests/test_data_directories.py` exists and passes
+- [ ] `tests/test_data_download.py` exists with 5 test cases
+- [ ] All tests pass: `make test`
+- [ ] `scripts/download_ohlcv.py` implements `download_spy()`
+- [ ] SPY data downloads successfully
+- [ ] Data saved to `data/raw/SPY.parquet`
+- [ ] Data has correct columns and types
+- [ ] Data coverage validated (pre-2000 to present)
+- [ ] Data splits validated (train/val/test boundaries)
+- [ ] Script is idempotent (safe to re-run)
+- [ ] Code committed to feature branch
+
+## 2.8 Estimated Time
+
+**Total:** 2-3 hours
+
+- Planning & approval: 30 min (complete)
+- Directory setup: 5 min
+- Test writing: 45 min
+- Implementation: 60 min
+- Testing & debugging: 30 min
+- Refactoring: 15 min
+- Documentation & commit: 15 min
+
+## 2.9 Next Steps (After Phase 2)
+
+1. **Indicator Calculation** - Separate planning session
+   - Use pandas-ta + TA-Lib
+   - Start with 20 basic indicators
+   - Save to `data/processed/`
+
+2. **Multi-Asset Downloads** - Phase 5
+   - Extend to DIA, QQQ
+   - Add individual stocks
+   - Add economic indicators (FRED)
+
+3. **Data Versioning** - Separate task
+   - Version schema for processed data
+   - Checksums for validation
+
+---
+
+# Phase 3: Pipeline Design
+
+[To be planned after Phase 2 completion]
 
 ---
 
@@ -1718,12 +2001,12 @@ mkdir -p .speckit
 |-------|-------|-------|
 | 0. Development Discipline | 4-6 | SpecKit + Superpowers setup, skills creation |
 | 1. Environment | 6-8 | Includes agentic tools |
-| 2. IDE Rules | 2-3 | With skills system |
+| 2. Data Pipeline Foundation | 2-3 | SPY OHLCV download with TDD |
 | 3. Pipeline Design | 4-6 | With SpecKit planning |
 | 4. Boilerplate | 10-14 | With TDD |
 | 5. Data Acquisition | 5-7 | With task breakdown |
 | 6. Experiments (initial) | Variable | Per experiment |
-| **Setup Total** | **31-44** | Before first experiment |
+| **Setup Total** | **33-47** | Before first experiment |
 
 ---
 

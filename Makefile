@@ -5,6 +5,7 @@ help:
 	@echo "Available targets:"
 	@echo "  make test       - Run all tests (REQUIRED before any git operations)"
 	@echo "  make test-cov   - Run tests with coverage report"
+	@echo "  make verify     - Run environment verification script"
 	@echo "  make lint       - Run ruff linter"
 	@echo "  make type-check - Run mypy type checker"
 	@echo "  make clean      - Remove cache and build artifacts"
@@ -20,6 +21,10 @@ test-cov:
 	@echo "Running tests with coverage..."
 	pytest tests/ -v --tb=short --cov=src --cov-report=term-missing --cov-report=html
 	@echo "Coverage report: htmlcov/index.html"
+
+verify:
+	@echo "Verifying development environment..."
+	python scripts/verify_environment.py
 
 # Linting
 lint:
