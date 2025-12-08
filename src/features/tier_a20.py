@@ -107,7 +107,7 @@ def _compute_weekly_indicators(df: pd.DataFrame) -> pd.DataFrame:
         index=weekly.index,
     )
     daily_index = df["Date"]
-    weekly_features = weekly_features.reindex(daily_index, method="ffill")
+    weekly_features = weekly_features.reindex(daily_index).ffill()
     return weekly_features
 
 
