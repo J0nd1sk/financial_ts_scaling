@@ -66,20 +66,45 @@ All training runs must be reproducible for valid scaling law comparisons.
 
 ### Task 1: Config System
 
-**Purpose:** Load and validate training configuration from YAML files
+**Purpose:** Load and validate experiment configuration from YAML files
+
+**Architecture:** See `docs/config_architecture.md` for full design rationale.
+
+**Key Design Decisions:**
+- ExperimentConfig defines WHAT we're testing (task, data, horizon)
+- Execution params (batch_size, learning_rate) are NOT in config - discovered/tuned separately
+- `param_budget` is a CLI argument to train.py, not a config field
+- Same experiment config runs across 2M/20M/200M budgets
 
 **Files:**
 | Path | Purpose | ~Lines |
 |------|---------|--------|
-| `src/config/__init__.py` | Package init | 5 |
-| `src/config/training.py` | Config dataclasses + loader | 150 |
-| `tests/test_config.py` | Config tests | 80 |
+| `src/config/__init__.py` | Package init with exports | 5 |
+| `src/config/experiment.py` | ExperimentConfig dataclass + loader | 120 |
+| `tests/test_config.py` | Config tests | 100 |
+| `tests/fixtures/valid_config.yaml` | Test fixture | 10 |
+| `tests/fixtures/sample_features.parquet` | Test fixture for path validation | - |
+
+**ExperimentConfig Schema:**
+```python
+@dataclass
+class ExperimentConfig:
+    seed: int = 42
+    data_path: str                    # Path to processed features
+    task: str                         # direction | threshold_1pct | threshold_2pct | threshold_3pct | threshold_5pct | regression
+    timescale: str                    # daily | 2d | 3d | 5d | weekly | 2wk | monthly
+    context_length: int = 60
+    horizon: int = 5
+    wandb_project: str | None = None
+    mlflow_experiment: str | None = None
+```
 
 **Tests:**
-- `test_load_valid_config_returns_dataclass`: Valid YAML → TrainingConfig dataclass
-- `test_load_config_missing_required_field_raises`: Missing required field → ValueError
-- `test_load_config_invalid_param_budget_raises`: Invalid budget (5M) → ValueError
-- `test_load_config_validates_paths_exist`: Non-existent path → ValueError
+- `test_load_valid_config_returns_dataclass`: Valid YAML → ExperimentConfig with all fields
+- `test_load_config_missing_required_field_raises`: Missing `data_path` → ValueError
+- `test_load_config_invalid_task_raises`: Invalid task (e.g., "predict") → ValueError
+- `test_load_config_invalid_timescale_raises`: Invalid timescale (e.g., "hourly") → ValueError
+- `test_load_config_validates_paths_exist`: Non-existent data_path → ValueError
 
 **Dependencies:** None
 

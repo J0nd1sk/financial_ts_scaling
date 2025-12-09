@@ -1,0 +1,10 @@
+# Test fixture: valid experiment configuration
+# Note: data_path is validated at load time, tests update this dynamically
+seed: 42
+data_path: PLACEHOLDER_UPDATED_BY_TEST
+task: threshold_1pct
+timescale: daily
+context_length: 60
+horizon: 5
+wandb_project: test-project
+mlflow_experiment: test-experiment

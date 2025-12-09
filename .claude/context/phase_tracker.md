@@ -39,7 +39,7 @@
 - Execution strategy: 7 sub-tasks with individual approval gates
 
 ### Sub-Tasks
-1. ⏸️ Config System (src/config/training.py)
+1. ✅ Config System (src/config/experiment.py) - 2025-12-08
 2. ⏸️ Dataset Class (src/data/dataset.py)
 3. ⏸️ Model Configs (configs/model/patchtst_*.yaml)
 4. ⏸️ Thermal Callback (src/training/thermal.py)

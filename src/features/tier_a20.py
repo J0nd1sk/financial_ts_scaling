@@ -108,6 +108,8 @@ def _compute_weekly_indicators(df: pd.DataFrame) -> pd.DataFrame:
     )
     daily_index = df["Date"]
     weekly_features = weekly_features.reindex(daily_index).ffill()
+    # Align index with daily RangeIndex to avoid index union when concatenating features.
+    weekly_features = weekly_features.reset_index(drop=True)
     return weekly_features
 
 
