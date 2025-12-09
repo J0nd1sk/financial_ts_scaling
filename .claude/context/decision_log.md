@@ -170,3 +170,39 @@
 - All Task 2-6 test counts increased
 - Training script has additional pre-flight verification step
 - Tests run fully offline without external service dependencies
+
+## 2025-12-08 PatchTST From-Scratch Implementation
+
+**Context**: Task 3 (Model Configs) originally assumed HuggingFace transformers library for PatchTST. However, `requirements.txt` had a comment indicating intent to implement from scratch, and user confirmed this preference.
+
+**Decision**: Implement PatchTST architecture from scratch using pure PyTorch instead of HuggingFace transformers.
+
+**Rationale**:
+- Full control over architecture and modifications
+- Minimal dependencies (only torch, no transformers library)
+- Educational value - understand the architecture deeply
+- Avoids potential MPS compatibility issues with HuggingFace
+- Cleaner integration with our training pipeline
+
+**Trade-offs**:
+- More code to write and test (~300 lines model, ~150 lines tests)
+- Risk of implementation bugs vs well-tested HuggingFace
+- No pretrained weights available (not needed for scaling experiments)
+
+**Scope Change**:
+Task 3 expanded into 3 sub-tasks:
+- 3a: PatchTST Backbone Implementation (`src/models/patchtst.py`)
+- 3b: Parameter Budget Configs (`configs/model/patchtst_*.yaml`)
+- 3c: Integration Tests
+
+**Architecture Components**:
+1. PatchEmbedding: Split time series into patches, project to d_model
+2. PositionalEncoding: Learnable position embeddings
+3. TransformerEncoder: Self-attention + FFN layers
+4. PredictionHead: Linear projection for binary classification
+
+**Implications**:
+- No HuggingFace transformers dependency needed
+- Must verify MPS compatibility for all PyTorch ops (attention, etc.)
+- Parameter counting must be implemented in `src/models/utils.py`
+- Plan document updated: `docs/phase4_boilerplate_plan.md` (assumption #3 changed)

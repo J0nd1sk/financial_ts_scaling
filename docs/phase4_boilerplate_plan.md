@@ -141,30 +141,92 @@ label = 1 if future_max >= close[t] * (1 + threshold) else 0
 
 ---
 
-### Task 3: Model Configs
+### Task 3: PatchTST Model & Configs
 
-**Purpose:** YAML configuration files for PatchTST at each parameter budget
+**Purpose:** Implement PatchTST architecture from scratch with YAML configs for each parameter budget
+
+**Decision (2025-12-08):** Implement PatchTST from scratch rather than using HuggingFace transformers.
+- Rationale: Full control, minimal dependencies, educational value, avoids potential MPS compatibility issues
+- Trade-off: More code to write/test, but cleaner integration with our training pipeline
+
+**Sub-Tasks:**
+
+#### Task 3a: PatchTST Backbone Implementation
 
 **Files:**
 | Path | Purpose | ~Lines |
 |------|---------|--------|
-| `configs/model/patchtst_2m.yaml` | ~2M params | 20 |
-| `configs/model/patchtst_20m.yaml` | ~20M params | 20 |
-| `configs/model/patchtst_200m.yaml` | ~200M params | 20 |
-| `src/models/__init__.py` | Package init | 5 |
-| `src/models/utils.py` | Parameter counting helper | 30 |
-| `tests/test_model_config.py` | Model config tests | 80 |
+| `src/models/__init__.py` | Package init with exports | 10 |
+| `src/models/patchtst.py` | PatchTST model implementation | 250-300 |
+| `tests/test_patchtst.py` | Model unit tests | 150 |
 
-**Rationale for YAML:** Standardize on single config format (YAML) across training and model configs. Avoids dual schema/loader complexity.
+**Architecture Components:**
+1. **PatchEmbedding**: Split time series into patches, project to d_model
+2. **PositionalEncoding**: Learnable or sinusoidal position embeddings
+3. **TransformerEncoder**: Stack of encoder layers (self-attention + FFN)
+4. **PredictionHead**: Linear projection for binary classification output
 
-**Tests:**
+**PatchTST Config Dataclass:**
+```python
+@dataclass
+class PatchTSTConfig:
+    num_features: int          # Number of input features (e.g., 20)
+    context_length: int        # Input sequence length (e.g., 60)
+    patch_length: int          # Length of each patch (e.g., 16)
+    stride: int                # Stride between patches (e.g., 8)
+    d_model: int               # Model dimension (e.g., 128)
+    n_heads: int               # Number of attention heads (e.g., 8)
+    n_layers: int              # Number of transformer layers (e.g., 3)
+    d_ff: int                  # Feedforward dimension (e.g., 256)
+    dropout: float             # Dropout rate (e.g., 0.1)
+    head_dropout: float        # Dropout for prediction head (e.g., 0.0)
+    num_classes: int = 1       # Output classes (1 for binary sigmoid)
+```
+
+**Tests (Task 3a):**
+- `test_patch_embedding_output_shape`: Input (B, seq_len, features) → patches (B, n_patches, d_model)
+- `test_transformer_encoder_output_shape`: Maintains (B, n_patches, d_model)
+- `test_patchtst_forward_pass_output_shape`: Full model input → (B, 1) output
+- `test_patchtst_output_range_sigmoid`: Output in [0, 1] range
+- `test_patchtst_gradient_flow`: Gradients flow through all parameters
+- `test_patchtst_deterministic_with_seed`: Same seed → same output
+
+#### Task 3b: Parameter Budget Configs
+
+**Files:**
+| Path | Purpose | ~Lines |
+|------|---------|--------|
+| `src/models/utils.py` | Parameter counting helper | 40 |
+| `configs/model/patchtst_2m.yaml` | ~2M params config | 25 |
+| `configs/model/patchtst_20m.yaml` | ~20M params config | 25 |
+| `configs/model/patchtst_200m.yaml` | ~200M params config | 25 |
+| `tests/test_model_configs.py` | Config validation tests | 100 |
+
+**Parameter Scaling Strategy:**
+- Scale d_model, n_layers, n_heads, d_ff to hit budget
+- Keep patch_length, stride, dropout relatively constant
+- Approximate targets: 2M (±25%), 20M (±25%), 200M (±25%)
+
+**Tests (Task 3b):**
 - `test_count_parameters_helper_accurate`: Known model → exact param count
-- `test_patchtst_2m_config_params_within_budget`: ≤2.5M params (uses helper)
-- `test_patchtst_20m_config_params_within_budget`: ≤25M params (uses helper)
-- `test_patchtst_200m_config_params_within_budget`: ≤250M params (uses helper)
-- `test_patchtst_forward_pass_output_shape`: Correct output dimensions
+- `test_load_patchtst_config_from_yaml`: YAML → PatchTSTConfig dataclass
+- `test_patchtst_2m_config_params_within_budget`: 1.5M ≤ params ≤ 2.5M
+- `test_patchtst_20m_config_params_within_budget`: 15M ≤ params ≤ 25M
+- `test_patchtst_200m_config_params_within_budget`: 150M ≤ params ≤ 250M
 
-**Dependencies:** None
+#### Task 3c: Integration Tests
+
+**Files:**
+| Path | Purpose | ~Lines |
+|------|---------|--------|
+| `tests/test_patchtst_integration.py` | End-to-end model tests | 80 |
+
+**Tests (Task 3c):**
+- `test_patchtst_with_real_feature_dimensions`: Model works with 20-feature input
+- `test_patchtst_backward_pass_on_mps`: Training step completes on MPS device
+- `test_patchtst_batch_inference`: Handles batch sizes 1, 8, 32
+
+**Dependencies:** None (pure PyTorch implementation)
 
 ---
 
@@ -287,8 +349,8 @@ Week 3: Integration
 
 1. Feature data exists at `data/processed/v1/SPY_features_a20.parquet`
 2. Raw SPY data exists at `data/raw/SPY.parquet` (for Close prices)
-3. PatchTST from Hugging Face transformers works with our data format
-4. MPS backend supports all required operations
+3. PatchTST implemented from scratch using pure PyTorch (no HuggingFace dependency)
+4. MPS backend supports all required PyTorch operations (attention, linear, etc.)
 5. Context length and patch length compatible with ~20 features
 
 ### Testing Environment

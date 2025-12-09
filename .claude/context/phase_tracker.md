@@ -41,7 +41,10 @@
 ### Sub-Tasks
 1. ✅ Config System (src/config/experiment.py) - 2025-12-08
 2. ✅ Dataset Class (src/data/dataset.py) - 2025-12-08
-3. ⏸️ Model Configs (configs/model/patchtst_*.yaml)
+3. 🔄 PatchTST Model & Configs (REVISED 2025-12-08: implement from scratch, not HuggingFace)
+   - 3a. ⏸️ PatchTST Backbone (src/models/patchtst.py)
+   - 3b. ⏸️ Parameter Budget Configs (configs/model/patchtst_*.yaml)
+   - 3c. ⏸️ Integration Tests
 4. ⏸️ Thermal Callback (src/training/thermal.py)
 5. ⏸️ Tracking Integration (src/training/tracking.py)
 6. ⏸️ Training Script (scripts/train.py)
