@@ -40,7 +40,7 @@
 
 ### Sub-Tasks
 1. ✅ Config System (src/config/experiment.py) - 2025-12-08
-2. ⏸️ Dataset Class (src/data/dataset.py)
+2. ✅ Dataset Class (src/data/dataset.py) - 2025-12-08
 3. ⏸️ Model Configs (configs/model/patchtst_*.yaml)
 4. ⏸️ Thermal Callback (src/training/thermal.py)
 5. ⏸️ Tracking Integration (src/training/tracking.py)

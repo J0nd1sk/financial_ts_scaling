@@ -1,107 +1,100 @@
-# Session Handoff - 2025-12-08 22:00
+# Session Handoff - 2025-12-08 23:30
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: 3f20654 "feat: implement ExperimentConfig loader (Phase 4 Task 1)"
-- Uncommitted: none (clean working tree)
+- Last commit: 5b95057 "feat: implement FinancialDataset class (Phase 4 Task 2)"
+- Uncommitted: phase_tracker.md (minor update)
+- Ahead of origin by: 1 commit (not pushed)
 
 ### Task Status
-- Working on: Phase 4 Task 1: Config System
+- Working on: Phase 4 Task 2: Dataset Class
 - Status: ✅ COMPLETE
 
 ## Test Status
-- Last `make test`: 2025-12-08 ~21:50 — PASS (22/22 tests, 0.20s)
+- Last `make test`: 2025-12-08 ~23:25 — PASS (34/34 tests, 0.61s)
 - Failing: none
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. **Planning refinement**: Discussed batch size discovery, HPO integration with Optuna
-3. **Architecture documentation**: Created `docs/config_architecture.md` with full pipeline design
-4. **Updated Phase 4 plan**: Revised Task 1 scope to ExperimentConfig (not TrainingConfig)
-5. **TDD Implementation**:
-   - Created test fixtures (valid_config.yaml, sample_features.parquet)
-   - Wrote 5 failing tests (RED phase verified)
-   - Implemented ExperimentConfig dataclass + loader (GREEN phase)
-   - All 22 tests passing
-6. Committed: 3f20654 "feat: implement ExperimentConfig loader (Phase 4 Task 1)"
+2. **TDD Implementation of FinancialDataset**:
+   - Wrote 8 failing tests (RED phase verified)
+   - Implemented FinancialDataset class (GREEN phase)
+   - All 34 tests passing
+3. Committed: 5b95057 "feat: implement FinancialDataset class (Phase 4 Task 2)"
+4. Updated phase_tracker.md
 
 ## In Progress
-- None - Task 1 complete, ready for Task 2
+- None - Task 2 complete, ready for Task 3
 
 ## Pending
-1. **Phase 4 Task 2: Dataset Class** (NEXT - depends on Task 1)
-   - Files: `src/data/dataset.py`, `tests/test_dataset.py`
-   - PyTorch Dataset with binary threshold target generation
-   - 8 test cases defined in plan
-2. **Phase 4 Tasks 3-7** (see docs/phase4_boilerplate_plan.md)
+1. **Phase 4 Task 3: Model Configs** (NEXT)
+   - Files: `configs/model/patchtst_*.yaml`, `src/models/utils.py`
+   - PatchTST configurations for 2M/20M/200M parameter budgets
+   - 5 test cases defined in plan
+2. **Phase 4 Tasks 4-7** (see docs/phase4_boilerplate_plan.md)
 
 ## Files Created/Modified This Session
-- `docs/config_architecture.md`: **NEW** - Full config pipeline architecture (~250 lines)
-- `docs/phase4_boilerplate_plan.md`: Updated Task 1 section with revised scope
-- `src/__init__.py`: **NEW** - Package init
-- `src/config/__init__.py`: **NEW** - Config package exports
-- `src/config/experiment.py`: **NEW** - ExperimentConfig dataclass + loader (~130 lines)
-- `tests/test_config.py`: **NEW** - 5 test cases (~115 lines)
-- `tests/fixtures/valid_config.yaml`: **NEW** - Test fixture
-- `tests/fixtures/sample_features.parquet`: **NEW** - Test fixture for path validation
-- `.claude/context/phase_tracker.md`: Updated Task 1 status to complete
+- `src/data/__init__.py`: **NEW** - Package exports
+- `src/data/dataset.py`: **NEW** - FinancialDataset class (~150 lines)
+- `tests/test_dataset.py`: **NEW** - 8 test cases (~310 lines)
+- `.claude/context/phase_tracker.md`: Updated Task 2 status to complete
 
-## Key Decisions This Session
+## Key Implementation Details
 
-### Config Architecture Design (2025-12-08)
-- **Decision**: ExperimentConfig defines WHAT (task, data, timescale), NOT HOW (batch_size, lr, epochs)
-- **Rationale**:
-  - Same experiment config runs at 2M/20M/200M budgets
-  - Batch size is hardware-dependent, discovered via Task 7
-  - Hyperparameters are tuned via Optuna HPO (Phase 6)
-- **Documented in**: docs/config_architecture.md
+### FinancialDataset Design
+- **Input**: features_df (DataFrame), close_prices (array), context_length, horizon, threshold
+- **Output**: (x, y) where x=(context_length, n_features), y=(1,) binary label
+- **Target construction**: `label = 1 if max(close[t+1:t+1+horizon]) >= close[t] * (1 + threshold) else 0`
+- **Pre-computed labels**: All labels computed at init for efficiency
+- **Validation**: NaN check, sequence length check
 
-### param_budget as CLI Argument (2025-12-08)
-- **Decision**: param_budget is `--budget` CLI arg to train.py, not a config field
-- **Rationale**: Enables same experiment config to run across all 3 scaling budgets
-- **Usage**: `python scripts/train.py --config experiment.yaml --budget 20M`
+### Dataset Length Formula
+```
+n_samples = n_rows - context_length - horizon + 1
+```
+
+### Index Mapping
+- Dataset index `i` → prediction point `t = i + context_length - 1`
+- Input features: rows `[i, i + context_length)`
+- Future window: `close[t+1 : t+1+horizon]`
 
 ## Context for Next Session
 
 ### Critical Context
-- **Config architecture is documented**: See `docs/config_architecture.md` for the full pipeline design
-- **ExperimentConfig schema**: seed, data_path, task, timescale, context_length, horizon, wandb_project, mlflow_experiment
-- **Valid tasks**: direction, threshold_1pct, threshold_2pct, threshold_3pct, threshold_5pct, regression
-- **Valid timescales**: daily, 2d, 3d, 5d, weekly, 2wk, monthly
-
-### Memory MCP Status
-Contains Task1_ConfigSystem_Plan entity with planning observations.
+- **FinancialDataset location**: `src/data/dataset.py`
+- **Features file**: Does NOT include Close prices (must load separately from raw data)
+- **Raw data**: `data/raw/SPY.parquet` has Close column
+- **Features data**: `data/processed/v1/SPY_features_a20.parquet` has 20 indicators
 
 ### What's Ready
 - ✅ SPY raw data (8,272 rows, 1993-2025)
 - ✅ SPY processed features (a20 tier, 20 indicators)
 - ✅ ExperimentConfig loader with validation
-- ✅ All tests passing (22/22)
-- ✅ Clean working tree
+- ✅ FinancialDataset with binary threshold targets
+- ✅ All tests passing (34/34)
+- ✅ Clean working tree (except phase_tracker update)
 
 ### Build Status
-- Processed features exist at: `data/processed/v1/SPY_features_a20.parquet`
-- Can proceed directly to Task 2 (Dataset Class)
+- Processed features: `data/processed/v1/SPY_features_a20.parquet`
+- Can proceed directly to Task 3 (Model Configs)
 
 ## Next Session Should
 1. **Session restore** to load context
-2. **Begin Phase 4 Task 2: Dataset Class**
-   - Read plan from docs/phase4_boilerplate_plan.md (Task 2 section)
-   - TDD: Write 8 failing tests first
-   - Implement PyTorch Dataset with target construction:
-     ```python
-     future_max = max(close[t+1 : t+horizon])
-     label = 1 if future_max >= close[t] * (1 + threshold) else 0
-     ```
-3. Get approval before each TDD phase (RED → GREEN)
+2. **Commit phase_tracker update** (or include in next task commit)
+3. **Begin Phase 4 Task 3: Model Configs**
+   - Read plan from docs/phase4_boilerplate_plan.md (Task 3 section)
+   - TDD: Write 5 failing tests first
+   - Create PatchTST YAML configs for 2M/20M/200M budgets
+   - Implement parameter counting helper
+4. Get approval before each TDD phase (RED → GREEN)
 
 ## Data Versions
 - **Raw manifest**: 1 entry
   - SPY.OHLCV.daily: data/raw/SPY.parquet (md5: 805e73ad..., 2025-12-08)
-- **Processed manifest**: 2 entries (duplicates from testing)
-  - SPY.features.a20 v1 tier=a20: data/processed/v1/SPY_features_a20.parquet (md5: 51d70d5a..., 2025-12-09)
+- **Processed manifest**: 2 entries
+  - SPY.features.a20 v1 tier=a20: data/processed/v1/SPY_features_a20.parquet
 - **Pending registrations**: None
 
 ## Commands to Run First
@@ -109,12 +102,11 @@ Contains Task1_ConfigSystem_Plan entity with planning observations.
 # Verify environment
 source venv/bin/activate
 make test
-make verify
 git status
 ```
 
 ## Session Statistics
-- Duration: ~45 minutes
-- Main achievements: Config architecture design + Task 1 complete
-- Tests added: 5 (17 → 22 total)
-- Ready for: Phase 4 Task 2 (Dataset Class)
+- Duration: ~20 minutes
+- Main achievements: FinancialDataset TDD implementation complete
+- Tests added: 8 (26 → 34 total)
+- Ready for: Phase 4 Task 3 (Model Configs)
