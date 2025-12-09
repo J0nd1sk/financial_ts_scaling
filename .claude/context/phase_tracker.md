@@ -42,7 +42,7 @@
 1. ✅ Config System (src/config/experiment.py) - 2025-12-08
 2. ✅ Dataset Class (src/data/dataset.py) - 2025-12-08
 3. 🔄 PatchTST Model & Configs (REVISED 2025-12-08: implement from scratch, not HuggingFace)
-   - 3a. ⏸️ PatchTST Backbone (src/models/patchtst.py)
+   - 3a. ✅ PatchTST Backbone (src/models/patchtst.py) - 2025-12-09
    - 3b. ⏸️ Parameter Budget Configs (configs/model/patchtst_*.yaml)
    - 3c. ⏸️ Integration Tests
 4. ⏸️ Thermal Callback (src/training/thermal.py)
