@@ -1,0 +1,24 @@
+# PatchTST Configuration - 200M Parameter Budget
+# Target: 150M - 250M parameters
+# Actual: ~202M parameters
+
+# Input dimensions (fixed for tier a20 dataset)
+num_features: 20
+context_length: 60
+
+# Patching parameters
+patch_length: 10
+stride: 10
+
+# Model architecture
+d_model: 1024
+n_heads: 16
+n_layers: 16
+d_ff: 4096
+
+# Regularization
+dropout: 0.1
+head_dropout: 0.0
+
+# Output
+num_classes: 1
