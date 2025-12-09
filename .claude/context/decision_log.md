@@ -70,6 +70,24 @@
 
 **Implications**: All manifest registrations must follow this convention; scripts should validate format on registration.
 
+## 2025-12-08 Phase 3 Pipeline Design Complete
+
+**Context**: Review of phase tracker vs actual implementation revealed Phase 3 is complete but not marked.
+
+**Evidence**:
+- Feature engineering implemented: tier_a20.py with 20 TA-Lib indicators (DEMA, SMA, RSI, MACD, Bollinger Bands, etc.)
+- Build script: build_features_a20.py with automatic manifest registration
+- Tests: 17/17 passing, including feature calculation tests
+- Training infrastructure: Config schema, target construction rules, and tracking decisions documented in project_phase_plans.md
+
+**Deliverables**:
+- `src/features/tier_a20.py` - 20 feature calculations
+- `scripts/build_features_a20.py` - Build script with manifest integration
+- `tests/features/test_indicators.py` - Feature tests
+- Training infrastructure decisions in project_phase_plans.md
+
+**Next Phase**: Phase 4 (Boilerplate) - Implement training infrastructure (PatchTST configs, train.py, config loader, dataset, batch size discovery, W&B/MLflow integration)
+
 ## 2025-12-08 Testing & Manifest Automation Lessons
 
 **Context**: Phase 2 implementation had three critical issues identified by code review:
@@ -92,3 +110,63 @@
 - All future data-fetching code must include mocking strategy in test plan
 - Download scripts must integrate manifest registration before merge
 - CI/CD must run offline without external API dependencies
+
+## 2025-12-08 Phase 4 Boilerplate Planning Approved
+
+**Context**: Phase 3 complete, ready to implement training infrastructure. Needed structured plan for complex multi-component implementation.
+
+**Decision**: Adopt Option A (Sequential TDD) with 7 independent sub-tasks, each with its own approval gate.
+
+**Sub-Tasks Defined**:
+1. Config System - YAML loader with dataclass validation
+2. Dataset Class - PyTorch Dataset with binary threshold target generation
+3. Model Configs - PatchTST JSON configs for 2M/20M/200M params
+4. Thermal Callback - Temperature monitoring with powermetrics
+5. Tracking Integration - W&B + MLflow dual logging
+6. Training Script - Main training loop integrating all components
+7. Batch Size Discovery - Automated batch size finding per budget
+
+**Rationale**:
+- ~1,400 lines across 20 files requires decomposition
+- Sequential TDD ensures each component is solid before integration
+- Individual approval gates prevent scope creep
+- Parallel execution possible for Tasks 1, 3, 4, 5 (no dependencies)
+
+**Alternatives Considered**:
+- Option B (Grouped Implementation) - Faster but higher risk, 3 approval gates
+- Option C (Single Task with Checkpoints) - Most efficient but less granular control
+
+**Key Design Decisions**:
+- Target construction: `future_max = max(close[t+1:t+horizon])`, label = 1 if exceeds threshold
+- Config format: Plain YAML with dataclass validation (no OmegaConf)
+- Thermal thresholds: warn ≥85°C, stop ≥95°C
+- Tracking: Both W&B (dashboards) and MLflow (local artifacts)
+
+**Implications**:
+- Each sub-task follows full TDD cycle (RED → GREEN → REFACTOR)
+- Plan documented in docs/phase4_boilerplate_plan.md
+- Estimated 17-25 hours total implementation time
+- Must build processed features before training (run build_features_a20.py)
+
+## 2025-12-08 Phase 4 Plan Review Improvements (v1.1)
+
+**Context**: GPT5-Codex reviewed `docs/phase4_boilerplate_plan.md` and identified 7 gaps related to reproducibility, testing, and experimental protocol compliance.
+
+**Decision**: Accept all 7 review recommendations and update plan document.
+
+**Changes Made**:
+1. **Config format standardization**: Changed model configs from JSON to YAML to avoid dual schema/loaders
+2. **Reproducibility section added**: Seed handling (config field, torch seeds, dataloader generator), determinism notes for MPS
+3. **Dataset edge case tests added**: NaN handling, short sequence rejection, warmup exclusion tests
+4. **Parameter counting helper**: Added `src/models/utils.py` with `count_parameters()` for budget verification
+5. **Manifest verification**: Training script pre-flight check validates manifest entries and MD5 before training
+6. **Testing environment assumptions**: Clarified W&B disabled mode, MLflow file:// backend, powermetrics mocking
+7. **Data version logging**: Training logs MD5 hash to trackers for reproducibility audit trail
+
+**Rationale**: Strengthens experimental protocol compliance, ensures reproducibility for scaling law research, and prevents CI failures from credential/platform dependencies.
+
+**Implications**:
+- Model config files now `.yaml` instead of `.json`
+- All Task 2-6 test counts increased
+- Training script has additional pre-flight verification step
+- Tests run fully offline without external service dependencies

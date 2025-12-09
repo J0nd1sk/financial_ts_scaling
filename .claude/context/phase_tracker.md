@@ -25,9 +25,27 @@
 - SPY.OHLCV.daily downloaded (8,272 rows, 1993-2025): ✅ 2025-12-08
 - Manifest registered with MD5: ✅ 2025-12-08
 
-## Phase 3: Pipeline Design ⏸️ NOT STARTED
+## Phase 3: Pipeline Design ✅ COMPLETE (2025-12-08)
+- Feature engineering implemented: ✅ 2025-12-08 (tier_a20.py with 20 indicators)
+- Build script created: ✅ 2025-12-08 (build_features_a20.py)
+- Manifest registration integrated: ✅ 2025-12-08
+- Training infrastructure decisions: ✅ 2025-12-08 (documented in project_phase_plans.md)
+- Config schema defined: ✅ 2025-12-08 (YAML format, target construction rules)
+- All tests passing: ✅ 2025-12-08 (17/17 tests)
 
-## Phase 4: Boilerplate ⏸️ NOT STARTED
+## Phase 4: Boilerplate 🔄 IN PROGRESS (Planning Complete)
+- Planning session: ✅ 2025-12-08 (Option A: Sequential TDD approved)
+- Plan documented: ✅ 2025-12-08 (docs/phase4_boilerplate_plan.md)
+- Execution strategy: 7 sub-tasks with individual approval gates
+
+### Sub-Tasks
+1. ⏸️ Config System (src/config/training.py)
+2. ⏸️ Dataset Class (src/data/dataset.py)
+3. ⏸️ Model Configs (configs/model/patchtst_*.json)
+4. ⏸️ Thermal Callback (src/training/thermal.py)
+5. ⏸️ Tracking Integration (src/training/tracking.py)
+6. ⏸️ Training Script (scripts/train.py)
+7. ⏸️ Batch Size Discovery (scripts/find_batch_size.py)
 
 ## Phase 5: Data Acquisition ⏸️ NOT STARTED
 
