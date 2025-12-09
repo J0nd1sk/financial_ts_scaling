@@ -1,92 +1,80 @@
-# Session Handoff - 2025-12-09 ~11:00
+# Session Handoff - 2025-12-09 ~11:30
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: b3e680f "feat: implement parameter budget configs (Phase 4 Task 3b)"
+- Last commit: 2ee7faa "test: add PatchTST integration tests (Phase 4 Task 3c)"
 - Uncommitted: 1 file (phase_tracker.md updated)
-- Ahead of origin by: 6 commits (not pushed)
+- Ahead of origin by: 8 commits (not pushed)
 
 ### Task Status
-- Working on: Phase 4 Task 3c: Integration Tests
-- Status: Ready to begin (Task 3b just completed)
+- Working on: Phase 4 Task 4: Thermal Callback
+- Status: Ready to begin (Task 3c just completed)
 
 ## Test Status
-- Last `make test`: 2025-12-09 — PASS (45/45 tests, ~1s)
+- Last `make test`: 2025-12-09 — PASS (48/48 tests, ~4s)
 - Last `make verify`: PASS
 - Failing: none
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. **Phase 4 Task 3b: Parameter Budget Configs (TDD complete)**
-   - Created `src/models/utils.py` with `count_parameters()` helper
-   - Created `src/models/configs.py` with `load_patchtst_config()` function
-   - Created `configs/model/patchtst_2m.yaml` (~1.82M params)
-   - Created `configs/model/patchtst_20m.yaml` (~19M params)
-   - Created `configs/model/patchtst_200m.yaml` (~202M params)
-   - Created `tests/test_parameter_budget.py` (5 tests)
-   - Updated `src/models/__init__.py` exports
-   - All tests passing (45 total)
+2. **Phase 4 Task 3c: Integration Tests (TDD complete)**
+   - Created `tests/test_patchtst_integration.py` with 3 tests:
+     - `test_patchtst_with_real_feature_dimensions`: verifies model works with actual 20-feature tier a20 data
+     - `test_patchtst_backward_pass_on_mps`: verifies gradient flow on Apple Silicon MPS
+     - `test_patchtst_batch_inference`: verifies DataLoader batching end-to-end
+   - All tests passing (48 total)
 
 ## In Progress
-- None - Task 3b complete, Task 3c ready to start
+- None - Task 3c complete, Task 4 ready to start
 
 ## Pending
-1. **Phase 4 Task 3c: Integration Tests** (NEXT)
-   - `test_patchtst_with_real_feature_dimensions`
-   - `test_patchtst_backward_pass_on_mps`
-   - `test_patchtst_batch_inference`
-2. **Phase 4 Task 4: Thermal Callback** (src/training/thermal.py)
-3. **Phase 4 Task 5: Tracking Integration** (src/training/tracking.py)
-4. **Phase 4 Task 6: Training Script** (scripts/train.py)
-5. **Phase 4 Task 7: Batch Size Discovery** (scripts/find_batch_size.py)
+1. **Phase 4 Task 4: Thermal Callback** (NEXT)
+   - `src/training/thermal.py`
+   - Monitor M4 MacBook Pro temperature during training
+   - Pause/resume based on thermal thresholds
+2. **Phase 4 Task 5: Tracking Integration** (src/training/tracking.py)
+3. **Phase 4 Task 6: Training Script** (scripts/train.py)
+4. **Phase 4 Task 7: Batch Size Discovery** (scripts/find_batch_size.py)
 
 ## Files Modified This Session
-- `src/models/utils.py`: NEW - count_parameters() utility
-- `src/models/configs.py`: NEW - load_patchtst_config() function
-- `configs/model/patchtst_2m.yaml`: NEW - 2M param config
-- `configs/model/patchtst_20m.yaml`: NEW - 20M param config
-- `configs/model/patchtst_200m.yaml`: NEW - 200M param config
-- `tests/test_parameter_budget.py`: NEW - 5 budget validation tests
-- `src/models/__init__.py`: Updated exports
-- `.claude/context/phase_tracker.md`: Updated Task 3b status
+- `tests/test_patchtst_integration.py`: NEW - 3 integration tests
+- `.claude/context/phase_tracker.md`: Updated Task 3c status
 
 ## Key Decisions Made
-- **Parameter budget configs calculated empirically**: Used Python script to find configs that hit target budgets within ±25% tolerance
-- **Config loading via YAML**: Created `load_patchtst_config()` that reads YAML files and returns PatchTSTConfig dataclass
+- **Integration tests verify real data compatibility**: Tests use actual SPY.features.a20 parquet file, not synthetic data
+- **MPS test skippable**: Uses `@pytest.mark.skipif` for CI compatibility on non-MPS systems
 
 ## Context for Next Session
 
-### Parameter Budget Summary
-| Budget | d_model | n_heads | n_layers | d_ff | Actual Params |
-|--------|---------|---------|----------|------|---------------|
-| 2M     | 192     | 6       | 4        | 768  | 1,822,657     |
-| 20M    | 512     | 8       | 6        | 2048 | 19,029,505    |
-| 200M   | 1024    | 16      | 16       | 4096 | 201,769,985   |
-
 ### What's Ready
 - ✅ PatchTST model fully implemented and tested (src/models/patchtst.py)
-- ✅ Parameter configs for all three budget tiers
-- ✅ count_parameters() and load_patchtst_config() utilities
-- ✅ 45 tests passing
+- ✅ Parameter configs for all three budget tiers (2M, 20M, 200M)
+- ✅ Integration tests verifying real data, MPS, and batch inference
+- ✅ 48 tests passing
 - ✅ SPY data (raw + processed features)
 - ✅ ExperimentConfig + FinancialDataset classes
 
-### Task 3c Integration Tests Should Cover
-1. Real feature dimensions (20 features from tier a20)
-2. MPS backward pass (gradient flow on Apple Silicon)
-3. Batch inference (multiple samples)
+### Task 4 Thermal Callback Should Implement
+1. Temperature monitoring via `powermetrics` or similar
+2. Thermal thresholds from CLAUDE.md:
+   - <70°C: Normal operation
+   - 70-85°C: Acceptable, monitor
+   - 85-95°C: Warning, consider pause
+   - >95°C: CRITICAL STOP
+3. PyTorch callback interface for training loop integration
+4. Graceful pause/resume mechanism
 
 ## Next Session Should
 1. **Session restore** to load context
-2. **Begin Phase 4 Task 3c** (TDD):
-   - Write failing integration tests
-   - Verify PatchTST works with real data dimensions
-   - Test MPS compatibility
+2. **Begin Phase 4 Task 4** (TDD):
+   - Plan thermal monitoring approach
+   - Write failing tests for thermal callback
+   - Implement thermal monitoring
 3. Run `make test` to verify
 4. Commit changes
-5. Continue to Task 4 (Thermal Callback) if time permits
+5. Continue to Task 5 (Tracking Integration) if time permits
 
 ## Data Versions
 - **Raw manifest**: 1 entry
@@ -106,7 +94,7 @@ git status
 ```
 
 ## Session Statistics
-- Duration: ~20 minutes
-- Main achievement: Parameter Budget Configs (Task 3b complete)
-- Tests: 40 → 45 (+5 new)
-- Ready for: Phase 4 Task 3c (Integration Tests)
+- Duration: ~15 minutes
+- Main achievement: Integration Tests (Task 3c complete)
+- Tests: 45 → 48 (+3 new)
+- Ready for: Phase 4 Task 4 (Thermal Callback)
