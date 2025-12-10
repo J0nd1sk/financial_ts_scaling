@@ -1,113 +1,91 @@
-# Session Handoff - 2025-12-09 ~18:00
+# Session Handoff - 2025-12-09 ~20:30
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: (pending) feat: add download_ticker with retry logic (Phase 5 Task 1)
-- Uncommitted: None after this commit
-- Pushed to origin: Yes (after this push)
+- Last commit: (pending - this session's work)
+- Uncommitted: None after commit
+- Pushed to origin: Pending
 
 ### Task Status
-- Working on: Phase 5 Data Acquisition
-- Status: **Task 1 COMPLETE**, ready for Task 2
+- Working on: **Phase 6 Experimental Design Documentation**
+- Status: **COMPLETE** - Ready for Phase 5 continuation
 
 ## Test Status
-- Last `make test`: 2025-12-09 — PASS (93/93 tests, ~11s)
+- Last `make test`: 2025-12-09 — PASS (94/94 tests)
 - Last `make verify`: PASS
 - Failing: none
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. Planning session for Phase 5 Task 1
-3. **Phase 5 Task 1 COMPLETE**: Generalize OHLCV download script
-   - Added `download_ticker(ticker, output_dir)` function
-   - Added `_download_with_retry()` with exponential backoff + jitter
-   - 5 new mocked tests (no live API calls)
-   - TDD cycle: RED → GREEN in one pass
+2. Corrected experimental design based on user clarification
+3. Created 2B parameter PatchTST config (~2.04B params)
+4. Updated `src/models/configs.py` to support 2B budget
+5. Added 2B parameter budget test (now 94 tests)
+6. Updated `docs/project_phase_plans.md` with comprehensive Phase 4-6D documentation
+7. Updated `phase_tracker.md` with new phase structure
+8. Stored experimental design in Memory MCP (6 entities, 7 relations)
 
-## In Progress
-- None
+## Key Decisions Made
+1. **4 parameter budgets**: 2M, 20M, 200M, 2B (extended from 3)
+2. **4 tasks only**: threshold 1%, 2%, 3%, 5% (dropped direction task)
+3. **5 horizons**: 1-day, 2-day, 3-day, 5-day, weekly
+4. **4 feature tiers**: 20, 100, 250, 500+
+5. **HPO for parameter + feature scaling**: 64 HPO runs total
+6. **384 total experiments** across Phases 6A-6C (~2-3 months runtime)
+7. **Phase 6D gated**: Data scaling only after 6A-6C results
 
-## Pending (Phase 5 remaining tasks)
-1. **Task 2**: Download DIA and QQQ data (run script live)
-2. **Task 3**: Download VIX data (minor script mods for ^VIX)
-3. **Task 4**: Generalize feature engineering pipeline
-4. **Task 5**: Build DIA/QQQ features
-5. **Task 6**: VIX feature engineering (tier c)
-6. **Task 7**: Combined dataset builder
-7. **Task 8**: Multi-asset builder (optional, gated)
+## Experimental Design Summary
+
+| Phase | Description | Runs |
+|-------|-------------|------|
+| 6A | Parameter scaling (2M→2B), 1-day, 20 features | 32 |
+| 6B | Horizon scaling (2d, 3d, 5d, weekly) | 64 |
+| 6C | Feature × Horizon (100, 250, 500 features) | 288 |
+| 6D | Data scaling (gated) | TBD |
+| **Total** | | **384** |
 
 ## Files Modified This Session
-- `scripts/download_ohlcv.py`: +80 lines (download_ticker, retry logic)
-- `tests/test_data_download.py`: +75 lines (5 mocked tests)
-- `docs/phase5_data_acquisition_plan.md`: New file (Phase 5 plan v1.2)
-- `docs/project_phase_plans.md`: Cleanup of formatting errors (user change)
+- `configs/model/patchtst_2b.yaml` (new) - 2B param config
+- `src/models/configs.py` - add 2b support
+- `tests/test_parameter_budget.py` - add 2B test
+- `docs/project_phase_plans.md` - add Phases 4, 5, 5.5, 6A-D (~350 lines)
+- `.claude/context/phase_tracker.md` - new phase structure
+- `.claude/context/session_context.md` - this handoff
 
-## Key Decisions
-- **Mock strategy**: All new tests use `@patch('scripts.download_ohlcv.yf.Ticker')`
-- **Retry logic**: 3 retries with 1s/2s/4s base + 0-50% jitter
-- **Manifest naming**: `{TICKER}.OHLCV.daily` pattern
-
-## Context for Next Session
-
-### What's Ready
-- Phase 4 COMPLETE - Full training infrastructure
-- Phase 5 Task 1 COMPLETE - Generalized download script
-- 93 tests passing
-- SPY data (raw + processed features) ready
-- Phase 5 plan approved and committed
-
-### New Capabilities
-```python
-from scripts.download_ohlcv import download_ticker
-
-# Download any ticker with automatic retry
-download_ticker("DIA", "data/raw")  # Creates DIA.parquet, registers DIA.OHLCV.daily
-download_ticker("QQQ", "data/raw")  # Creates QQQ.parquet, registers QQQ.OHLCV.daily
-```
-
-### Phase 5 Progress
-- [x] Task 1: Generalize download script
-- [ ] Task 2: Download DIA + QQQ
-- [ ] Task 3: Download VIX
-- [ ] Task 4: Generalize feature pipeline
-- [ ] Task 5: Build DIA/QQQ features
-- [ ] Task 6: VIX feature engineering
-- [ ] Task 7: Combined dataset builder
-- [ ] Task 8: Multi-asset builder (optional)
+## Memory MCP Entities Created
+- Phase6_Experimental_Design
+- Phase6A_Parameter_Scaling
+- Phase6B_Horizon_Scaling
+- Phase6C_Feature_Horizon_Scaling
+- Phase6D_Data_Scaling
+- Scaling_Tasks_Definition
 
 ## Next Session Should
-1. **Session restore** to load context
-2. **Task 2**: Run download script for DIA and QQQ (live API)
-3. **Task 3**: Add VIX support (^VIX ticker handling)
-4. Continue through Phase 5 tasks sequentially
+1. Continue **Phase 5 Task 2**: Download DIA + QQQ
+2. Or start **Phase 5.5**: Experiment setup infrastructure
+3. Run batch size discovery for 2B config when ready
 
 ## Data Versions
-- **Raw manifest**: 1 entry
-  - SPY.OHLCV.daily: data/raw/SPY.parquet (md5: 805e73ad...)
-- **Processed manifest**: 2 entries
-  - SPY.features.a20 v1 tier=a20 (md5: 51d70d5a...)
-  - SPY.dataset.a20 v1 tier=a20 (md5: 6b1309a5...)
-- **Pending registrations**: DIA and QQQ after Task 2
+- **Raw manifest**: 1 entry (SPY.OHLCV.daily)
+- **Processed manifest**: 2 entries (SPY.features.a20, SPY.dataset.a20)
+- **Pending**: DIA, QQQ, VIX after Phase 5 Tasks 2-3
+
+## Phase Status Summary
+- Phase 0-3: COMPLETE
+- Phase 4: COMPLETE (94/94 tests, 4 param budgets)
+- Phase 5: IN PROGRESS (Task 1/8 done)
+- Phase 5.5: PROPOSED (experiment setup)
+- Phase 6A: NOT STARTED (32 runs planned)
+- Phase 6B: NOT STARTED (64 runs planned)
+- Phase 6C: NOT STARTED (288 runs planned)
+- Phase 6D: GATED (after 6A-6C)
 
 ## Commands to Run First
 ```bash
-# Verify environment
 source venv/bin/activate
 make test
 make verify
-
-# Task 2: Download new tickers
-python -c "from scripts.download_ohlcv import download_ticker; download_ticker('DIA', 'data/raw')"
-python -c "from scripts.download_ohlcv import download_ticker; download_ticker('QQQ', 'data/raw')"
+git status
 ```
-
-## Session Statistics
-- Duration: ~45 minutes
-- Main achievement: Phase 5 Task 1 complete (TDD)
-- Tests: 88 → 93 (+5 new mocked tests)
-- Lines added: ~155 (implementation + tests)
-
-## Memory MCP Entries
-- "Phase 5 Task 1 Plan" - planning decision with outcome recorded

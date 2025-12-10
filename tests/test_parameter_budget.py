@@ -90,3 +90,18 @@ class TestParameterBudget200M:
         assert 150_000_000 <= param_count <= 250_000_000, (
             f"200M config has {param_count:,} params, expected 150M-250M"
         )
+
+
+class TestParameterBudget2B:
+    """Test 2B parameter budget configuration."""
+
+    def test_2b_config_within_budget(self):
+        """2B config should have 1.5B <= params <= 2.5B."""
+        from src.models.configs import load_patchtst_config
+
+        config = load_patchtst_config("2b")
+        model = PatchTST(config)
+        param_count = count_parameters(model)
+        assert 1_500_000_000 <= param_count <= 2_500_000_000, (
+            f"2B config has {param_count:,} params, expected 1.5B-2.5B"
+        )

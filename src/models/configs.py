@@ -13,7 +13,7 @@ def load_patchtst_config(budget: str) -> PatchTSTConfig:
     """Load a PatchTST configuration for a given parameter budget.
 
     Args:
-        budget: Parameter budget identifier ("2m", "20m", or "200m").
+        budget: Parameter budget identifier ("2m", "20m", "200m", or "2b").
 
     Returns:
         PatchTSTConfig dataclass with the configuration.
@@ -22,7 +22,7 @@ def load_patchtst_config(budget: str) -> PatchTSTConfig:
         ValueError: If budget is not recognized.
         FileNotFoundError: If config file doesn't exist.
     """
-    valid_budgets = ("2m", "20m", "200m")
+    valid_budgets = ("2m", "20m", "200m", "2b")
     if budget.lower() not in valid_budgets:
         raise ValueError(f"Budget must be one of {valid_budgets}, got '{budget}'")
 

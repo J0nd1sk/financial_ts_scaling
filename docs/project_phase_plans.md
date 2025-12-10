@@ -1898,9 +1898,336 @@ git commit -m "feat: add SPY data download pipeline with tests"
 
 ---
 
-# Phase 3: Pipeline Design
+# Phase 3: Pipeline Design ✅ COMPLETE
 
-[To be planned after Phase 2 completion]
+**Status:** Complete (2025-12-08)
+
+Deliverables:
+- Feature engineering: `src/features/tier_a20.py` with 20 indicators
+- Build script: `scripts/build_features_a20.py`
+- Manifest integration for processed data versioning
+- Training infrastructure decisions documented below
+
+---
+
+# Phase 4: Training Boilerplate ✅ COMPLETE
+
+**Status:** Complete (2025-12-09)
+**Tests:** 88 → 94 tests passing
+
+## 4.1 Deliverables Completed
+
+| Component | Files | Tests |
+|-----------|-------|-------|
+| Config System | `src/config/experiment.py` | 5 |
+| Dataset Class | `src/data/dataset.py` | 8 |
+| PatchTST Model | `src/models/patchtst.py` | 6 |
+| Parameter Configs | `configs/model/patchtst_{2m,20m,200m,2b}.yaml` | 4 |
+| Thermal Callback | `src/training/thermal.py` | 10 |
+| Tracking Integration | `src/training/tracking.py` | 9 |
+| Training Script | `scripts/train.py`, `src/training/trainer.py` | 7 |
+| Batch Size Discovery | `scripts/find_batch_size.py` | 10 |
+
+## 4.2 Parameter Budgets
+
+| Budget | d_model | n_heads | n_layers | d_ff | Actual Params |
+|--------|---------|---------|----------|------|---------------|
+| 2M | 192 | 6 | 4 | 768 | ~1.82M |
+| 20M | 512 | 8 | 6 | 2048 | ~19M |
+| 200M | 1024 | 16 | 16 | 4096 | ~202M |
+| 2B | 2304 | 24 | 32 | 9216 | ~2.04B |
+
+---
+
+# Phase 5: Data Acquisition 🔄 IN PROGRESS
+
+**Status:** Task 1/8 complete (2025-12-09)
+**Plan:** See `docs/phase5_data_acquisition_plan.md`
+
+## 5.1 Tasks
+
+1. ✅ Generalize download script (`download_ticker` with retry logic)
+2. ⏸️ Download DIA + QQQ
+3. ⏸️ Download VIX
+4. ⏸️ Generalize feature pipeline
+5. ⏸️ Build DIA/QQQ features (tier a20)
+6. ⏸️ VIX feature engineering (tier c)
+7. ⏸️ Combined dataset builder
+8. ⏸️ Multi-asset builder (optional)
+
+---
+
+# Phase 5.5: Experiment Setup ⏸️ PROPOSED
+
+**Objective:** Prepare infrastructure for systematic scaling experiments
+
+## 5.5.1 Scope
+
+| Task | Purpose | Files | Est. Lines |
+|------|---------|-------|------------|
+| 5.5.1 | Config templates for 4 threshold tasks | `configs/experiments/*.yaml` | +100 |
+| 5.5.2 | HPO infrastructure | `scripts/run_hpo.py` | +150 |
+| 5.5.3 | Timescale resampling | `scripts/resample_timescales.py` | +100 |
+| 5.5.4 | Horizon config variants | `configs/experiments/{2d,3d,5d,weekly}/*.yaml` | +80 |
+| 5.5.5 | Scaling curve analysis | `src/analysis/scaling_curves.py` | +150 |
+| 5.5.6 | Result aggregation | `src/analysis/aggregate_results.py` | +100 |
+
+## 5.5.2 Task Definitions
+
+All experiments use threshold prediction tasks:
+
+| Task | Target Definition | Output |
+|------|-------------------|--------|
+| threshold_1pct | P(max_price[t+h] > close[t] × 1.01) | sigmoid |
+| threshold_2pct | P(max_price[t+h] > close[t] × 1.02) | sigmoid |
+| threshold_3pct | P(max_price[t+h] > close[t] × 1.03) | sigmoid |
+| threshold_5pct | P(max_price[t+h] > close[t] × 1.05) | sigmoid |
+
+Where `h` = horizon in trading days (1, 2, 3, 5, or weekly ~5 days).
+
+## 5.5.3 Success Criteria
+
+- [ ] All 4 task configs exist and load successfully
+- [ ] HPO script integrates with Optuna + W&B/MLflow
+- [ ] Timescale resampling produces valid weekly data
+- [ ] Analysis scripts generate scaling curves from mock data
+- [ ] All tests pass: `make test`
+
+---
+
+# Phase 6: Scaling Experiments
+
+**Research Question:** Do neural scaling laws apply to transformer models trained on financial time-series data?
+
+## 6.0 Experimental Design Overview
+
+### Constants (All Experiments)
+- **Tasks:** 4 (threshold 1%, 2%, 3%, 5%)
+- **Parameter budgets:** 4 (2M, 20M, 200M, 2B)
+- **Data:** SPY baseline (data scaling deferred to 6D)
+
+### Scaling Dimensions
+1. **Parameters:** 2M → 20M → 200M → 2B
+2. **Horizons:** 1-day → 2-day → 3-day → 5-day → weekly
+3. **Features:** 20 → 100 → 250 → 500+
+4. **Data:** SPY → multi-asset → cross-domain (Phase 6D)
+
+### Experiment Totals
+
+| Phase | HPO Runs | Final Runs | Total |
+|-------|----------|------------|-------|
+| 6A: Parameter Scaling | 16 | 16 | 32 |
+| 6B: Horizon Scaling | 0 | 64 | 64 |
+| 6C: Feature × Horizon | 48 | 240 | 288 |
+| **Total (6A-6C)** | **64** | **320** | **384** |
+
+### Runtime Estimate
+
+| Model | Avg Time | Count | Hours |
+|-------|----------|-------|-------|
+| 2M | ~30 min | 96 | 48 |
+| 20M | ~1.5 hr | 96 | 144 |
+| 200M | ~4 hr | 96 | 384 |
+| 2B | ~12 hr | 96 | 1,152 |
+| **Total** | | **384** | **~1,728 hrs** |
+
+Realistic timeline: **2-3 months** with thermal constraints and scheduling.
+
+---
+
+# Phase 6A: Parameter Scaling Baseline
+
+**Objective:** Establish whether error follows power law with model parameters
+
+## 6A.1 Experimental Matrix
+
+**Hold Constant:**
+- Features: 20 (tier a20)
+- Horizon: 1-day
+- Data: SPY only
+
+**Vary:** Parameter budget (2M, 20M, 200M, 2B)
+
+### Experiment IDs
+
+| ID | Params | Task | Type | Purpose |
+|----|--------|------|------|---------|
+| 6A-HPO-2M-T1 | 2M | 1% | HPO | Find optimal hyperparams |
+| 6A-HPO-2M-T2 | 2M | 2% | HPO | Find optimal hyperparams |
+| 6A-HPO-2M-T3 | 2M | 3% | HPO | Find optimal hyperparams |
+| 6A-HPO-2M-T5 | 2M | 5% | HPO | Find optimal hyperparams |
+| 6A-HPO-20M-T1 | 20M | 1% | HPO | Find optimal hyperparams |
+| 6A-HPO-20M-T2 | 20M | 2% | HPO | Find optimal hyperparams |
+| 6A-HPO-20M-T3 | 20M | 3% | HPO | Find optimal hyperparams |
+| 6A-HPO-20M-T5 | 20M | 5% | HPO | Find optimal hyperparams |
+| 6A-HPO-200M-T1 | 200M | 1% | HPO | Find optimal hyperparams |
+| 6A-HPO-200M-T2 | 200M | 2% | HPO | Find optimal hyperparams |
+| 6A-HPO-200M-T3 | 200M | 3% | HPO | Find optimal hyperparams |
+| 6A-HPO-200M-T5 | 200M | 5% | HPO | Find optimal hyperparams |
+| 6A-HPO-2B-T1 | 2B | 1% | HPO | Find optimal hyperparams |
+| 6A-HPO-2B-T2 | 2B | 2% | HPO | Find optimal hyperparams |
+| 6A-HPO-2B-T3 | 2B | 3% | HPO | Find optimal hyperparams |
+| 6A-HPO-2B-T5 | 2B | 5% | HPO | Find optimal hyperparams |
+| 6A-2M-T1 | 2M | 1% | Final | Baseline evaluation |
+| 6A-2M-T2 | 2M | 2% | Final | Baseline evaluation |
+| 6A-2M-T3 | 2M | 3% | Final | Baseline evaluation |
+| 6A-2M-T5 | 2M | 5% | Final | Baseline evaluation |
+| 6A-20M-T1 | 20M | 1% | Final | Mid-scale evaluation |
+| 6A-20M-T2 | 20M | 2% | Final | Mid-scale evaluation |
+| 6A-20M-T3 | 20M | 3% | Final | Mid-scale evaluation |
+| 6A-20M-T5 | 20M | 5% | Final | Mid-scale evaluation |
+| 6A-200M-T1 | 200M | 1% | Final | High-scale evaluation |
+| 6A-200M-T2 | 200M | 2% | Final | High-scale evaluation |
+| 6A-200M-T3 | 200M | 3% | Final | High-scale evaluation |
+| 6A-200M-T5 | 200M | 5% | Final | High-scale evaluation |
+| 6A-2B-T1 | 2B | 1% | Final | Max-scale evaluation |
+| 6A-2B-T2 | 2B | 2% | Final | Max-scale evaluation |
+| 6A-2B-T3 | 2B | 3% | Final | Max-scale evaluation |
+| 6A-2B-T5 | 2B | 5% | Final | Max-scale evaluation |
+
+**Total: 32 runs (16 HPO + 16 final)**
+
+## 6A.2 Analysis Outputs
+
+1. **Parameter Scaling Curve:** Plot log(error) vs log(params) for each task
+2. **Power Law Fit:** error ∝ N^(-α), report α and R² per task
+3. **Task Difficulty Comparison:** Which thresholds benefit most from scaling?
+
+## 6A.3 Success Criteria
+
+- [ ] All 32 experiments complete with logged results
+- [ ] Parameter scaling curves plotted for all 4 tasks
+- [ ] Power law exponent (α) computed with confidence intervals
+- [ ] Draft finding: "Scaling [does/does not] improve financial prediction"
+
+## 6A.4 Minimum Publishable Result
+
+After Phase 6A completion:
+> "Empirical Test of Transformer Scaling Laws on Financial Time Series"
+
+---
+
+# Phase 6B: Horizon Scaling
+
+**Objective:** Test whether scaling effectiveness varies with prediction horizon
+
+## 6B.1 Experimental Matrix
+
+**Hold Constant:**
+- Features: 20 (tier a20)
+- Data: SPY only
+
+**Vary:**
+- Parameter budget (2M, 20M, 200M, 2B)
+- Horizon (2-day, 3-day, 5-day, weekly)
+
+**Note:** Reuse HPO results from Phase 6A (same param budgets)
+
+### Experiment Count
+
+4 new horizons × 4 params × 4 tasks = **64 runs**
+
+### Experiment ID Pattern
+
+`6B-{PARAMS}-H{HORIZON}-T{THRESHOLD}`
+
+Examples:
+- `6B-2M-H2-T1`: 2M params, 2-day horizon, 1% threshold
+- `6B-200M-H5-T3`: 200M params, 5-day horizon, 3% threshold
+- `6B-2B-HW-T5`: 2B params, weekly horizon, 5% threshold
+
+## 6B.2 Analysis Outputs
+
+1. **Horizon × Parameter Heatmap:** Error rates across horizons and param budgets
+2. **Scaling Curve by Horizon:** Does α vary with prediction horizon?
+3. **Optimal Horizon Identification:** Which horizon benefits most from scaling?
+
+## 6B.3 Success Criteria
+
+- [ ] All 64 experiments complete
+- [ ] Scaling curves computed for each horizon
+- [ ] Horizon effect quantified with statistical significance
+
+---
+
+# Phase 6C: Feature × Horizon Scaling
+
+**Objective:** Test feature scaling across all horizon combinations
+
+## 6C.1 Experimental Matrix
+
+**Hold Constant:**
+- Data: SPY only
+
+**Vary:**
+- Features: 100, 250, 500+ (3 new tiers)
+- Horizons: all 5 (1d, 2d, 3d, 5d, weekly)
+- Parameters: all 4 (2M, 20M, 200M, 2B)
+
+### Experiment Count
+
+**HPO runs:** 3 tiers × 4 params × 4 tasks = 48 (at 1-day horizon)
+**Final runs:** 3 tiers × 5 horizons × 4 params × 4 tasks = 240
+
+**Total: 288 runs**
+
+### Experiment ID Pattern
+
+`6C-{PARAMS}-F{FEATURES}-H{HORIZON}-T{THRESHOLD}`
+
+Examples:
+- `6C-HPO-20M-F100-T2`: HPO for 20M, 100 features, 2% threshold
+- `6C-2B-F500-H3-T1`: 2B params, 500 features, 3-day horizon, 1% threshold
+
+## 6C.2 Feature Tiers
+
+| Tier | Features | Indicator Categories |
+|------|----------|---------------------|
+| a20 | 20 | Basic (SMA, EMA, RSI, MACD, BBands, ATR, OBV, etc.) |
+| a100 | 100 | + Extended momentum, volatility, volume |
+| a250 | 250 | + Pattern recognition, multi-timeframe |
+| a500 | 500+ | + All pandas-ta indicators |
+
+## 6C.3 Analysis Outputs
+
+1. **Feature × Parameter Surface:** 3D plot of error vs features vs params
+2. **Feature Scaling Curves:** Does more features help or hurt?
+3. **Interaction Effects:** Feature × Horizon × Parameter interactions
+4. **Optimal Configuration:** Best feature/param/horizon combination
+
+## 6C.3 Success Criteria
+
+- [ ] All 288 experiments complete
+- [ ] Feature scaling effect quantified
+- [ ] Interaction effects documented
+- [ ] Best configuration identified for Phase 6D
+
+---
+
+# Phase 6D: Data Scaling ⏸️ GATED
+
+**Gate Condition:** Proceed only after Phase 6A-6C results show scaling promise
+
+**Objective:** Test whether data diversity improves scaling
+
+## 6D.1 Scope (Preliminary)
+
+**Additional Data Sources:**
+- Row B: DIA, QQQ (ETFs)
+- Row C: AAPL, MSFT, GOOGL, AMZN, TSLA (stocks)
+- Row D: SF Fed News Sentiment
+- Row E: FRED economic indicators
+
+**Approach:**
+- Use best configuration from Phase 6C
+- Test data scaling with fixed features/params/horizon
+- Quantify data diversity effect on scaling
+
+## 6D.2 Success Criteria
+
+- [ ] Data scaling effect quantified
+- [ ] Cross-asset generalization tested
+- [ ] Publication-ready comprehensive scaling analysis
 
 ---
 

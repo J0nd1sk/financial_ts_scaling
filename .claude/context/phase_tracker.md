@@ -37,14 +37,15 @@
 - Planning session: ✅ 2025-12-08 (Option A: Sequential TDD approved)
 - Plan documented: ✅ 2025-12-08 (docs/phase4_boilerplate_plan.md)
 - Execution strategy: 7 sub-tasks with individual approval gates
-- All tests passing: ✅ 2025-12-09 (88/88 tests)
+- All tests passing: ✅ 2025-12-09 (94/94 tests)
+- 2B parameter config added: ✅ 2025-12-09
 
 ### Sub-Tasks
 1. ✅ Config System (src/config/experiment.py) - 2025-12-08
 2. ✅ Dataset Class (src/data/dataset.py) - 2025-12-08
 3. ✅ PatchTST Model & Configs (REVISED 2025-12-08: implement from scratch, not HuggingFace)
    - 3a. ✅ PatchTST Backbone (src/models/patchtst.py) - 2025-12-09
-   - 3b. ✅ Parameter Budget Configs (configs/model/patchtst_*.yaml) - 2025-12-09
+   - 3b. ✅ Parameter Budget Configs (configs/model/patchtst_{2m,20m,200m,2b}.yaml) - 2025-12-09
    - 3c. ✅ Integration Tests (tests/test_patchtst_integration.py) - 2025-12-09
 4. ✅ Thermal Callback (src/training/thermal.py) - 2025-12-09
 5. ✅ Tracking Integration (src/training/tracking.py) - 2025-12-09
@@ -62,4 +63,36 @@
 - Task 7: ⏸️ Combined dataset builder
 - Task 8: ⏸️ Multi-asset builder (optional)
 
-## Phase 6: Experiments ⏸️ NOT STARTED
+## Phase 5.5: Experiment Setup ⏸️ PROPOSED
+- Config templates for 4 threshold tasks
+- HPO infrastructure (Optuna + W&B/MLflow)
+- Timescale resampling
+- Scaling curve analysis tools
+- Result aggregation
+
+## Phase 6A: Parameter Scaling ⏸️ NOT STARTED
+- 32 runs: 16 HPO + 16 final evaluation
+- Hold: 20 features, 1-day horizon, SPY
+- Vary: 2M → 20M → 200M → 2B parameters
+- Research: Does error ∝ N^(-α)?
+
+## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
+- 64 runs (reuse 6A HPO)
+- Hold: 20 features, SPY
+- Add: 2-day, 3-day, 5-day, weekly horizons
+- Research: Does scaling vary with horizon?
+
+## Phase 6C: Feature × Horizon Scaling ⏸️ NOT STARTED
+- 288 runs: 48 HPO + 240 final
+- Hold: SPY
+- Add: 100, 250, 500 feature tiers
+- Full matrix: 3 tiers × 5 horizons × 4 params × 4 tasks
+
+## Phase 6D: Data Scaling ⏸️ GATED
+- Proceed after 6A-6C results
+- Add: DIA, QQQ, stocks, FRED
+- Research: Does data diversity improve scaling?
+
+## Experiment Totals
+- Phase 6A-6C: 384 runs
+- Estimated runtime: ~1,728 hours (~2-3 months)
