@@ -1,7 +1,7 @@
 # Phase 5: Data Acquisition - Dataset Matrix Expansion Plan
 
-**Status:** Draft - Pending Approval
-**Date:** 2025-12-09
+**Status:** In Progress
+**Date:** 2025-12-09 (Updated 2025-12-10)
 **Execution Strategy:** Sequential TDD with sub-tasks and approval gates
 
 ---
@@ -22,10 +22,25 @@ From the experimental design:
 | Row | Assets | Description |
 |-----|--------|-------------|
 | **A** | SPY only | ✅ Complete (Phase 2) |
-| **B** | +DIA, QQQ | Major ETFs - **Phase 5 Priority** |
+| **B** | +DIA, QQQ (ETFs) | Major ETFs - ✅ Complete |
+| **B'** | +^DJI, ^IXIC (Indices) | Index data for extended history - ✅ Complete |
 | **C** | +stocks (AAPL, MSFT, GOOGL, AMZN, TSLA) | Individual stocks |
 | **D** | +sentiment (SF Fed News Sentiment Index) | Sentiment data |
 | **E** | +economic indicators (FRED) | Macro indicators |
+
+### Index vs ETF Data (Decision 2025-12-10)
+
+To maximize training history, we downloaded both ETF and index data:
+
+| Asset | ETF Ticker | Index Ticker | ETF Start | Index Start |
+|-------|------------|--------------|-----------|-------------|
+| S&P 500 | SPY | (^GSPC avail) | 1993 | 1927 |
+| Dow Jones | DIA | **^DJI** | 1998 | **1992** |
+| NASDAQ | QQQ | **^IXIC** | 1999 | **1971** |
+
+**Training window with indices: 1992+ (vs 1999+ with ETFs only)**
+
+See `decision_log.md` entry "2025-12-10 Index Tickers for Extended Training History" for full rationale.
 
 ### Columns (Feature Tiers)
 | Col | Features | Description |
@@ -114,28 +129,38 @@ All tests in this phase MUST follow these rules:
 
 ---
 
-### Task 2: Download DIA and QQQ Data
+### Task 2: Download DIA, QQQ, ^DJI, ^IXIC Data ✅ COMPLETE
 
-**Purpose:** Acquire OHLCV data for additional ETFs
+**Purpose:** Acquire OHLCV data for ETFs and indices (indices provide extended history)
 
 **Files:**
 | Path | Purpose | ~Lines |
 |------|---------|--------|
-| `data/raw/DIA.parquet` | DIA OHLCV data | - |
-| `data/raw/QQQ.parquet` | QQQ OHLCV data | - |
-| `data/raw/manifest.json` | Updated with new entries | - |
+| `data/raw/DIA.parquet` | DIA ETF OHLCV (1998+) | ✅ 7,018 rows |
+| `data/raw/QQQ.parquet` | QQQ ETF OHLCV (1999+) | ✅ 6,731 rows |
+| `data/raw/DJI.parquet` | Dow Jones Index OHLCV (1992+) | ✅ 8,546 rows |
+| `data/raw/IXIC.parquet` | NASDAQ Composite OHLCV (1971+) | ✅ 13,829 rows |
+| `data/raw/manifest.json` | Updated with all entries | ✅ |
 
 **Execution:**
 ```bash
 python scripts/download_ohlcv.py --ticker DIA
 python scripts/download_ohlcv.py --ticker QQQ
+python scripts/download_ohlcv.py --ticker "^DJI"
+python scripts/download_ohlcv.py --ticker "^IXIC"
 ```
 
-**Validation:**
-- DIA: Data starts ~1998 (DJIA ETF inception)
-- QQQ: Data starts ~1999 (Nasdaq-100 ETF inception)
-- Both have OHLCV columns with no nulls
-- Manifest entries registered with MD5 checksums
+**Validation:** ✅ All Complete
+- DIA: 7,018 rows, 1998-01-20 to 2025-12-10, 0 nulls
+- QQQ: 6,731 rows, 1999-03-10 to 2025-12-09, 0 nulls
+- DJI: 8,546 rows, 1992-01-02 to 2025-12-09, 0 nulls
+- IXIC: 13,829 rows, 1971-02-05 to 2025-12-10, 0 nulls
+- All manifest entries registered with MD5 checksums
+
+**Implementation Notes:**
+- Added `_sanitize_ticker_for_filename()` to handle ^ in index tickers
+- Index tickers (^DJI) saved as DJI.parquet (^ removed from filename)
+- 101 tests passing after changes
 
 **Dependencies:** Task 1
 
@@ -392,11 +417,13 @@ Phase 5 is complete when ALL of the following files exist and are registered in 
 
 ### Raw Data Files
 
-| File Path | Manifest ID | Source |
-|-----------|-------------|--------|
-| `data/raw/DIA.parquet` | `DIA.OHLCV.daily` | Task 2 |
-| `data/raw/QQQ.parquet` | `QQQ.OHLCV.daily` | Task 2 |
-| `data/raw/VIX.parquet` | `VIX.OHLCV.daily` | Task 3 |
+| File Path | Manifest ID | Source | Status |
+|-----------|-------------|--------|--------|
+| `data/raw/DIA.parquet` | `DIA.OHLCV.daily` | Task 2 | ✅ Complete |
+| `data/raw/QQQ.parquet` | `QQQ.OHLCV.daily` | Task 2 | ✅ Complete |
+| `data/raw/DJI.parquet` | `DJI.OHLCV.daily` | Task 2 | ✅ Complete |
+| `data/raw/IXIC.parquet` | `IXIC.OHLCV.daily` | Task 2 | ✅ Complete |
+| `data/raw/VIX.parquet` | `VIX.OHLCV.daily` | Task 3 | ⏸️ Pending |
 
 ### Processed Data Files
 
@@ -515,3 +542,4 @@ Each sub-task requires:
 | 1.0 | 2025-12-09 | Initial draft |
 | 1.1 | 2025-12-09 | Added Testing Rules section (mock strategy, offline tests); Added retry logic to Task 1; Clarified VIX volume handling in Task 3; Added 5 join validation tests to Task 7; Added Expected Artifacts section with explicit file paths and manifest IDs |
 | 1.2 | 2025-12-09 | Added jitter to retry specification; Added explicit approval gate to Task 8 |
+| 1.3 | 2025-12-10 | Task 2 expanded to include index tickers (^DJI, ^IXIC) for extended training history; Added Index vs ETF Data section; Updated Expected Artifacts with index files; Task 2 marked complete |

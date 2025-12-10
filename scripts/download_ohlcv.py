@@ -80,6 +80,24 @@ def _download_with_retry(ticker: str, max_retries: int = MAX_RETRIES) -> pd.Data
     raise ValueError(f"Failed to download {ticker}") from last_exception
 
 
+def _sanitize_ticker_for_filename(ticker: str) -> str:
+    """Remove special characters from ticker for use in filenames.
+
+    Index tickers like ^DJI, ^GSPC, ^IXIC have ^ which is problematic in filenames.
+
+    Parameters
+    ----------
+    ticker : str
+        Raw ticker symbol (e.g., '^DJI', 'SPY')
+
+    Returns
+    -------
+    str
+        Sanitized ticker suitable for filenames (e.g., 'DJI', 'SPY')
+    """
+    return ticker.replace("^", "")
+
+
 def download_ticker(
     ticker: str,
     output_dir: str = "data/raw",
@@ -92,9 +110,9 @@ def download_ticker(
     Parameters
     ----------
     ticker : str
-        Ticker symbol (e.g., 'SPY', 'DIA', 'QQQ', '^VIX')
+        Ticker symbol (e.g., 'SPY', 'DIA', 'QQQ', '^DJI', '^IXIC')
     output_dir : str
-        Directory to save parquet file (file will be {ticker}.parquet)
+        Directory to save parquet file (file will be {sanitized_ticker}.parquet)
     register_manifest : bool
         Whether to register in data manifest (default True)
     manifest_path : Optional[Path]
@@ -109,7 +127,15 @@ def download_ticker(
     ------
     ValueError
         If download fails or data is invalid
+
+    Notes
+    -----
+    Index tickers (^DJI, ^IXIC, etc.) have the ^ removed from filenames
+    and manifest entries for filesystem compatibility.
     """
+    # Sanitize ticker for filenames (^DJI -> DJI)
+    sanitized_ticker = _sanitize_ticker_for_filename(ticker)
+
     logger.info(f"Downloading {ticker} data from Yahoo Finance...")
 
     # Download with retry logic
@@ -148,14 +174,14 @@ def download_ticker(
     output_dir_path = Path(output_dir)
     output_dir_path.mkdir(parents=True, exist_ok=True)
 
-    # Save to parquet
-    output_file = output_dir_path / f"{ticker}.parquet"
+    # Save to parquet (use sanitized ticker for filename)
+    output_file = output_dir_path / f"{sanitized_ticker}.parquet"
     df.to_parquet(output_file, index=False)
     logger.info(f"Saved to {output_file}")
 
-    # Register in manifest
+    # Register in manifest (use sanitized ticker for dataset name)
     if register_manifest:
-        dataset_name = f"{ticker}.OHLCV.daily"
+        dataset_name = f"{sanitized_ticker}.OHLCV.daily"
         target_manifest = manifest_path or dv.RAW_MANIFEST
         dv.register_raw_entry(dataset_name, output_file, manifest_path=target_manifest)
         logger.info(f"Registered {dataset_name} in manifest {target_manifest}")

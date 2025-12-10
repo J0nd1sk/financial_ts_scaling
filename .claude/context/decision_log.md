@@ -206,3 +206,45 @@ Task 3 expanded into 3 sub-tasks:
 - Must verify MPS compatibility for all PyTorch ops (attention, etc.)
 - Parameter counting must be implemented in `src/models/utils.py`
 - Plan document updated: `docs/phase4_boilerplate_plan.md` (assumption #3 changed)
+
+## 2025-12-10 Index Tickers for Extended Training History
+
+**Context**: Phase 5 Task 2 downloaded DIA (1998) and QQQ (1999) ETFs, but this limited training data to 1999+ when used as features with SPY (1993). User wanted to train as far back as possible using DJIA and NASDAQ price data as features.
+
+**Decision**: Use index tickers (^DJI, ^IXIC) instead of ETF tickers (DIA, QQQ) for feature data to extend training history to 1992.
+
+**Data Comparison**:
+| Ticker | Type | Start Date | Rows |
+|--------|------|------------|------|
+| DIA | ETF | 1998-01-20 | 7,018 |
+| QQQ | ETF | 1999-03-10 | 6,731 |
+| ^DJI | Index | 1992-01-02 | 8,546 |
+| ^IXIC | Index | 1971-02-05 | 13,829 |
+
+**Training Window Impact**:
+- With ETFs only: 1999+ (~26 years)
+- With indices: 1992+ (~33 years)
+- **+7 years of training data recovered**
+
+**Rationale**:
+- Index data provides longer history than ETFs (ETFs are relatively recent financial instruments)
+- All indices have OHLCV data suitable for feature engineering
+- ^DJI (1992) is the limiting factor; ^IXIC goes back to 1971
+- SPY remains the prediction target (1993+)
+
+**Implementation Details**:
+- Added `_sanitize_ticker_for_filename()` to handle ^ in index tickers
+- ^DJI → DJI.parquet, ^IXIC → IXIC.parquet
+- Manifest uses sanitized names: DJI.OHLCV.daily, IXIC.OHLCV.daily
+- yfinance API called with original ticker (^DJI) for correct data retrieval
+
+**Alternatives Considered**:
+- FRED data sources (SP500, NASDAQCOM) — deferred; yfinance sufficient for now
+- ^GSPC (S&P 500 index back to 1927) — available if deeper history needed later
+- MeasuringWorth for pre-1990 Dow — rejected as unnecessary complexity
+
+**Implications**:
+- Feature engineering must handle both ETF and index data
+- Training date range now limited by ^DJI start (1992-01-02) when using all indices
+- DIA and QQQ ETF data retained for potential ETF-specific experiments
+- Future work may add ^GSPC for even longer S&P 500 history

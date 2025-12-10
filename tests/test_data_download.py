@@ -399,3 +399,57 @@ class TestCLIArgumentParsing:
 
         args = parse_args([])
         assert args.output_dir == "data/raw"
+
+
+# =============================================================================
+# Tests for index ticker handling (sanitize ^ from filenames)
+# =============================================================================
+
+
+class TestIndexTickerHandling:
+    """Tests for index ticker filename sanitization."""
+
+    @patch("scripts.download_ohlcv.yf.Ticker")
+    def test_download_index_ticker_sanitizes_filename(self, mock_ticker_class, tmp_path):
+        """Test that ^DJI creates DJI.parquet (not ^DJI.parquet)."""
+        from scripts.download_ohlcv import download_ticker
+
+        # Arrange
+        mock_df = _create_mock_ohlcv_dataframe(rows=10)
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker_class.return_value = mock_ticker_instance
+
+        # Act
+        download_ticker("^DJI", str(tmp_path), register_manifest=False)
+
+        # Assert: file created without ^ in name
+        assert (tmp_path / "DJI.parquet").exists(), "Should create DJI.parquet"
+        assert not (tmp_path / "^DJI.parquet").exists(), "Should NOT create ^DJI.parquet"
+
+        # Assert: yfinance called with original ticker (including ^)
+        mock_ticker_class.assert_called_once_with("^DJI")
+
+    @patch("scripts.download_ohlcv.yf.Ticker")
+    def test_download_index_ticker_manifest_uses_sanitized_name(self, mock_ticker_class, tmp_path):
+        """Test that manifest uses sanitized ticker name (DJI.OHLCV.daily, not ^DJI.OHLCV.daily)."""
+        from scripts.download_ohlcv import download_ticker
+
+        # Arrange
+        mock_df = _create_mock_ohlcv_dataframe(rows=10)
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker_class.return_value = mock_ticker_instance
+
+        manifest = tmp_path / "manifest.json"
+
+        # Act
+        download_ticker("^IXIC", str(tmp_path), register_manifest=True, manifest_path=manifest)
+
+        # Assert: manifest entry uses sanitized name
+        manifest_data = json.loads(manifest.read_text())
+        entry = manifest_data["entries"][-1]
+        assert entry["dataset"] == "IXIC.OHLCV.daily", f"Expected IXIC.OHLCV.daily, got {entry['dataset']}"
+        assert "IXIC.parquet" in entry["path"]
+        assert "^" not in entry["dataset"]
+        assert "^" not in entry["path"]

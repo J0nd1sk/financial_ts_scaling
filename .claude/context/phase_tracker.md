@@ -53,9 +53,12 @@
 7. ✅ Batch Size Discovery (scripts/find_batch_size.py) - 2025-12-09
 
 ## Phase 5: Data Acquisition 🔄 IN PROGRESS (Started 2025-12-09)
-- Plan approved: ✅ 2025-12-09 (docs/phase5_data_acquisition_plan.md v1.2)
+- Plan approved: ✅ 2025-12-09 (docs/phase5_data_acquisition_plan.md v1.3)
 - Task 1: ✅ Generalize download script (download_ticker + retry logic)
-- Task 2: ⏸️ Download DIA + QQQ
+- Task 2: ✅ Download ETFs + Indices (2025-12-10)
+  - DIA: 7,018 rows (1998+), QQQ: 6,731 rows (1999+)
+  - ^DJI: 8,546 rows (1992+), ^IXIC: 13,829 rows (1971+)
+  - Decision: Use indices for extended training history (1992+ vs 1999+)
 - Task 3: ⏸️ Download VIX
 - Task 4: ⏸️ Generalize feature pipeline
 - Task 5: ⏸️ Build DIA/QQQ features
