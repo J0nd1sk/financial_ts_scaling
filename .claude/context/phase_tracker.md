@@ -47,7 +47,7 @@
    - 3c. ✅ Integration Tests (tests/test_patchtst_integration.py) - 2025-12-09
 4. ✅ Thermal Callback (src/training/thermal.py) - 2025-12-09
 5. ✅ Tracking Integration (src/training/tracking.py) - 2025-12-09
-6. ⏸️ Training Script (scripts/train.py)
+6. ✅ Training Script (scripts/train.py) - 2025-12-09
 7. ⏸️ Batch Size Discovery (scripts/find_batch_size.py)
 
 ## Phase 5: Data Acquisition ⏸️ NOT STARTED
