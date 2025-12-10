@@ -1,57 +1,57 @@
-# Session Handoff - 2025-12-09 ~12:00
+# Session Handoff - 2025-12-09 ~13:30
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: 37f4ced "feat: add thermal callback for M4 MacBook Pro training (Phase 4 Task 4)"
+- Last commit: 0ffc14f "feat: add W&B and MLflow tracking integration (Phase 4 Task 5)"
 - Uncommitted: 1 file (phase_tracker.md updated)
-- Ahead of origin by: 10 commits (not pushed)
+- Pushed to origin: Yes (all commits pushed)
 
 ### Task Status
-- Working on: Phase 4 Task 5: Tracking Integration
-- Status: Ready to begin (Task 4 just completed)
+- Working on: Phase 4 Task 6: Training Script
+- Status: Ready to begin (Task 5 just completed)
 
 ## Test Status
-- Last `make test`: 2025-12-09 — PASS (59/59 tests, ~1.2s)
+- Last `make test`: 2025-12-09 — PASS (70/70 tests, ~1.65s)
 - Last `make verify`: PASS
 - Failing: none
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. **Phase 4 Task 4: Thermal Callback (TDD complete)**
-   - Created `src/training/__init__.py` - training module init
-   - Created `src/training/thermal.py` - ThermalCallback implementation (146 lines)
-   - Created `tests/test_thermal.py` - 11 test cases
+2. **Phase 4 Task 5: Tracking Integration (TDD complete)**
+   - Created `src/training/tracking.py` - TrackingManager implementation (107 lines)
+   - Created `tests/test_tracking.py` - 11 test cases (211 lines)
+   - Updated `src/training/__init__.py` - added exports
    - Features:
-     - `ThermalStatus` dataclass with temperature, status, should_pause, message
-     - `ThermalCallback` with injectable temp_provider for testing
-     - Thresholds matching CLAUDE.md: normal <70°C, acceptable 70-85°C, warning 85-95°C, critical ≥95°C
-     - Graceful error handling (should_pause=True on read failure for safety)
-     - Threshold validation (must be in ascending order)
-   - All tests passing (59 total)
+     - `TrackingConfig` dataclass with wandb_project, wandb_run_name, mlflow_experiment, mlflow_run_name
+     - `TrackingManager` class with unified logging interface
+     - Methods: start(), log_metric(), log_metrics(), log_config(), finish()
+     - Independent enable/disable of W&B and MLflow
+     - Graceful no-op when trackers disabled
+   - All tests passing (70 total)
 
 ## In Progress
-- None - Task 4 complete, Task 5 ready to start
+- None - Task 5 complete, Task 6 ready to start
 
 ## Pending
-1. **Phase 4 Task 5: Tracking Integration** (NEXT)
-   - `src/training/tracking.py`
-   - W&B + MLflow integration
-   - Experiment logging and metric tracking
-2. **Phase 4 Task 6: Training Script** (scripts/train.py)
-3. **Phase 4 Task 7: Batch Size Discovery** (scripts/find_batch_size.py)
+1. **Phase 4 Task 6: Training Script** (NEXT)
+   - `src/training/trainer.py` - training loop + callbacks
+   - `scripts/train.py` - CLI entry point
+   - `configs/daily/threshold_1pct.yaml` - example config
+   - `tests/test_training.py` - integration tests
+2. **Phase 4 Task 7: Batch Size Discovery** (scripts/find_batch_size.py)
 
 ## Files Modified This Session
-- `src/training/__init__.py`: NEW - training module init
-- `src/training/thermal.py`: NEW - ThermalCallback implementation
-- `tests/test_thermal.py`: NEW - 11 tests for thermal callback
-- `.claude/context/phase_tracker.md`: Updated Task 4 status
+- `src/training/tracking.py`: NEW - TrackingManager implementation
+- `tests/test_tracking.py`: NEW - 11 tests for tracking
+- `src/training/__init__.py`: Added TrackingConfig/TrackingManager exports
+- `.claude/context/phase_tracker.md`: Updated Task 5 status
 
 ## Key Decisions Made
-- **Injectable temp_provider**: Temperature reading is a dependency-injected callable, enabling easy testing without actual hardware sensors
-- **Fail-safe on read error**: If temperature cannot be read, should_pause=True for safety (assume worst case)
-- **Boundary semantics**: Thresholds are inclusive on the upper side (e.g., exactly 70°C = "acceptable", not "normal")
+- **Unified TrackingManager interface**: Single class handles both W&B and MLflow, with independent enable/disable via config
+- **Mocked tests**: All tracking tests use unittest.mock to patch wandb/mlflow, avoiding actual API calls during testing
+- **Config-based activation**: Trackers enabled/disabled based on whether project/experiment name is None
 
 ## Context for Next Session
 
@@ -60,27 +60,38 @@
 - ✅ Parameter configs for all three budget tiers (2M, 20M, 200M)
 - ✅ Integration tests verifying real data, MPS, and batch inference
 - ✅ ThermalCallback for temperature monitoring during training
-- ✅ 59 tests passing
-- ✅ SPY data (raw + processed features)
+- ✅ TrackingManager for W&B + MLflow logging
 - ✅ ExperimentConfig + FinancialDataset classes
+- ✅ 70 tests passing
+- ✅ SPY data (raw + processed features)
+- ✅ WANDB_API_KEY in .env (40 chars, verified)
 
-### Task 5 Tracking Integration Should Implement
-1. W&B (Weights & Biases) integration for experiment tracking
-2. MLflow integration for model versioning
-3. Metric logging interface for training loop
-4. Config logging for reproducibility
-5. Checkpoint artifact tracking
+### Task 6 Training Script Should Implement
+Per docs/phase4_boilerplate_plan.md:
+1. `src/training/trainer.py` - Training loop with callbacks (~200 lines)
+2. `scripts/train.py` - CLI entry point (~80 lines)
+3. `configs/daily/threshold_1pct.yaml` - Example config (~30 lines)
+4. `tests/test_training.py` - Integration tests (~100 lines)
+
+Tests from plan:
+- `test_train_one_epoch_completes`: Micro dataset → no errors
+- `test_train_logs_metrics`: Loss logged to trackers
+- `test_train_saves_checkpoint`: Checkpoint file created
+- `test_train_respects_thermal_stop`: Mock 95°C → training stops
+- `test_training_verifies_manifest_before_start`: Invalid/missing manifest → fails before epoch 1
+- `test_training_logs_data_version`: Data MD5 hash logged to trackers for reproducibility
+- `test_reproducible_batch_with_fixed_seed`: Same seed → identical first batch values
 
 ## Next Session Should
 1. **Session restore** to load context
 2. **Commit phase_tracker.md update** (1 uncommitted file)
-3. **Begin Phase 4 Task 5** (TDD):
-   - Plan tracking integration approach
-   - Write failing tests for tracking module
-   - Implement W&B + MLflow integration
+3. **Begin Phase 4 Task 6** (TDD):
+   - Plan training script approach (this is the biggest integration task)
+   - Write failing tests for trainer module
+   - Implement training loop with thermal + tracking callbacks
 4. Run `make test` to verify
 5. Commit changes
-6. Continue to Task 6 (Training Script) if time permits
+6. Continue to Task 7 (Batch Size Discovery) if time permits
 
 ## Data Versions
 - **Raw manifest**: 1 entry
@@ -100,7 +111,7 @@ git status
 ```
 
 ## Session Statistics
-- Duration: ~30 minutes
-- Main achievement: Thermal Callback (Task 4 complete)
-- Tests: 48 → 59 (+11 new)
-- Ready for: Phase 4 Task 5 (Tracking Integration)
+- Duration: ~45 minutes
+- Main achievement: Tracking Integration (Task 5 complete)
+- Tests: 59 → 70 (+11 new)
+- Ready for: Phase 4 Task 6 (Training Script)
