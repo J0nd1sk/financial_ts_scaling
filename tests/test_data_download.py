@@ -355,3 +355,47 @@ class TestDownloadTicker:
         second_delay = mock_sleep.call_args_list[1][0][0]
         assert 1.0 <= first_delay <= 1.5, f"First delay {first_delay} not in [1.0, 1.5]"
         assert 2.0 <= second_delay <= 3.0, f"Second delay {second_delay} not in [2.0, 3.0]"
+
+
+# =============================================================================
+# Tests for CLI argument parsing (Phase 5 Task 2)
+# =============================================================================
+
+
+class TestCLIArgumentParsing:
+    """Tests for CLI argument parsing in download_ohlcv.py."""
+
+    def test_cli_parse_ticker_dia(self):
+        """Test that --ticker DIA parses correctly."""
+        from scripts.download_ohlcv import parse_args
+
+        args = parse_args(["--ticker", "DIA"])
+        assert args.ticker == "DIA"
+
+    def test_cli_parse_ticker_qqq(self):
+        """Test that --ticker QQQ parses correctly."""
+        from scripts.download_ohlcv import parse_args
+
+        args = parse_args(["--ticker", "QQQ"])
+        assert args.ticker == "QQQ"
+
+    def test_cli_default_ticker_spy(self):
+        """Test that no --ticker defaults to SPY."""
+        from scripts.download_ohlcv import parse_args
+
+        args = parse_args([])
+        assert args.ticker == "SPY"
+
+    def test_cli_parse_output_dir(self):
+        """Test that --output-dir parses correctly."""
+        from scripts.download_ohlcv import parse_args
+
+        args = parse_args(["--output-dir", "/custom/path"])
+        assert args.output_dir == "/custom/path"
+
+    def test_cli_default_output_dir(self):
+        """Test that no --output-dir defaults to data/raw."""
+        from scripts.download_ohlcv import parse_args
+
+        args = parse_args([])
+        assert args.output_dir == "data/raw"

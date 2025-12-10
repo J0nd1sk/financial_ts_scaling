@@ -5,11 +5,12 @@ This module provides functions to download historical OHLCV data
 for financial instruments using the yfinance library.
 """
 
+import argparse
 import logging
 import random
 import time
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import pandas as pd
 import yfinance as yf
@@ -248,5 +249,37 @@ def download_spy(
     return df
 
 
+def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
+    """Parse command line arguments.
+
+    Parameters
+    ----------
+    args : Optional[List[str]]
+        Command line arguments. If None, uses sys.argv.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments with ticker and output_dir attributes.
+    """
+    parser = argparse.ArgumentParser(
+        description="Download OHLCV data from Yahoo Finance."
+    )
+    parser.add_argument(
+        "--ticker",
+        type=str,
+        default="SPY",
+        help="Ticker symbol to download (default: SPY)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="data/raw",
+        help="Output directory for parquet file (default: data/raw)",
+    )
+    return parser.parse_args(args)
+
+
 if __name__ == "__main__":
-    download_spy()
+    cli_args = parse_args()
+    download_ticker(cli_args.ticker, cli_args.output_dir)
