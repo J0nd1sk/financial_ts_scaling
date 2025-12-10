@@ -1,50 +1,57 @@
-# Session Handoff - 2025-12-09 ~11:30
+# Session Handoff - 2025-12-09 ~12:00
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: 2ee7faa "test: add PatchTST integration tests (Phase 4 Task 3c)"
+- Last commit: 37f4ced "feat: add thermal callback for M4 MacBook Pro training (Phase 4 Task 4)"
 - Uncommitted: 1 file (phase_tracker.md updated)
-- Ahead of origin by: 8 commits (not pushed)
+- Ahead of origin by: 10 commits (not pushed)
 
 ### Task Status
-- Working on: Phase 4 Task 4: Thermal Callback
-- Status: Ready to begin (Task 3c just completed)
+- Working on: Phase 4 Task 5: Tracking Integration
+- Status: Ready to begin (Task 4 just completed)
 
 ## Test Status
-- Last `make test`: 2025-12-09 — PASS (48/48 tests, ~4s)
+- Last `make test`: 2025-12-09 — PASS (59/59 tests, ~1.2s)
 - Last `make verify`: PASS
 - Failing: none
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. **Phase 4 Task 3c: Integration Tests (TDD complete)**
-   - Created `tests/test_patchtst_integration.py` with 3 tests:
-     - `test_patchtst_with_real_feature_dimensions`: verifies model works with actual 20-feature tier a20 data
-     - `test_patchtst_backward_pass_on_mps`: verifies gradient flow on Apple Silicon MPS
-     - `test_patchtst_batch_inference`: verifies DataLoader batching end-to-end
-   - All tests passing (48 total)
+2. **Phase 4 Task 4: Thermal Callback (TDD complete)**
+   - Created `src/training/__init__.py` - training module init
+   - Created `src/training/thermal.py` - ThermalCallback implementation (146 lines)
+   - Created `tests/test_thermal.py` - 11 test cases
+   - Features:
+     - `ThermalStatus` dataclass with temperature, status, should_pause, message
+     - `ThermalCallback` with injectable temp_provider for testing
+     - Thresholds matching CLAUDE.md: normal <70°C, acceptable 70-85°C, warning 85-95°C, critical ≥95°C
+     - Graceful error handling (should_pause=True on read failure for safety)
+     - Threshold validation (must be in ascending order)
+   - All tests passing (59 total)
 
 ## In Progress
-- None - Task 3c complete, Task 4 ready to start
+- None - Task 4 complete, Task 5 ready to start
 
 ## Pending
-1. **Phase 4 Task 4: Thermal Callback** (NEXT)
-   - `src/training/thermal.py`
-   - Monitor M4 MacBook Pro temperature during training
-   - Pause/resume based on thermal thresholds
-2. **Phase 4 Task 5: Tracking Integration** (src/training/tracking.py)
-3. **Phase 4 Task 6: Training Script** (scripts/train.py)
-4. **Phase 4 Task 7: Batch Size Discovery** (scripts/find_batch_size.py)
+1. **Phase 4 Task 5: Tracking Integration** (NEXT)
+   - `src/training/tracking.py`
+   - W&B + MLflow integration
+   - Experiment logging and metric tracking
+2. **Phase 4 Task 6: Training Script** (scripts/train.py)
+3. **Phase 4 Task 7: Batch Size Discovery** (scripts/find_batch_size.py)
 
 ## Files Modified This Session
-- `tests/test_patchtst_integration.py`: NEW - 3 integration tests
-- `.claude/context/phase_tracker.md`: Updated Task 3c status
+- `src/training/__init__.py`: NEW - training module init
+- `src/training/thermal.py`: NEW - ThermalCallback implementation
+- `tests/test_thermal.py`: NEW - 11 tests for thermal callback
+- `.claude/context/phase_tracker.md`: Updated Task 4 status
 
 ## Key Decisions Made
-- **Integration tests verify real data compatibility**: Tests use actual SPY.features.a20 parquet file, not synthetic data
-- **MPS test skippable**: Uses `@pytest.mark.skipif` for CI compatibility on non-MPS systems
+- **Injectable temp_provider**: Temperature reading is a dependency-injected callable, enabling easy testing without actual hardware sensors
+- **Fail-safe on read error**: If temperature cannot be read, should_pause=True for safety (assume worst case)
+- **Boundary semantics**: Thresholds are inclusive on the upper side (e.g., exactly 70°C = "acceptable", not "normal")
 
 ## Context for Next Session
 
@@ -52,29 +59,28 @@
 - ✅ PatchTST model fully implemented and tested (src/models/patchtst.py)
 - ✅ Parameter configs for all three budget tiers (2M, 20M, 200M)
 - ✅ Integration tests verifying real data, MPS, and batch inference
-- ✅ 48 tests passing
+- ✅ ThermalCallback for temperature monitoring during training
+- ✅ 59 tests passing
 - ✅ SPY data (raw + processed features)
 - ✅ ExperimentConfig + FinancialDataset classes
 
-### Task 4 Thermal Callback Should Implement
-1. Temperature monitoring via `powermetrics` or similar
-2. Thermal thresholds from CLAUDE.md:
-   - <70°C: Normal operation
-   - 70-85°C: Acceptable, monitor
-   - 85-95°C: Warning, consider pause
-   - >95°C: CRITICAL STOP
-3. PyTorch callback interface for training loop integration
-4. Graceful pause/resume mechanism
+### Task 5 Tracking Integration Should Implement
+1. W&B (Weights & Biases) integration for experiment tracking
+2. MLflow integration for model versioning
+3. Metric logging interface for training loop
+4. Config logging for reproducibility
+5. Checkpoint artifact tracking
 
 ## Next Session Should
 1. **Session restore** to load context
-2. **Begin Phase 4 Task 4** (TDD):
-   - Plan thermal monitoring approach
-   - Write failing tests for thermal callback
-   - Implement thermal monitoring
-3. Run `make test` to verify
-4. Commit changes
-5. Continue to Task 5 (Tracking Integration) if time permits
+2. **Commit phase_tracker.md update** (1 uncommitted file)
+3. **Begin Phase 4 Task 5** (TDD):
+   - Plan tracking integration approach
+   - Write failing tests for tracking module
+   - Implement W&B + MLflow integration
+4. Run `make test` to verify
+5. Commit changes
+6. Continue to Task 6 (Training Script) if time permits
 
 ## Data Versions
 - **Raw manifest**: 1 entry
@@ -94,7 +100,7 @@ git status
 ```
 
 ## Session Statistics
-- Duration: ~15 minutes
-- Main achievement: Integration Tests (Task 3c complete)
-- Tests: 45 → 48 (+3 new)
-- Ready for: Phase 4 Task 4 (Thermal Callback)
+- Duration: ~30 minutes
+- Main achievement: Thermal Callback (Task 4 complete)
+- Tests: 48 → 59 (+11 new)
+- Ready for: Phase 4 Task 5 (Tracking Integration)

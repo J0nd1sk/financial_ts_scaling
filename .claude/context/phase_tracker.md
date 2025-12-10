@@ -45,7 +45,7 @@
    - 3a. ✅ PatchTST Backbone (src/models/patchtst.py) - 2025-12-09
    - 3b. ✅ Parameter Budget Configs (configs/model/patchtst_*.yaml) - 2025-12-09
    - 3c. ✅ Integration Tests (tests/test_patchtst_integration.py) - 2025-12-09
-4. ⏸️ Thermal Callback (src/training/thermal.py)
+4. ✅ Thermal Callback (src/training/thermal.py) - 2025-12-09
 5. ⏸️ Tracking Integration (src/training/tracking.py)
 6. ⏸️ Training Script (scripts/train.py)
 7. ⏸️ Batch Size Discovery (scripts/find_batch_size.py)
