@@ -1,100 +1,87 @@
-# Session Handoff - 2025-12-09 ~15:00
+# Session Handoff - 2025-12-09 ~18:00
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: b016c99 "feat: add training script with thermal and tracking integration (Phase 4 Task 6)"
-- Uncommitted: 1 file (phase_tracker.md updated)
-- Pushed to origin: No (1 commit ahead)
+- Last commit: (pending) feat: add download_ticker with retry logic (Phase 5 Task 1)
+- Uncommitted: None after this commit
+- Pushed to origin: Yes (after this push)
 
 ### Task Status
-- Working on: Phase 4 Task 6: Training Script
-- Status: ✅ COMPLETE
+- Working on: Phase 5 Data Acquisition
+- Status: **Task 1 COMPLETE**, ready for Task 2
 
 ## Test Status
-- Last `make test`: 2025-12-09 — PASS (77/77 tests, ~2.1s)
+- Last `make test`: 2025-12-09 — PASS (93/93 tests, ~11s)
 - Last `make verify`: PASS
 - Failing: none
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. **Phase 4 Task 6: Training Script (TDD complete)**
-   - Planning session using planning_session skill
-   - Created `tests/test_training.py` - 7 integration tests (~400 lines)
-   - Created `src/training/trainer.py` - Trainer class (~280 lines)
-   - Created `scripts/train.py` - CLI entry point (~170 lines)
-   - Created `configs/daily/threshold_1pct.yaml` - Example config (~15 lines)
-   - Updated `src/training/__init__.py` - added Trainer export
-   - Features:
-     - Trainer class with full training loop
-     - Thermal callback integration (stops on critical temp)
-     - TrackingManager integration (W&B + MLflow)
-     - Checkpoint saving with model/optimizer state
-     - Data file verification before training
-     - MD5 hash logging for reproducibility
-     - Seeded dataloaders for deterministic batches
-   - All 77 tests passing
+2. Planning session for Phase 5 Task 1
+3. **Phase 5 Task 1 COMPLETE**: Generalize OHLCV download script
+   - Added `download_ticker(ticker, output_dir)` function
+   - Added `_download_with_retry()` with exponential backoff + jitter
+   - 5 new mocked tests (no live API calls)
+   - TDD cycle: RED → GREEN in one pass
 
 ## In Progress
-- None - Task 6 complete, Task 7 ready to start
+- None
 
-## Pending
-1. **Phase 4 Task 7: Batch Size Discovery** (NEXT)
-   - `scripts/find_batch_size.py` - CLI for finding optimal batch size
-   - `tests/test_batch_size.py` - Tests for batch size discovery
-   - Algorithm: Binary search starting at 8, doubling until OOM
-   - Expected: ~100 lines script, ~60 lines tests
-2. After Task 7, Phase 4 is complete → Phase 5 (Data Acquisition)
+## Pending (Phase 5 remaining tasks)
+1. **Task 2**: Download DIA and QQQ data (run script live)
+2. **Task 3**: Download VIX data (minor script mods for ^VIX)
+3. **Task 4**: Generalize feature engineering pipeline
+4. **Task 5**: Build DIA/QQQ features
+5. **Task 6**: VIX feature engineering (tier c)
+6. **Task 7**: Combined dataset builder
+7. **Task 8**: Multi-asset builder (optional, gated)
 
 ## Files Modified This Session
-- `src/training/trainer.py`: NEW - Trainer class implementation
-- `tests/test_training.py`: NEW - 7 integration tests
-- `scripts/train.py`: NEW - CLI entry point
-- `configs/daily/threshold_1pct.yaml`: NEW - Example experiment config
-- `src/training/__init__.py`: Added Trainer export
-- `.claude/context/phase_tracker.md`: Updated Task 6 status
+- `scripts/download_ohlcv.py`: +80 lines (download_ticker, retry logic)
+- `tests/test_data_download.py`: +75 lines (5 mocked tests)
+- `docs/phase5_data_acquisition_plan.md`: New file (Phase 5 plan v1.2)
+- `docs/project_phase_plans.md`: Cleanup of formatting errors (user change)
 
-## Key Decisions Made
-- **Trainer class architecture**: Encapsulates model, optimizer, dataloader; callbacks injectable for testing
-- **Data verification in __init__**: Verify file exists before computing MD5 or creating model
-- **Thermal check per-batch**: Check after each batch for responsive stopping (not just per-epoch)
-- **Test fixtures use 25 features**: OHLCV (5) + 20 indicator columns, matching real data structure
+## Key Decisions
+- **Mock strategy**: All new tests use `@patch('scripts.download_ohlcv.yf.Ticker')`
+- **Retry logic**: 3 retries with 1s/2s/4s base + 0-50% jitter
+- **Manifest naming**: `{TICKER}.OHLCV.daily` pattern
 
 ## Context for Next Session
 
 ### What's Ready
-- ✅ Complete training pipeline functional
-- ✅ Can train with: `./venv/bin/python scripts/train.py --config configs/daily/threshold_1pct.yaml --param-budget 2m`
-- ✅ 77 tests passing
-- ✅ SPY data (raw + processed features)
-- ✅ WANDB_API_KEY in .env
+- Phase 4 COMPLETE - Full training infrastructure
+- Phase 5 Task 1 COMPLETE - Generalized download script
+- 93 tests passing
+- SPY data (raw + processed features) ready
+- Phase 5 plan approved and committed
 
-### Task 7 (Batch Size Discovery) Should Implement
-Per docs/phase4_boilerplate_plan.md:
-1. `scripts/find_batch_size.py` - CLI (~100 lines)
-2. `tests/test_batch_size.py` - Tests (~60 lines)
+### New Capabilities
+```python
+from scripts.download_ohlcv import download_ticker
 
-Algorithm:
-1. Start with batch_size = 8
-2. Try forward + backward pass
-3. If success, double batch_size
-4. If OOM, halve and return previous successful value
+# Download any ticker with automatic retry
+download_ticker("DIA", "data/raw")  # Creates DIA.parquet, registers DIA.OHLCV.daily
+download_ticker("QQQ", "data/raw")  # Creates QQQ.parquet, registers QQQ.OHLCV.daily
+```
 
-Tests:
-- `test_find_batch_size_returns_power_of_two`
-- `test_find_batch_size_respects_memory`
+### Phase 5 Progress
+- [x] Task 1: Generalize download script
+- [ ] Task 2: Download DIA + QQQ
+- [ ] Task 3: Download VIX
+- [ ] Task 4: Generalize feature pipeline
+- [ ] Task 5: Build DIA/QQQ features
+- [ ] Task 6: VIX feature engineering
+- [ ] Task 7: Combined dataset builder
+- [ ] Task 8: Multi-asset builder (optional)
 
 ## Next Session Should
 1. **Session restore** to load context
-2. **Commit phase_tracker.md update** (1 uncommitted file)
-3. **Push to origin** (1 commit ahead)
-4. **Begin Phase 4 Task 7** (TDD):
-   - Planning session for batch size discovery
-   - Write failing tests
-   - Implement find_batch_size.py
-5. After Task 7, Phase 4 is complete
-6. Optionally: Run a short training test to verify end-to-end
+2. **Task 2**: Run download script for DIA and QQQ (live API)
+3. **Task 3**: Add VIX support (^VIX ticker handling)
+4. Continue through Phase 5 tasks sequentially
 
 ## Data Versions
 - **Raw manifest**: 1 entry
@@ -102,7 +89,7 @@ Tests:
 - **Processed manifest**: 2 entries
   - SPY.features.a20 v1 tier=a20 (md5: 51d70d5a...)
   - SPY.dataset.a20 v1 tier=a20 (md5: 6b1309a5...)
-- **Pending registrations**: None
+- **Pending registrations**: DIA and QQQ after Task 2
 
 ## Commands to Run First
 ```bash
@@ -110,19 +97,17 @@ Tests:
 source venv/bin/activate
 make test
 make verify
-git status
 
-# Optional: Test training end-to-end
-./venv/bin/python scripts/train.py \
-  --config configs/daily/threshold_1pct.yaml \
-  --param-budget 2m \
-  --epochs 1 \
-  --batch-size 32 \
-  --no-tracking
+# Task 2: Download new tickers
+python -c "from scripts.download_ohlcv import download_ticker; download_ticker('DIA', 'data/raw')"
+python -c "from scripts.download_ohlcv import download_ticker; download_ticker('QQQ', 'data/raw')"
 ```
 
 ## Session Statistics
-- Duration: ~30 minutes
-- Main achievement: Training Script (Task 6 complete)
-- Tests: 70 → 77 (+7 new)
-- Ready for: Phase 4 Task 7 (Batch Size Discovery) - final task in Phase 4
+- Duration: ~45 minutes
+- Main achievement: Phase 5 Task 1 complete (TDD)
+- Tests: 88 → 93 (+5 new mocked tests)
+- Lines added: ~155 (implementation + tests)
+
+## Memory MCP Entries
+- "Phase 5 Task 1 Plan" - planning decision with outcome recorded

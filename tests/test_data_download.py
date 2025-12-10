@@ -1,4 +1,4 @@
-"""Tests for SPY OHLCV data download functionality.
+"""Tests for OHLCV data download functionality.
 
 These tests verify that the download script:
 - Downloads SPY data successfully
@@ -6,10 +6,13 @@ These tests verify that the download script:
 - Produces valid data with expected columns and types
 - Covers expected date range
 - Supports proper train/val/test splits
+- Supports downloading any ticker (DIA, QQQ, etc.)
+- Implements retry logic for transient failures
 """
 
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 import json
 import sys
 
@@ -209,3 +212,146 @@ class TestManifestRegistration:
         assert entry["dataset"] == "SPY.OHLCV.daily"
         assert entry["path"] == str(output_path)
         assert entry["md5"]
+
+
+# =============================================================================
+# Tests for download_ticker() - Multi-ticker support (Phase 5 Task 1)
+# All tests use mocked yfinance - no live API calls
+# =============================================================================
+
+
+def _create_mock_ohlcv_dataframe(rows: int = 10) -> pd.DataFrame:
+    """Create a synthetic OHLCV DataFrame matching yfinance format.
+
+    yfinance returns DataFrame with Date as INDEX, not a column.
+    """
+    dates = pd.date_range("2020-01-01", periods=rows, freq="B")  # Business days
+    df = pd.DataFrame({
+        "Open": [100.0 + i * 0.1 for i in range(rows)],
+        "High": [101.0 + i * 0.1 for i in range(rows)],
+        "Low": [99.0 + i * 0.1 for i in range(rows)],
+        "Close": [100.5 + i * 0.1 for i in range(rows)],
+        "Volume": [1000000 + i * 1000 for i in range(rows)],
+    }, index=dates)
+    df.index.name = "Date"
+    return df
+
+
+class TestDownloadTicker:
+    """Tests for download_ticker() - multi-ticker support with mocked yfinance."""
+
+    @patch("scripts.download_ohlcv.yf.Ticker")
+    def test_download_ticker_dia_basic(self, mock_ticker_class, tmp_path):
+        """Test that download_ticker creates DIA parquet file with correct data."""
+        from scripts.download_ohlcv import download_ticker
+
+        # Arrange: mock yfinance to return synthetic data
+        mock_df = _create_mock_ohlcv_dataframe(rows=15)
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker_class.return_value = mock_ticker_instance
+
+        # Act
+        df = download_ticker("DIA", str(tmp_path), register_manifest=False)
+
+        # Assert: file created with correct name
+        output_file = tmp_path / "DIA.parquet"
+        assert output_file.exists(), "DIA.parquet was not created"
+        assert output_file.stat().st_size > 0, "DIA.parquet is empty"
+
+        # Assert: DataFrame has correct structure
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) == 15
+        assert list(df.columns) == ["Date", "Open", "High", "Low", "Close", "Volume"]
+
+        # Assert: yfinance was called with correct ticker
+        mock_ticker_class.assert_called_once_with("DIA")
+        mock_ticker_instance.history.assert_called_once_with(period="max")
+
+    @patch("scripts.download_ohlcv.yf.Ticker")
+    def test_download_ticker_qqq_basic(self, mock_ticker_class, tmp_path):
+        """Test that download_ticker creates QQQ parquet file with correct data."""
+        from scripts.download_ohlcv import download_ticker
+
+        # Arrange
+        mock_df = _create_mock_ohlcv_dataframe(rows=20)
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker_class.return_value = mock_ticker_instance
+
+        # Act
+        df = download_ticker("QQQ", str(tmp_path), register_manifest=False)
+
+        # Assert
+        output_file = tmp_path / "QQQ.parquet"
+        assert output_file.exists(), "QQQ.parquet was not created"
+        assert len(df) == 20
+        mock_ticker_class.assert_called_once_with("QQQ")
+
+    @patch("scripts.download_ohlcv.yf.Ticker")
+    def test_download_ticker_registers_manifest(self, mock_ticker_class, tmp_path):
+        """Test that download_ticker registers manifest entry as {TICKER}.OHLCV.daily."""
+        from scripts.download_ohlcv import download_ticker
+
+        # Arrange
+        mock_df = _create_mock_ohlcv_dataframe(rows=10)
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker_class.return_value = mock_ticker_instance
+
+        manifest = tmp_path / "manifest.json"
+
+        # Act
+        download_ticker("DIA", str(tmp_path), register_manifest=True, manifest_path=manifest)
+
+        # Assert: manifest entry created with correct dataset name
+        manifest_data = json.loads(manifest.read_text())
+        entry = manifest_data["entries"][-1]
+        assert entry["dataset"] == "DIA.OHLCV.daily", f"Expected DIA.OHLCV.daily, got {entry['dataset']}"
+        assert "DIA.parquet" in entry["path"]
+        assert entry["md5"]  # MD5 should be present
+
+    @patch("scripts.download_ohlcv.yf.Ticker")
+    def test_download_ticker_invalid_raises(self, mock_ticker_class, tmp_path):
+        """Test that download_ticker raises ValueError when yfinance returns empty data."""
+        from scripts.download_ohlcv import download_ticker
+
+        # Arrange: mock yfinance to return empty DataFrame
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = pd.DataFrame()  # Empty
+        mock_ticker_class.return_value = mock_ticker_instance
+
+        # Act & Assert
+        with pytest.raises(ValueError, match="No data returned|Failed to download"):
+            download_ticker("INVALID_TICKER_XYZ", str(tmp_path), register_manifest=False)
+
+    @patch("scripts.download_ohlcv.time.sleep")
+    @patch("scripts.download_ohlcv.yf.Ticker")
+    def test_download_ticker_retries_on_failure(self, mock_ticker_class, mock_sleep, tmp_path):
+        """Test that download_ticker retries on transient failures with backoff."""
+        from scripts.download_ohlcv import download_ticker
+
+        # Arrange: first 2 calls fail, third succeeds
+        mock_df = _create_mock_ohlcv_dataframe(rows=10)
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.side_effect = [
+            Exception("Network error"),  # Attempt 1: fail
+            Exception("Timeout"),         # Attempt 2: fail
+            mock_df,                       # Attempt 3: success
+        ]
+        mock_ticker_class.return_value = mock_ticker_instance
+
+        # Act
+        df = download_ticker("DIA", str(tmp_path), register_manifest=False)
+
+        # Assert: succeeded after retries
+        assert len(df) == 10
+        assert mock_ticker_instance.history.call_count == 3
+
+        # Assert: sleep was called for backoff (2 times, before attempts 2 and 3)
+        assert mock_sleep.call_count == 2
+        # Verify backoff delays are in expected range (base + jitter)
+        first_delay = mock_sleep.call_args_list[0][0][0]
+        second_delay = mock_sleep.call_args_list[1][0][0]
+        assert 1.0 <= first_delay <= 1.5, f"First delay {first_delay} not in [1.0, 1.5]"
+        assert 2.0 <= second_delay <= 3.0, f"Second delay {second_delay} not in [2.0, 3.0]"

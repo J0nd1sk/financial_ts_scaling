@@ -463,32 +463,7 @@ Starting new work?
 
 ### 0.4.2 Skills Directory Structure
 
-```
-.claude/
-â”œâ”€â”€ skills/
-â”‚   â”œâ”€â”€ core/
-â”‚   â”‚   â”œâ”€â”€ experimental_discipline.md
-â”‚   â”‚   â”œâ”€â”€ thermal_management.md
-â”‚   â”‚   â”œâ”€â”€ dataset_validation.md
-â”‚   â”‚   â””â”€â”€ probability_scoring.md
-â”‚   â”œâ”€â”€ context/
-â”‚   â”‚   â”œâ”€â”€ session_handoff.md
-â”‚   â”‚   â”œâ”€â”€ session_restore.md
-â”‚   â”‚   â””â”€â”€ context_budget.md
-â”‚   â”œâ”€â”€ development/
-â”‚   â”‚   â”œâ”€â”€ planning_session.md
-â”‚   â”‚   â”œâ”€â”€ task_breakdown.md
-â”‚   â”‚   â”œâ”€â”€ test_first.md
-â”‚   â”‚   â”œâ”€â”€ approval_gate.md
-â”‚   â”‚   â””â”€â”€ branch_strategy.md
-â”‚   â””â”€â”€ quality/
-â”‚       â”œâ”€â”€ code_review_prep.md
-â”‚       â”œâ”€â”€ commit_discipline.md
-â”‚       â””â”€â”€ holistic_review.md
-â””â”€â”€ context/
-    â”œâ”€â”€ phase_tracker.md
-    â””â”€â”€ decision_log.md
-```
+- REMOVED INTENTIONALLY BECAUSE OF ERRORS
 
 ### 0.4.3 Core Skills (Implement First)
 
@@ -1204,73 +1179,7 @@ mkdir -p financial-ts-scaling/{.claude/{skills/{core,context,development,quality
 ```
 
 **Resulting structure:**
-```
-financial-ts-scaling/
-â”œâ”€â”€ .claude/
-â”‚   â”œâ”€â”€ skills/
-â”‚   â”‚   â”œâ”€â”€ core/
-â”‚   â”‚   â”‚   â”œâ”€â”€ experimental_discipline.md
-â”‚   â”‚   â”‚   â”œâ”€â”€ thermal_management.md
-â”‚   â”‚   â”‚   â”œâ”€â”€ dataset_validation.md
-â”‚   â”‚   â”‚   â””â”€â”€ probability_scoring.md
-â”‚   â”‚   â”œâ”€â”€ context/
-â”‚   â”‚   â”‚   â”œâ”€â”€ session_handoff.md
-â”‚   â”‚   â”‚   â”œâ”€â”€ session_restore.md
-â”‚   â”‚   â”‚   â””â”€â”€ context_budget.md
-â”‚   â”‚   â”œâ”€â”€ development/
-â”‚   â”‚   â”‚   â”œâ”€â”€ planning_session.md
-â”‚   â”‚   â”‚   â”œâ”€â”€ task_breakdown.md
-â”‚   â”‚   â”‚   â”œâ”€â”€ test_first.md
-â”‚   â”‚   â”‚   â”œâ”€â”€ approval_gate.md
-â”‚   â”‚   â”‚   â””â”€â”€ branch_strategy.md
-â”‚   â”‚   â””â”€â”€ quality/
-â”‚   â”‚       â”œâ”€â”€ code_review_prep.md
-â”‚   â”‚       â”œâ”€â”€ commit_discipline.md
-â”‚   â”‚       â””â”€â”€ holistic_review.md
-â”‚   â””â”€â”€ context/
-â”‚       â”œâ”€â”€ phase_tracker.md
-â”‚       â””â”€â”€ decision_log.md
-â”œâ”€â”€ .speckit/
-â”‚   â”œâ”€â”€ constitution.md
-â”‚   â””â”€â”€ specs/                    # Created as needed per feature
-â”œâ”€â”€ configs/
-â”‚   â”œâ”€â”€ phase1/
-â”‚   â”œâ”€â”€ phase2/
-â”‚   â”œâ”€â”€ phase3/
-â”‚   â”œâ”€â”€ phase4/
-â”‚   â”œâ”€â”€ phase5/
-â”‚   â””â”€â”€ phase6/
-â”œâ”€â”€ data/
-â”‚   â”œâ”€â”€ raw/
-â”‚   â”‚   â”œâ”€â”€ ohlcv/
-â”‚   â”‚   â”œâ”€â”€ fred/
-â”‚   â”‚   â””â”€â”€ sentiment/
-â”‚   â”œâ”€â”€ processed/
-â”‚   â”‚   â””â”€â”€ v1/
-â”‚   â””â”€â”€ samples/                 # CSV samples for LLM debugging
-â”œâ”€â”€ src/
-â”‚   â”œâ”€â”€ data/
-â”‚   â”œâ”€â”€ features/
-â”‚   â”œâ”€â”€ models/
-â”‚   â”œâ”€â”€ training/
-â”‚   â”œâ”€â”€ evaluation/
-â”‚   â””â”€â”€ utils/
-â”œâ”€â”€ tests/
-â”‚   â”œâ”€â”€ unit/
-â”‚   â””â”€â”€ integration/
-â”œâ”€â”€ notebooks/
-â”œâ”€â”€ scripts/
-â”œâ”€â”€ outputs/
-â”‚   â”œâ”€â”€ checkpoints/
-â”‚   â”œâ”€â”€ results/
-â”‚   â”œâ”€â”€ figures/
-â”‚   â””â”€â”€ thermal/                 # Temperature logs
-â”œâ”€â”€ docs/
-â”‚   â””â”€â”€ runbooks/
-â”œâ”€â”€ CLAUDE.md                    # Static project rules
-â”œâ”€â”€ HANDOFF.md                   # Dynamic session state (not committed)
-â””â”€â”€ pyproject.toml
-```
+- REMOVED BECAUSE OF ERRORS
 
 ### 1.2.3 Create .gitignore
 

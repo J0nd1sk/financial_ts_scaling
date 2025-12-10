@@ -51,6 +51,15 @@
 6. ✅ Training Script (scripts/train.py) - 2025-12-09
 7. ✅ Batch Size Discovery (scripts/find_batch_size.py) - 2025-12-09
 
-## Phase 5: Data Acquisition ⏸️ NOT STARTED
+## Phase 5: Data Acquisition 🔄 IN PROGRESS (Started 2025-12-09)
+- Plan approved: ✅ 2025-12-09 (docs/phase5_data_acquisition_plan.md v1.2)
+- Task 1: ✅ Generalize download script (download_ticker + retry logic)
+- Task 2: ⏸️ Download DIA + QQQ
+- Task 3: ⏸️ Download VIX
+- Task 4: ⏸️ Generalize feature pipeline
+- Task 5: ⏸️ Build DIA/QQQ features
+- Task 6: ⏸️ VIX feature engineering
+- Task 7: ⏸️ Combined dataset builder
+- Task 8: ⏸️ Multi-asset builder (optional)
 
 ## Phase 6: Experiments ⏸️ NOT STARTED
