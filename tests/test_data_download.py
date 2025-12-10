@@ -453,3 +453,89 @@ class TestIndexTickerHandling:
         assert "IXIC.parquet" in entry["path"]
         assert "^" not in entry["dataset"]
         assert "^" not in entry["path"]
+
+
+# =============================================================================
+# Tests for VIX download (Phase 5 Task 3)
+# VIX has NaN/0 Volume which is expected and should be allowed
+# =============================================================================
+
+
+def _create_mock_vix_dataframe(rows: int = 10) -> pd.DataFrame:
+    """Create a synthetic VIX DataFrame with NaN Volume (mimics real VIX data).
+
+    VIX is a volatility index - it has OHLC but no meaningful volume.
+    yfinance returns 0 or NaN for VIX volume.
+    """
+    import numpy as np
+
+    dates = pd.date_range("2020-01-01", periods=rows, freq="B")
+    df = pd.DataFrame({
+        "Open": [15.0 + i * 0.1 for i in range(rows)],
+        "High": [16.0 + i * 0.1 for i in range(rows)],
+        "Low": [14.0 + i * 0.1 for i in range(rows)],
+        "Close": [15.5 + i * 0.1 for i in range(rows)],
+        "Volume": [np.nan] * rows,  # VIX has no volume
+    }, index=dates)
+    df.index.name = "Date"
+    return df
+
+
+class TestVIXDownload:
+    """Tests for VIX download - special handling for NaN Volume."""
+
+    @patch("scripts.download_ohlcv.yf.Ticker")
+    def test_download_vix_basic(self, mock_ticker_class, tmp_path):
+        """Test that ^VIX downloads and saves parquet with OHLC columns."""
+        from scripts.download_ohlcv import download_ticker
+
+        # Arrange: mock yfinance to return VIX-like data
+        mock_df = _create_mock_vix_dataframe(rows=20)
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker_class.return_value = mock_ticker_instance
+
+        # Act
+        df = download_ticker("^VIX", str(tmp_path), register_manifest=False)
+
+        # Assert: file created with sanitized name (VIX, not ^VIX)
+        output_file = tmp_path / "VIX.parquet"
+        assert output_file.exists(), "VIX.parquet was not created"
+        assert output_file.stat().st_size > 0, "VIX.parquet is empty"
+
+        # Assert: DataFrame has correct structure
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) == 20
+        assert list(df.columns) == ["Date", "Open", "High", "Low", "Close", "Volume"]
+
+        # Assert: yfinance was called with original ticker (including ^)
+        mock_ticker_class.assert_called_once_with("^VIX")
+
+    @patch("scripts.download_ohlcv.yf.Ticker")
+    def test_vix_volume_nan_allowed(self, mock_ticker_class, tmp_path):
+        """Test that download succeeds even when Volume column has NaN values.
+
+        VIX volume is not meaningful (0 or NaN). The download should succeed
+        as long as OHLC columns are valid. This tests that we don't fail
+        on NaN Volume.
+        """
+        from scripts.download_ohlcv import download_ticker
+
+        # Arrange: create data with all NaN volume (like real VIX)
+        mock_df = _create_mock_vix_dataframe(rows=15)
+        mock_ticker_instance = MagicMock()
+        mock_ticker_instance.history.return_value = mock_df
+        mock_ticker_class.return_value = mock_ticker_instance
+
+        # Act: should NOT raise ValueError despite NaN Volume
+        df = download_ticker("^VIX", str(tmp_path), register_manifest=False)
+
+        # Assert: download succeeded
+        assert len(df) == 15
+
+        # Assert: OHLC columns have no NaN
+        for col in ["Open", "High", "Low", "Close"]:
+            assert df[col].notna().all(), f"{col} should have no NaN values"
+
+        # Assert: Volume column exists (even if NaN - we keep it as-is)
+        assert "Volume" in df.columns

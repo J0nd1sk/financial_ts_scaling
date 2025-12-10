@@ -59,7 +59,10 @@
   - DIA: 7,018 rows (1998+), QQQ: 6,731 rows (1999+)
   - ^DJI: 8,546 rows (1992+), ^IXIC: 13,829 rows (1971+)
   - Decision: Use indices for extended training history (1992+ vs 1999+)
-- Task 3: ⏸️ Download VIX
+- Task 3: ✅ Download VIX (2025-12-10)
+  - ^VIX: 9,053 rows (1990+)
+  - Relaxed Volume validation to allow NaN/0 (VIX has no volume)
+  - 103 tests passing
 - Task 4: ⏸️ Generalize feature pipeline
 - Task 5: ⏸️ Build DIA/QQQ features
 - Task 6: ⏸️ VIX feature engineering

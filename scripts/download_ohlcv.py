@@ -165,8 +165,9 @@ def download_ticker(
     # Ensure Volume is numeric
     df["Volume"] = pd.to_numeric(df["Volume"])
 
-    # Validate no nulls in OHLCV
-    null_counts = df[required_cols].isnull().sum()
+    # Validate no nulls in Date + OHLC (Volume can be NaN for indices like VIX)
+    ohlc_cols = ["Date", "Open", "High", "Low", "Close"]
+    null_counts = df[ohlc_cols].isnull().sum()
     if null_counts.any():
         raise ValueError(f"Null values found: {null_counts[null_counts > 0].to_dict()}")
 
@@ -254,8 +255,9 @@ def download_spy(
     # Ensure Volume is numeric
     df["Volume"] = pd.to_numeric(df["Volume"])
 
-    # Validate no nulls in OHLCV
-    null_counts = df[required_cols].isnull().sum()
+    # Validate no nulls in Date + OHLC (Volume can be NaN for indices like VIX)
+    ohlc_cols = ["Date", "Open", "High", "Low", "Close"]
+    null_counts = df[ohlc_cols].isnull().sum()
     if null_counts.any():
         raise ValueError(f"Null values found: {null_counts[null_counts > 0].to_dict()}")
 
