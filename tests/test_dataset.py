@@ -1,4 +1,4 @@
-"""Tests for FinancialDataset class.
+"""Tests for FinancialDataset and ChunkSplitter classes.
 
 Tests cover:
 - Correct tensor shapes for inputs and targets
@@ -6,6 +6,7 @@ Tests cover:
 - Horizon handling for target calculation
 - Edge case handling (end of sequence, short sequences, NaN values)
 - Warmup period exclusion
+- Hybrid chunk-based train/val/test splits
 """
 
 import numpy as np
@@ -13,7 +14,7 @@ import pandas as pd
 import pytest
 import torch
 
-from src.data.dataset import FinancialDataset
+from src.data.dataset import FinancialDataset, ChunkSplitter, SplitIndices
 
 
 @pytest.fixture
@@ -304,3 +305,352 @@ class TestErrorHandling:
                 horizon=5,
                 threshold=0.01,
             )
+
+
+# ============================================================
+# ChunkSplitter Tests - Hybrid train/val/test splits
+# ============================================================
+
+
+class TestChunkSplitterReturnsDataclass:
+    """Test that ChunkSplitter returns correct SplitIndices dataclass."""
+
+    def test_chunk_splitter_returns_split_indices(self):
+        """ChunkSplitter should return SplitIndices dataclass."""
+        total_days = 1000
+        context_length = 60
+        horizon = 1
+        chunk_size = context_length + horizon  # 61
+
+        splitter = ChunkSplitter(
+            total_days=total_days,
+            context_length=context_length,
+            horizon=horizon,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        assert isinstance(splits, SplitIndices), "Should return SplitIndices"
+        assert hasattr(splits, "train_indices")
+        assert hasattr(splits, "val_indices")
+        assert hasattr(splits, "test_indices")
+        assert hasattr(splits, "chunk_size")
+
+    def test_split_indices_are_numpy_arrays(self):
+        """All indices should be numpy arrays."""
+        splitter = ChunkSplitter(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        assert isinstance(splits.train_indices, np.ndarray)
+        assert isinstance(splits.val_indices, np.ndarray)
+        assert isinstance(splits.test_indices, np.ndarray)
+
+
+class TestChunkSplitterValTestNonOverlapping:
+    """Test that val/test chunks are non-overlapping."""
+
+    def test_val_chunks_are_non_overlapping(self):
+        """Val chunks should not overlap with each other."""
+        splitter = ChunkSplitter(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+        chunk_size = splits.chunk_size
+
+        # Check no two val chunks overlap
+        val_starts = sorted(splits.val_indices)
+        for i in range(len(val_starts) - 1):
+            assert val_starts[i + 1] >= val_starts[i] + chunk_size, (
+                f"Val chunks overlap: {val_starts[i]} and {val_starts[i + 1]}"
+            )
+
+    def test_test_chunks_are_non_overlapping(self):
+        """Test chunks should not overlap with each other."""
+        splitter = ChunkSplitter(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+        chunk_size = splits.chunk_size
+
+        # Check no two test chunks overlap
+        test_starts = sorted(splits.test_indices)
+        for i in range(len(test_starts) - 1):
+            assert test_starts[i + 1] >= test_starts[i] + chunk_size, (
+                f"Test chunks overlap: {test_starts[i]} and {test_starts[i + 1]}"
+            )
+
+    def test_val_and_test_chunks_dont_overlap(self):
+        """Val and test chunks should not overlap with each other."""
+        splitter = ChunkSplitter(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+        chunk_size = splits.chunk_size
+
+        # Create sets of all days in val and test chunks
+        val_days = set()
+        for start in splits.val_indices:
+            val_days.update(range(start, start + chunk_size))
+
+        test_days = set()
+        for start in splits.test_indices:
+            test_days.update(range(start, start + chunk_size))
+
+        overlap = val_days & test_days
+        assert len(overlap) == 0, f"Val and test chunks overlap on days: {overlap}"
+
+
+class TestChunkSplitterTrainNoOverlap:
+    """Test that train samples don't overlap with val/test regions."""
+
+    def test_train_samples_dont_overlap_val_test(self):
+        """No train sample's [t, t+context_length+horizon) can overlap val/test."""
+        splitter = ChunkSplitter(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+        chunk_size = splits.chunk_size
+        context_length = 60
+        horizon = 1
+        sample_span = context_length + horizon  # Days covered by one sample
+
+        # Create set of all val/test days
+        blocked_days = set()
+        for start in splits.val_indices:
+            blocked_days.update(range(start, start + chunk_size))
+        for start in splits.test_indices:
+            blocked_days.update(range(start, start + chunk_size))
+
+        # Check each train sample doesn't touch blocked days
+        for train_start in splits.train_indices:
+            sample_days = set(range(train_start, train_start + sample_span))
+            overlap = sample_days & blocked_days
+            assert len(overlap) == 0, (
+                f"Train sample at {train_start} overlaps blocked days: {overlap}"
+            )
+
+    def test_train_uses_sliding_window(self):
+        """Train should have more samples than val+test (sliding vs non-overlapping)."""
+        splitter = ChunkSplitter(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        # Val/test are non-overlapping chunks, train is sliding
+        # Train should have significantly more samples
+        assert len(splits.train_indices) > len(splits.val_indices) + len(splits.test_indices), (
+            f"Train ({len(splits.train_indices)}) should be > val+test "
+            f"({len(splits.val_indices) + len(splits.test_indices)})"
+        )
+
+
+class TestChunkSplitterSplitRatios:
+    """Test that split ratios are approximately correct."""
+
+    def test_val_test_chunk_counts_approximate_ratio(self):
+        """Val/test chunk counts should approximate the requested ratio."""
+        total_days = 8000  # ~130 chunks of 61 days
+        splitter = ChunkSplitter(
+            total_days=total_days,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+        chunk_size = splits.chunk_size
+
+        total_chunks = total_days // chunk_size
+        expected_val_chunks = int(total_chunks * 0.15)
+        expected_test_chunks = int(total_chunks * 0.15)
+
+        # Allow ±2 chunks tolerance
+        assert abs(len(splits.val_indices) - expected_val_chunks) <= 2, (
+            f"Val chunks {len(splits.val_indices)} not close to expected {expected_val_chunks}"
+        )
+        assert abs(len(splits.test_indices) - expected_test_chunks) <= 2, (
+            f"Test chunks {len(splits.test_indices)} not close to expected {expected_test_chunks}"
+        )
+
+
+class TestChunkSplitterReproducibility:
+    """Test that splits are reproducible with same seed."""
+
+    def test_same_seed_produces_same_splits(self):
+        """Same seed should produce identical splits."""
+        kwargs = dict(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+
+        splitter1 = ChunkSplitter(**kwargs)
+        splits1 = splitter1.split()
+
+        splitter2 = ChunkSplitter(**kwargs)
+        splits2 = splitter2.split()
+
+        np.testing.assert_array_equal(splits1.train_indices, splits2.train_indices)
+        np.testing.assert_array_equal(splits1.val_indices, splits2.val_indices)
+        np.testing.assert_array_equal(splits1.test_indices, splits2.test_indices)
+
+    def test_different_seed_produces_different_splits(self):
+        """Different seeds should produce different splits."""
+        base_kwargs = dict(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+        )
+
+        splits1 = ChunkSplitter(**base_kwargs, seed=42).split()
+        splits2 = ChunkSplitter(**base_kwargs, seed=123).split()
+
+        # At least one of the indices should be different
+        val_different = not np.array_equal(splits1.val_indices, splits2.val_indices)
+        test_different = not np.array_equal(splits1.test_indices, splits2.test_indices)
+        assert val_different or test_different, "Different seeds should produce different splits"
+
+
+class TestChunkSplitterEdgeCases:
+    """Test edge cases and validation."""
+
+    def test_raises_on_insufficient_data(self):
+        """Should raise if total_days is too small for meaningful splits."""
+        with pytest.raises(ValueError, match="insufficient|too short|small"):
+            ChunkSplitter(
+                total_days=100,  # Too small for context=60, horizon=1
+                context_length=60,
+                horizon=1,
+                val_ratio=0.15,
+                test_ratio=0.15,
+                seed=42,
+            )
+
+    def test_raises_on_invalid_ratios(self):
+        """Should raise if val_ratio + test_ratio >= 1.0."""
+        with pytest.raises(ValueError, match="ratio"):
+            ChunkSplitter(
+                total_days=1000,
+                context_length=60,
+                horizon=1,
+                val_ratio=0.5,
+                test_ratio=0.6,  # Total > 1.0
+                seed=42,
+            )
+
+    def test_handles_real_world_data_size(self):
+        """Should handle ~8000 days (1993-2025 SPY data)."""
+        splitter = ChunkSplitter(
+            total_days=8073,  # Real SPY data size
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        # Should have reasonable number of samples
+        assert len(splits.train_indices) > 1000, "Should have many train samples"
+        assert len(splits.val_indices) >= 10, "Should have val samples"
+        assert len(splits.test_indices) >= 10, "Should have test samples"
+
+
+class TestChunkSplitterHPOSubset:
+    """Test HPO subset functionality."""
+
+    def test_get_hpo_subset_returns_subset(self):
+        """get_hpo_subset should return a fraction of train indices."""
+        splitter = ChunkSplitter(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        hpo_fraction = 0.3
+        hpo_indices = splitter.get_hpo_subset(splits, fraction=hpo_fraction)
+
+        expected_count = int(len(splits.train_indices) * hpo_fraction)
+        # Allow ±5% tolerance
+        assert abs(len(hpo_indices) - expected_count) <= expected_count * 0.05 + 1, (
+            f"HPO subset size {len(hpo_indices)} not close to expected {expected_count}"
+        )
+
+    def test_hpo_subset_is_subset_of_train(self):
+        """HPO subset should only contain train indices."""
+        splitter = ChunkSplitter(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        hpo_indices = splitter.get_hpo_subset(splits, fraction=0.3)
+
+        train_set = set(splits.train_indices)
+        for idx in hpo_indices:
+            assert idx in train_set, f"HPO index {idx} not in train indices"
+
+    def test_hpo_subset_reproducible(self):
+        """HPO subset should be reproducible with same seed."""
+        splitter = ChunkSplitter(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        hpo1 = splitter.get_hpo_subset(splits, fraction=0.3, seed=42)
+        hpo2 = splitter.get_hpo_subset(splits, fraction=0.3, seed=42)
+
+        np.testing.assert_array_equal(hpo1, hpo2)

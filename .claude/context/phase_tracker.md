@@ -113,11 +113,19 @@
 - `.claude/skills/experiment_generation/SKILL.md`: 228 lines (Task 5)
 - `.claude/skills/experiment_execution/SKILL.md`: 329 lines (Task 6)
 
-## Phase 6A: Parameter Scaling 🔜 READY TO START
+## Phase 6A: Parameter Scaling 🔄 IN PROGRESS
 - 32 runs: 16 HPO + 16 final evaluation
-- Hold: 20 features, 1-day horizon, SPY
+- Hold: 28 features, 1-day horizon, SPY
 - Vary: 2M → 20M → 200M → 2B parameters
 - Research: Does error ∝ N^(-α)?
+
+**Status (2025-12-11):**
+- Fixed feature pipeline integration issues (vix_regime encoding, OHLCV exclusion)
+- Config file created: `configs/experiments/threshold_1pct.yaml`
+- HPO script generated: `experiments/phase6a/hpo_2M_threshold_1pct.py`
+- Data re-processed with numeric vix_regime (28 features total)
+- Issue: HPO trials failing inside objective function - needs debugging
+- Documentation: `docs/feature_pipeline_integration_issues.md`
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)

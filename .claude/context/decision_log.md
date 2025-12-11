@@ -295,6 +295,49 @@ Task 3 expanded into 3 sub-tasks:
 - Future restores use `open_nodes` with those exact names
 - More reliable cross-session knowledge transfer
 
+## 2025-12-11 Hybrid Chunk-Based Data Splits
+
+**Context**: HPO was running on ALL data with no train/val/test splits. This violated experimental protocol (lines 46-55 in `.claude/rules/experimental-protocol.md`) and would produce scientifically invalid results.
+
+**Problem Identified**:
+- Trainer created ONE dataloader from entire dataset
+- HPO optimized train_loss on full data (no val_loss)
+- No held-out test set for final evaluation
+- User asked: "are you testing/doing HPO on the full data available or only a subset?"
+
+**Decision**: Implement hybrid chunk-based splits instead of pure chronological splits.
+
+**Design**:
+- Val/Test: Non-overlapping chunks of 61 days (context_length + horizon), randomly assigned
+- Train: Sliding window on remaining data (maximizes samples)
+- Constraint: No training sample's `[context, target]` can overlap any val/test chunk
+- Split ratio: 70% train, 15% val, 15% test
+- HPO uses 30% of train samples for faster iteration
+
+**Sample Counts**:
+| Approach | Train | Val | Test |
+|----------|-------|-----|------|
+| Pure non-overlapping | 92 | 20 | 20 |
+| **Hybrid (approved)** | ~3,157 | 20 | 20 |
+
+**Rationale**:
+- User rejected pure chronological splits (train pre-2020, val 2021-22, test 2023+) as regime-dependent
+- Random chunk assignment gives exposure to different market conditions across all splits
+- Sliding window for train maximizes training data (~34x more samples)
+- Non-overlapping val/test ensures strict isolation and valid held-out evaluation
+
+**Alternatives Considered**:
+- Pure chronological splits — rejected by user as regime-dependent
+- All non-overlapping chunks — produces too few training samples (92)
+- Sliding window for all splits — rejected due to data leakage risk
+
+**Implications**:
+- Must implement ChunkSplitter class in dataset.py
+- Trainer needs train_loader and val_loader, must compute val_loss
+- HPO objective must return val_loss instead of train_loss
+- Skills and templates must include split validation
+- Experimental protocol documentation needs update
+
 ## 2025-12-10 Phase 5.5 Plan Approved
 
 **Context**: Phase 5 complete, ready for experiment infrastructure. Planning session held to define Phase 5.5 scope.

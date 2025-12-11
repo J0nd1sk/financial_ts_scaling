@@ -14,9 +14,11 @@ from pathlib import Path
 from typing import Any, Callable
 
 import optuna
+import torch
 import yaml
 
 from src.config.experiment import load_experiment_config
+from src.data.dataset import SplitIndices
 from src.models.configs import load_patchtst_config
 from src.training.thermal import ThermalCallback
 from src.training.trainer import Trainer
@@ -124,18 +126,21 @@ def create_objective(
     config_path: str,
     budget: str,
     search_space: dict,
+    split_indices: SplitIndices | None = None,
 ) -> Callable[[optuna.Trial], float]:
     """Create Optuna objective function for HPO.
 
     The objective function:
     1. Samples hyperparameters from search space
     2. Creates and trains model with sampled params
-    3. Returns training loss
+    3. Returns validation loss if splits provided, else training loss
 
     Args:
         config_path: Path to experiment config YAML
         budget: Parameter budget
         search_space: Dict defining parameter ranges
+        split_indices: Optional SplitIndices for train/val/test splits.
+            If provided, objective returns val_loss instead of train_loss.
 
     Returns:
         Objective function for study.optimize()
@@ -143,6 +148,9 @@ def create_objective(
 
     def objective(trial: optuna.Trial) -> float:
         """Objective function that trains model and returns loss."""
+        import logging
+        logger = logging.getLogger("optuna")
+
         # Sample hyperparameters from search space
         sampled_params = {}
         for param_name, param_spec in search_space.items():
@@ -160,6 +168,20 @@ def create_objective(
         batch_size = sampled_params.get("batch_size", 32)
 
         # Create temporary checkpoint directory for this trial
+        # Select best available device: MPS (Apple Silicon GPU) > CUDA > CPU
+        if torch.backends.mps.is_available():
+            device = "mps"
+        elif torch.cuda.is_available():
+            device = "cuda"
+        else:
+            device = "cpu"
+
+        # Log trial start with key parameters
+        logger.info(
+            f"Trial {trial.number} starting: device={device}, "
+            f"lr={learning_rate:.6f}, epochs={epochs}, batch_size={batch_size}"
+        )
+
         with tempfile.TemporaryDirectory() as tmp_dir:
             trainer = Trainer(
                 experiment_config=experiment_config,
@@ -167,14 +189,18 @@ def create_objective(
                 batch_size=batch_size,
                 learning_rate=learning_rate,
                 epochs=epochs,
-                device="cpu",  # Use CPU for HPO to avoid MPS memory issues
+                device=device,
                 checkpoint_dir=Path(tmp_dir),
                 thermal_callback=None,  # Thermal handled at study level
                 tracking_manager=None,  # Tracking handled at study level
+                split_indices=split_indices,  # Pass splits to trainer
             )
 
             result = trainer.train()
 
+        # Return val_loss if splits provided, otherwise train_loss
+        if split_indices is not None:
+            return result["val_loss"]
         return result["train_loss"]
 
     return objective
@@ -277,9 +303,11 @@ def run_hpo(
     stop_reason = None
 
     # Check thermal status before starting (early abort if critical)
+    # Note: Only abort on "critical" status, not "unknown" (temp read failure)
+    # Unknown status should log warning but allow HPO to proceed
     if thermal_callback is not None:
         status = thermal_callback.check()
-        if status.status == "critical" or status.should_pause:
+        if status.status == "critical":
             stopped_early = True
             stop_reason = "thermal"
             # Save empty results and return early
@@ -308,7 +336,8 @@ def run_hpo(
 
         status = thermal_callback.check()
 
-        if status.status == "critical" or status.should_pause:
+        # Only abort on critical status (not unknown/should_pause from read failures)
+        if status.status == "critical":
             # Critical temperature - abort
             stopped_early = True
             stop_reason = "thermal"

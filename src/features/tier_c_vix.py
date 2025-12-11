@@ -6,7 +6,7 @@ Computes 8 VIX-derived features for volatility context:
 - vix_sma_20: 20-day simple moving average
 - vix_percentile_60d: 60-day rolling percentile rank [0-100]
 - vix_zscore_20d: 20-day rolling z-score
-- vix_regime: Categorical - 'low' (<15), 'normal' (15-25), 'high' (>=25)
+- vix_regime: Numeric encoding - 0=low (<15), 1=normal (15-25), 2=high (>=25)
 - vix_change_1d: 1-day percent change
 - vix_change_5d: 5-day percent change
 """
@@ -67,14 +67,19 @@ def _compute_rolling_zscore(series: pd.Series, window: int) -> pd.Series:
 
 
 def _classify_regime(close: pd.Series) -> pd.Series:
-    """Classify VIX into regime categories."""
+    """Classify VIX into regime categories.
+
+    Returns:
+        Series of integers: 0=low (<15), 1=normal (15-25), 2=high (>=25)
+    """
     conditions = [
         close < VIX_LOW_THRESHOLD,
         (close >= VIX_LOW_THRESHOLD) & (close < VIX_HIGH_THRESHOLD),
         close >= VIX_HIGH_THRESHOLD,
     ]
-    choices = ["low", "normal", "high"]
-    return pd.Series(np.select(conditions, choices, default="normal"), index=close.index)
+    # Numeric encoding: 0=low, 1=normal, 2=high
+    choices = [0, 1, 2]
+    return pd.Series(np.select(conditions, choices, default=1), index=close.index, dtype=np.int32)
 
 
 def _compute_percent_change(series: pd.Series, periods: int) -> pd.Series:

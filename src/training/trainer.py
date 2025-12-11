@@ -7,6 +7,7 @@ and experiment tracking (W&B + MLflow).
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -14,13 +15,16 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 from src.config.experiment import ExperimentConfig
-from src.data.dataset import FinancialDataset
+from src.data.dataset import FinancialDataset, SplitIndices
 from src.models.patchtst import PatchTST, PatchTSTConfig
 from src.training.thermal import ThermalCallback
 from src.training.tracking import TrackingManager
+
+# Columns that are not features (only Date - OHLCV are valid features)
+NON_FEATURE_COLUMNS = {"Date"}
 
 
 # Task name to threshold mapping
@@ -76,6 +80,7 @@ class Trainer:
         checkpoint_dir: Path,
         thermal_callback: ThermalCallback | None = None,
         tracking_manager: TrackingManager | None = None,
+        split_indices: SplitIndices | None = None,
     ) -> None:
         """Initialize the trainer.
 
@@ -89,9 +94,10 @@ class Trainer:
             checkpoint_dir: Directory to save checkpoints
             thermal_callback: Optional thermal monitoring callback
             tracking_manager: Optional experiment tracking manager
+            split_indices: Optional SplitIndices for train/val/test splits.
+                If provided, creates separate train and val dataloaders.
         """
         self.experiment_config = experiment_config
-        self.model_config = model_config
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.epochs = epochs
@@ -99,6 +105,7 @@ class Trainer:
         self.checkpoint_dir = Path(checkpoint_dir)
         self.thermal_callback = thermal_callback
         self.tracking_manager = tracking_manager
+        self.split_indices = split_indices
 
         # Set random seeds for reproducibility
         self._set_seeds(experiment_config.seed)
@@ -112,8 +119,11 @@ class Trainer:
         # Compute data MD5 for reproducibility tracking
         self.data_md5 = _compute_file_md5(Path(experiment_config.data_path))
 
+        # Detect actual feature count and update model config if needed
+        self.model_config = self._adjust_model_config(model_config)
+
         # Create model
-        self.model = PatchTST(model_config).to(self.device)
+        self.model = PatchTST(self.model_config).to(self.device)
 
         # Create optimizer
         self.optimizer = torch.optim.Adam(
@@ -123,8 +133,15 @@ class Trainer:
         # Loss function (BCE for binary classification)
         self.criterion = nn.BCELoss()
 
-        # Create dataloader (with seeded generator for reproducibility)
-        self.dataloader = self._create_dataloader()
+        # Create dataloaders (with seeded generator for reproducibility)
+        if split_indices is not None:
+            self.train_dataloader, self.val_dataloader = self._create_split_dataloaders()
+            # Backward compatibility: dataloader points to train_dataloader
+            self.dataloader = self.train_dataloader
+        else:
+            self.dataloader = self._create_dataloader()
+            self.train_dataloader = self.dataloader
+            self.val_dataloader = None
 
     def _set_seeds(self, seed: int) -> None:
         """Set random seeds for reproducibility."""
@@ -142,6 +159,31 @@ class Trainer:
         data_path = Path(self.experiment_config.data_path)
         if not data_path.exists():
             raise FileNotFoundError(f"Data file not found: {data_path}")
+
+    def _adjust_model_config(self, model_config: PatchTSTConfig) -> PatchTSTConfig:
+        """Adjust model config to match actual data feature count.
+
+        Detects the number of feature columns in the data and updates
+        model_config.num_features if it doesn't match.
+
+        Args:
+            model_config: Original model configuration.
+
+        Returns:
+            Updated model configuration with correct num_features.
+        """
+        data_path = Path(self.experiment_config.data_path)
+        df = pd.read_parquet(data_path)
+
+        # Count actual features (exclude non-feature columns)
+        feature_columns = [c for c in df.columns if c not in NON_FEATURE_COLUMNS]
+        actual_num_features = len(feature_columns)
+
+        if model_config.num_features != actual_num_features:
+            # Create new config with corrected num_features
+            return replace(model_config, num_features=actual_num_features)
+
+        return model_config
 
     def _create_dataloader(self) -> DataLoader:
         """Create DataLoader from experiment config.
@@ -188,6 +230,71 @@ class Trainer:
 
         return dataloader
 
+    def _create_split_dataloaders(self) -> tuple[DataLoader, DataLoader]:
+        """Create train and validation DataLoaders using split indices.
+
+        Uses SplitIndices to create separate dataloaders for train and val.
+        Train samples are specified by train_indices (sliding window).
+        Val samples are specified by val_indices (non-overlapping chunks).
+
+        Returns:
+            Tuple of (train_dataloader, val_dataloader).
+        """
+        assert self.split_indices is not None, "split_indices must be set"
+
+        # Load data
+        data_path = Path(self.experiment_config.data_path)
+        df = pd.read_parquet(data_path)
+
+        # Extract close prices
+        close_prices = df["Close"].values
+
+        # Get threshold for task
+        threshold = TASK_THRESHOLDS.get(self.experiment_config.task)
+        if threshold is None and self.experiment_config.task != "regression":
+            raise ValueError(f"Unknown task: {self.experiment_config.task}")
+
+        # For regression, use threshold=0.0 (labels won't be used as-is)
+        if threshold is None:
+            threshold = 0.0
+
+        # Create full dataset
+        full_dataset = FinancialDataset(
+            features_df=df,
+            close_prices=close_prices,
+            context_length=self.experiment_config.context_length,
+            horizon=self.experiment_config.horizon,
+            threshold=threshold,
+        )
+
+        # Create train subset using train_indices
+        train_subset = Subset(full_dataset, self.split_indices.train_indices.tolist())
+
+        # Create val subset using val_indices
+        val_subset = Subset(full_dataset, self.split_indices.val_indices.tolist())
+
+        # Create dataloaders with seeded generator
+        generator = torch.Generator()
+        generator.manual_seed(self.experiment_config.seed)
+
+        train_dataloader = DataLoader(
+            train_subset,
+            batch_size=self.batch_size,
+            shuffle=True,
+            generator=generator,
+            drop_last=False,
+        )
+
+        # Val dataloader: no shuffle needed
+        val_dataloader = DataLoader(
+            val_subset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            drop_last=False,
+        )
+
+        return train_dataloader, val_dataloader
+
     def get_first_batch(self) -> tuple[torch.Tensor, torch.Tensor]:
         """Get the first batch from the dataloader.
 
@@ -211,6 +318,7 @@ class Trainer:
         Returns:
             Dictionary with training results:
             - train_loss: Final training loss
+            - val_loss: Final validation loss (None if no splits provided)
             - stopped_early: Whether training stopped early
             - stop_reason: Reason for early stop (if applicable)
         """
@@ -233,16 +341,25 @@ class Trainer:
         stopped_early = False
         stop_reason = None
         epoch_loss = 0.0
+        val_loss: float | None = None
 
         try:
             for epoch in range(self.epochs):
                 epoch_loss = self._train_epoch(epoch)
 
-                # Log epoch metrics
+                # Log train epoch metrics
                 if self.tracking_manager:
                     self.tracking_manager.log_metric(
                         "train_loss", epoch_loss, step=epoch
                     )
+
+                # Compute validation loss if splits are provided
+                if self.val_dataloader is not None:
+                    val_loss = self._evaluate_val()
+                    if self.tracking_manager:
+                        self.tracking_manager.log_metric(
+                            "val_loss", val_loss, step=epoch
+                        )
 
                 # Check thermal status
                 if self.thermal_callback:
@@ -261,6 +378,7 @@ class Trainer:
 
         return {
             "train_loss": epoch_loss,
+            "val_loss": val_loss,
             "stopped_early": stopped_early,
             "stop_reason": stop_reason,
         }
@@ -300,6 +418,36 @@ class Trainer:
                 status = self.thermal_callback.check()
                 if status.should_pause:
                     break
+
+        return total_loss / max(num_batches, 1)
+
+    def _evaluate_val(self) -> float:
+        """Evaluate model on validation set.
+
+        Returns:
+            Average validation loss.
+        """
+        assert self.val_dataloader is not None, "val_dataloader must be set"
+
+        self.model.eval()
+        total_loss = 0.0
+        num_batches = 0
+
+        with torch.no_grad():
+            for batch_x, batch_y in self.val_dataloader:
+                # Move to device
+                batch_x = batch_x.to(self.device)
+                batch_y = batch_y.to(self.device)
+
+                # Forward pass
+                outputs = self.model(batch_x)
+                loss = self.criterion(outputs, batch_y)
+
+                total_loss += loss.item()
+                num_batches += 1
+
+        # Switch back to training mode
+        self.model.train()
 
         return total_loss / max(num_batches, 1)
 

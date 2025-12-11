@@ -4,8 +4,8 @@
 # Random seed for reproducibility
 seed: 42
 
-# Data source (Phase 5 combined dataset with VIX features)
-data_path: data/processed/v1/SPY_dataset_c.parquet
+# Data source (OHLCV + 20 indicators, no VIX - tier a25)
+data_path: data/processed/v1/SPY_dataset_a25.parquet
 
 # Task configuration
 task: threshold_5pct

@@ -514,3 +514,190 @@ class TestRunHpoThermalAbortOnCritical:
         # Result should indicate thermal abort
         assert result.get("stopped_early") is True
         assert result.get("stop_reason") == "thermal"
+
+
+# --- Tests for HPO with data splits ---
+
+
+class TestCreateObjectiveWithSplits:
+    """Test that create_objective supports split_indices for val_loss optimization."""
+
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    @patch("src.training.hpo.load_patchtst_config")
+    def test_create_objective_accepts_split_indices(
+        self,
+        mock_load_patchtst: MagicMock,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_experiment_config: MagicMock,
+        valid_search_space_yaml: Path,
+    ) -> None:
+        """Test that create_objective accepts split_indices parameter."""
+        from src.data.dataset import SplitIndices
+        import numpy as np
+
+        mock_load_exp.return_value = mock_experiment_config
+        mock_load_patchtst.return_value = MagicMock()
+
+        # Create mock split indices
+        split_indices = SplitIndices(
+            train_indices=np.array([0, 1, 2, 3, 4]),
+            val_indices=np.array([5, 6]),
+            test_indices=np.array([7, 8]),
+            chunk_size=13,
+        )
+
+        search_config = load_search_space(valid_search_space_yaml)
+        objective = create_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            search_space=search_config["search_space"],
+            split_indices=split_indices,  # New parameter
+        )
+        assert callable(objective)
+
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    @patch("src.training.hpo.load_patchtst_config")
+    def test_objective_returns_val_loss_when_splits_provided(
+        self,
+        mock_load_patchtst: MagicMock,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_experiment_config: MagicMock,
+        valid_search_space_yaml: Path,
+    ) -> None:
+        """Test that objective returns val_loss when split_indices provided."""
+        from src.data.dataset import SplitIndices
+        import numpy as np
+
+        mock_load_exp.return_value = mock_experiment_config
+        mock_load_patchtst.return_value = MagicMock()
+
+        # Create mock trainer that returns val_loss
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {
+            "train_loss": 0.5,
+            "val_loss": 0.55,  # Different from train_loss
+        }
+        mock_trainer_cls.return_value = mock_trainer
+
+        # Create mock split indices
+        split_indices = SplitIndices(
+            train_indices=np.array([0, 1, 2, 3, 4]),
+            val_indices=np.array([5, 6]),
+            test_indices=np.array([7, 8]),
+            chunk_size=13,
+        )
+
+        # Create mock trial
+        mock_trial = MagicMock()
+        mock_trial.suggest_float.return_value = 0.001
+        mock_trial.suggest_int.return_value = 50
+
+        search_config = load_search_space(valid_search_space_yaml)
+        objective = create_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            search_space=search_config["search_space"],
+            split_indices=split_indices,
+        )
+
+        result = objective(mock_trial)
+
+        # Should return val_loss (0.55), not train_loss (0.5)
+        assert result == 0.55
+
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    @patch("src.training.hpo.load_patchtst_config")
+    def test_objective_passes_split_indices_to_trainer(
+        self,
+        mock_load_patchtst: MagicMock,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_experiment_config: MagicMock,
+        valid_search_space_yaml: Path,
+    ) -> None:
+        """Test that objective passes split_indices to Trainer constructor."""
+        from src.data.dataset import SplitIndices
+        import numpy as np
+
+        mock_load_exp.return_value = mock_experiment_config
+        mock_load_patchtst.return_value = MagicMock()
+
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.55}
+        mock_trainer_cls.return_value = mock_trainer
+
+        # Create split indices
+        split_indices = SplitIndices(
+            train_indices=np.array([0, 1, 2, 3, 4]),
+            val_indices=np.array([5, 6]),
+            test_indices=np.array([7, 8]),
+            chunk_size=13,
+        )
+
+        mock_trial = MagicMock()
+        mock_trial.suggest_float.return_value = 0.001
+        mock_trial.suggest_int.return_value = 50
+
+        search_config = load_search_space(valid_search_space_yaml)
+        objective = create_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            search_space=search_config["search_space"],
+            split_indices=split_indices,
+        )
+
+        objective(mock_trial)
+
+        # Verify Trainer was called with split_indices
+        mock_trainer_cls.assert_called_once()
+        call_kwargs = mock_trainer_cls.call_args.kwargs
+        assert "split_indices" in call_kwargs
+        assert call_kwargs["split_indices"] is split_indices
+
+
+class TestObjectiveWithoutSplitsUsesTrainLoss:
+    """Test backward compatibility: no splits returns train_loss."""
+
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    @patch("src.training.hpo.load_patchtst_config")
+    def test_objective_returns_train_loss_without_splits(
+        self,
+        mock_load_patchtst: MagicMock,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_experiment_config: MagicMock,
+        valid_search_space_yaml: Path,
+    ) -> None:
+        """Test that objective returns train_loss when no splits provided."""
+        mock_load_exp.return_value = mock_experiment_config
+        mock_load_patchtst.return_value = MagicMock()
+
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {
+            "train_loss": 0.5,
+            "val_loss": None,  # No splits, so val_loss is None
+        }
+        mock_trainer_cls.return_value = mock_trainer
+
+        mock_trial = MagicMock()
+        mock_trial.suggest_float.return_value = 0.001
+        mock_trial.suggest_int.return_value = 50
+
+        search_config = load_search_space(valid_search_space_yaml)
+        objective = create_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            search_space=search_config["search_space"],
+            # No split_indices parameter
+        )
+
+        result = objective(mock_trial)
+
+        # Should return train_loss for backward compatibility
+        assert result == 0.5

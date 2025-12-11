@@ -22,6 +22,31 @@ Before using this skill:
 1. Experiment scripts must exist (use `experiment_generation` skill first)
 2. Data files must be registered in manifest
 3. System should be in suitable thermal state
+4. **MANDATORY**: Scripts must use ChunkSplitter for data splits (see below)
+
+## 🔴 CRITICAL: Data Split Protocol
+
+**ALL experiments MUST use proper train/val/test splits.** Previous experiments that trained on ALL data are methodologically flawed.
+
+### Split Requirements
+
+| Component | Requirement |
+|-----------|-------------|
+| ChunkSplitter | From `src/data/dataset.py` |
+| Val/Test | Non-overlapping 61-day chunks |
+| Train | Sliding window on remaining data |
+| HPO | Optimizes `val_loss`, NOT `train_loss` |
+| HPO subset | 30% of train data for speed |
+
+### Verification Before Running
+
+```bash
+# Verify script imports ChunkSplitter
+grep -q "ChunkSplitter" experiments/{phase}/hpo_{budget}_{task}.py
+grep -q "split_indices" experiments/{phase}/hpo_{budget}_{task}.py
+
+# If grep returns nothing, script is INVALID and must be regenerated
+```
 
 ## Pre-Flight Checklist
 

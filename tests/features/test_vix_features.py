@@ -98,17 +98,20 @@ class TestVIXFeatureRanges:
 
 
 class TestVIXRegime:
-    """Test VIX regime classification."""
+    """Test VIX regime classification.
+
+    Regime encoding: 0=low (<15), 1=normal (15-25), 2=high (>=25)
+    """
 
     def test_vix_regime_categories(self, sample_vix_df: pd.DataFrame) -> None:
-        """Only 'high', 'normal', 'low' values."""
+        """Only 0, 1, 2 values (low, normal, high)."""
         result = tier_c_vix.build_vix_features(sample_vix_df)
         unique_regimes = set(result["vix_regime"].unique())
-        expected = {"high", "normal", "low"}
+        expected = {0, 1, 2}  # low=0, normal=1, high=2
         assert unique_regimes.issubset(expected), f"Unexpected regimes: {unique_regimes - expected}"
 
     def test_vix_regime_boundary_25(self) -> None:
-        """VIX=25 should be classified as 'high'."""
+        """VIX=25 should be classified as high (2)."""
         df = pd.DataFrame({
             "Date": pd.date_range("2020-01-02", periods=100, freq="B"),
             "Open": [25.0] * 100,
@@ -118,11 +121,11 @@ class TestVIXRegime:
             "Volume": [np.nan] * 100,
         })
         result = tier_c_vix.build_vix_features(df)
-        # All regime values should be 'high' when VIX >= 25
-        assert (result["vix_regime"] == "high").all()
+        # All regime values should be 2 (high) when VIX >= 25
+        assert (result["vix_regime"] == 2).all()
 
     def test_vix_regime_boundary_15(self) -> None:
-        """VIX=15 should be classified as 'normal'."""
+        """VIX=15 should be classified as normal (1)."""
         df = pd.DataFrame({
             "Date": pd.date_range("2020-01-02", periods=100, freq="B"),
             "Open": [15.0] * 100,
@@ -132,11 +135,11 @@ class TestVIXRegime:
             "Volume": [np.nan] * 100,
         })
         result = tier_c_vix.build_vix_features(df)
-        # VIX=15 is at boundary, should be 'normal' (15 <= x < 25)
-        assert (result["vix_regime"] == "normal").all()
+        # VIX=15 is at boundary, should be 1 (normal) (15 <= x < 25)
+        assert (result["vix_regime"] == 1).all()
 
     def test_vix_regime_low(self) -> None:
-        """VIX=12 should be classified as 'low'."""
+        """VIX=12 should be classified as low (0)."""
         df = pd.DataFrame({
             "Date": pd.date_range("2020-01-02", periods=100, freq="B"),
             "Open": [12.0] * 100,
@@ -146,8 +149,8 @@ class TestVIXRegime:
             "Volume": [np.nan] * 100,
         })
         result = tier_c_vix.build_vix_features(df)
-        # VIX < 15 should be 'low'
-        assert (result["vix_regime"] == "low").all()
+        # VIX < 15 should be 0 (low)
+        assert (result["vix_regime"] == 0).all()
 
 
 class TestVIXChangeCalculations:
