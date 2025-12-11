@@ -1,73 +1,72 @@
-# Session Handoff - 2025-12-10 ~21:30
+# Session Handoff - 2025-12-11 ~04:35
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: 3bb0452 feat: add threshold_2pct/3pct/5pct config templates (Task 5.5.1)
+- Last commit: 2f9ec99 docs: update phase tracker - Task 5.5.2 complete
 - Uncommitted: none (clean working tree)
 
 ### Task Status
-- Working on: **Task 5.5.1 Config Templates** - COMPLETE
-- Status: **Ready for Task 5.5.2**
+- Working on: **Task 5.5.2 Timescale Resampling** - COMPLETE
+- Status: **Ready for Task 5.5.3**
 
 ## Test Status
-- Last `make test`: 2025-12-10 — **PASS** (139/139 tests)
+- Last `make test`: 2025-12-11 — **PASS** (149/149 tests)
 - Last `make verify`: PASS
 - Failing: none
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. Task 5.5.1 planning session (approved)
+2. Planning session for Task 5.5.2 (approved)
 3. TDD implementation:
-   - Created `configs/experiments/` directory
-   - Wrote 3 failing tests (RED confirmed)
-   - Created 3 YAML config files
-   - Tests pass (GREEN confirmed: 136 → 139)
-4. Committed and pushed: 3bb0452
+   - Created `src/features/resample.py` with `resample_ohlcv()` and `get_freq_string()`
+   - Created `scripts/resample_timescales.py` CLI
+   - Wrote 10 tests in `tests/features/test_resample.py`
+   - TDD verified: RED (10 failures) → GREEN (149 pass)
+4. Manual verification: SPY weekly (1716 rows, all Fridays), SPY 2d (5030 rows)
+5. Committed and pushed: 4599c36, 2f9ec99
 
 ## In Progress
 - Nothing in progress - clean handoff
 
 ## Pending (Next Session)
-1. **Task 5.5.2: Timescale Resampling** (2-3 hrs)
-   - Create `src/features/resample.py` with `resample_ohlcv(df, freq)` function
-   - Create `scripts/resample_timescales.py` CLI
-   - Create `tests/features/test_resample.py`
-   - Frequencies: 2D, 3D, 5D, W-FRI (weekly ending Friday)
-   - OHLCV aggregation: Open=first, High=max, Low=min, Close=last, Volume=sum
+1. **Task 5.5.3: Data Dictionary** (1-2 hrs)
+   - Create `docs/data_dictionary.md` documenting all features
+   - Create generator script to auto-generate from code
+   - Document OHLCV columns, tier_a20 indicators, VIX features, timescales
 
 2. **Subsequent tasks:**
-   - 5.5.3: Data Dictionary (1-2 hrs)
    - 5.5.4: Optuna HPO Integration (3-4 hrs)
    - 5.5.5: Scaling Curve Analysis (2 hrs)
    - 5.5.6: Result Aggregation (1-2 hrs)
 
 ## Files Modified This Session
-- `configs/experiments/spy_daily_threshold_2pct.yaml`: NEW
-- `configs/experiments/spy_daily_threshold_3pct.yaml`: NEW
-- `configs/experiments/spy_daily_threshold_5pct.yaml`: NEW
-- `tests/test_config.py`: Added TestLoadThresholdConfigs class (3 tests)
-- `.claude/context/phase_tracker.md`: Updated Task 5.5.1 status to COMPLETE
+- `src/features/resample.py`: NEW - resample_ohlcv(), get_freq_string()
+- `scripts/resample_timescales.py`: NEW - CLI for resampling
+- `tests/features/test_resample.py`: NEW - 10 unit tests
+- `.claude/context/phase_tracker.md`: Updated Task 5.5.2 status to COMPLETE
 
 ## Key Decisions Made
-1. **Config location**: `configs/experiments/` (separate from `configs/daily/`)
-2. **Data path**: All new configs point to `SPY_dataset_c.parquet` (Phase 5 combined dataset with VIX)
-3. **Tracking defaults**: `wandb_project: financial-ts-scaling`, `mlflow_experiment: phase6a-parameter-scaling`
+1. **Resampling approach**: Calendar-based (2D/3D/5D) not trading-day-based
+   - This means weekends create extra periods (e.g., 2D spanning Fri-Mon)
+   - Acceptable for experiments; matches pandas native behavior
+2. **Weekly alignment**: W-FRI (Friday close) per spec, not W-MON like tier_a20.py
+3. **No look-ahead**: Using `label='right', closed='right'` for end-of-period values
 
 ## Data Versions
 
 ### Raw Manifest (6 entries)
-| Dataset | Rows | MD5 (first 8) |
-|---------|------|---------------|
-| SPY.OHLCV.daily | 8,272 | 805e73ad |
-| DIA.OHLCV.daily | 7,018 | cd3f8535 |
-| QQQ.OHLCV.daily | 6,731 | 2aa32c1c |
-| DJI.OHLCV.daily | 8,546 | b8fea97a |
-| IXIC.OHLCV.daily | 13,829 | 9a3f0f93 |
-| VIX.OHLCV.daily | 9,053 | e8cdd9f6 |
+| Dataset | MD5 (first 8) |
+|---------|---------------|
+| SPY.OHLCV.daily | 805e73ad |
+| DIA.OHLCV.daily | cd3f8535 |
+| QQQ.OHLCV.daily | 2aa32c1c |
+| DJI.OHLCV.daily | b8fea97a |
+| IXIC.OHLCV.daily | 9a3f0f93 |
+| VIX.OHLCV.daily | e8cdd9f6 |
 
-### Processed Manifest (6 entries)
+### Processed Manifest (8 entries)
 | Dataset | Version | Tier | MD5 (first 8) |
 |---------|---------|------|---------------|
 | SPY.features.a20 | 1 | a20 | 51d70d5a |
@@ -76,35 +75,31 @@
 | QQQ.features.a20 | 1 | a20 | c578e3f6 |
 | VIX.features.c | 1 | c | 0f0e8a8d |
 | SPY.dataset.c | 1 | c | 108716f9 |
+| SPY.OHLCV.weekly | 1 | weekly | 0c2de0f1 |
+| SPY.OHLCV.2d | 1 | 2d | 0e390119 |
 
 ### Pending Registrations
 - None
 
 ## Memory Entities Updated
-- Task5_5_1_Plan_Approved (created): Planning decision for Task 5.5.1 with TDD completion confirmation
-- Phase5_5_Plan (existing): Master plan for Phase 5.5
-- Phase5_5_Task1_Config_Templates (existing): Task spec referenced during implementation
+- Task5_5_2_Resample_Plan (created): Planning decision for Task 5.5.2
+- Task5_5_2_Resample_Plan (updated): Completion confirmation with TDD verification
 
 ## Context for Next Session
-- Phase 5.5 plan document: `docs/phase5_5_experiment_setup_plan.md` (lines 115-150 for Task 5.5.2 spec)
-- Task 5.5.2 requires reading raw OHLCV from `data/raw/*.parquet`
-- Resampling must preserve date alignment (use W-FRI for weekly to match trading week)
-- After resampling, features need to be regenerated for each timescale
-- 139 tests provide baseline; Task 5.5.2 should add ~8-10 new tests
+- Phase 5.5 plan document: `docs/phase5_5_experiment_setup_plan.md` (lines 185-250 for Task 5.5.3 spec)
+- Task 5.5.3 should document: OHLCV columns, tier_a20 features, VIX features, timescales
+- Consider auto-generating from FEATURE_LIST in tier_a20.py
+- 149 tests provide baseline; Task 5.5.3 may add validation tests
 
 ## Next Session Should
 1. Run `session restore` or read this file
-2. Read Task 5.5.2 spec in `docs/phase5_5_experiment_setup_plan.md` (lines 115-180)
-3. Run planning session for Task 5.5.2
-4. Begin TDD implementation:
-   - Write failing tests for `resample_ohlcv()` function
-   - Implement `src/features/resample.py`
-   - Create CLI script
-   - Commit: `feat: add timescale resampling utilities (Task 5.5.2)`
+2. Read Task 5.5.3 spec in `docs/phase5_5_experiment_setup_plan.md`
+3. Run planning session for Task 5.5.3
+4. Create data dictionary (may not need TDD - documentation task)
 
 ## Phase Status Summary
 - Phase 0-5: COMPLETE
-- **Phase 5.5: Task 5.5.1 COMPLETE, Task 5.5.2 READY**
+- **Phase 5.5: Tasks 5.5.1-5.5.2 COMPLETE, Task 5.5.3 READY**
 - Phase 6A-6D: NOT STARTED
 
 ## Commands to Run First
@@ -116,7 +111,7 @@ git status
 ```
 
 ## Key Files for Next Session
-- `docs/phase5_5_experiment_setup_plan.md` - Task 5.5.2 spec (lines 115-180)
-- `data/raw/SPY.parquet` - Source for resampling tests
-- `src/features/tier_a20.py` - Reference for feature engineering patterns
-- `tests/features/test_indicators.py` - Reference for test patterns
+- `docs/phase5_5_experiment_setup_plan.md` - Task 5.5.3 spec
+- `src/features/tier_a20.py` - FEATURE_LIST to document
+- `src/features/vix_features.py` - VIX features to document
+- `src/features/resample.py` - Timescale info to document
