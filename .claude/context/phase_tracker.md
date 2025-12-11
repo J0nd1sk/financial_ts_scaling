@@ -120,12 +120,14 @@
 - Research: Does error ∝ N^(-α)?
 
 **Status (2025-12-11):**
-- Fixed feature pipeline integration issues (vix_regime encoding, OHLCV exclusion)
-- Config file created: `configs/experiments/threshold_1pct.yaml`
-- HPO script generated: `experiments/phase6a/hpo_2M_threshold_1pct.py`
-- Data re-processed with numeric vix_regime (28 features total)
-- Issue: HPO trials failing inside objective function - needs debugging
-- Documentation: `docs/feature_pipeline_integration_issues.md`
+- ✅ Fixed feature pipeline integration issues (vix_regime encoding, OHLCV exclusion)
+- ✅ Config file created: `configs/experiments/threshold_1pct.yaml`
+- ✅ **CRITICAL FIX: Implemented train/val/test data splits (commit 0e9ec1b)**
+  - ChunkSplitter class for hybrid splits (val/test=chunks, train=sliding window)
+  - HPO now optimizes val_loss instead of train_loss
+  - 264 tests passing
+- ✅ HPO script regenerated with ChunkSplitter: `experiments/phase6a/hpo_2M_threshold_1pct.py`
+- Ready to run HPO with proper splits
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)
