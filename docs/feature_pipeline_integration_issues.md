@@ -28,11 +28,12 @@ feature_cols = [c for c in features_df.columns if c != "Date"]
 ```
 
 This included:
-- OHLCV columns (Open, High, Low, Close, Volume) - should be excluded
-- Any non-numeric columns - caused crashes
+- Any non-numeric columns - caused crashes (e.g., string-based vix_regime)
+
+**Note:** OHLCV columns (Open, High, Low, Close, Volume) are CORE data and MUST be included in training. Indicators/features are additional and will expand during feature scaling tests.
 
 **Fix Applied:** Added defensive feature discovery with explicit filtering:
-1. Exclude OHLCV columns by default
+1. Only exclude Date column (OHLCV is core training data)
 2. Filter to only numeric dtypes
 3. Warn when non-numeric columns are skipped
 4. Support optional explicit `feature_columns` parameter
@@ -106,7 +107,7 @@ Dataset:
 |------|--------|
 | `src/data/dataset.py` | Added defensive feature discovery, explicit feature_columns param |
 | `src/features/tier_c_vix.py` | Changed vix_regime from strings to integers (0/1/2) |
-| `tests/test_training.py` | Updated fixture to expect 20 features (OHLCV now excluded) |
+| `tests/test_training.py` | Updated fixture feature count (Trainer auto-adjusts to actual data) |
 | `tests/features/test_vix_features.py` | Updated regime tests to expect integers |
 | `data/processed/v1/VIX_features_c.parquet` | Re-processed with numeric vix_regime |
 | `data/processed/v1/SPY_dataset_c.parquet` | Re-processed with numeric vix_regime |

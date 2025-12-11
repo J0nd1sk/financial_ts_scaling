@@ -13,7 +13,7 @@ timescale: daily
 
 # Sequence parameters
 context_length: 60  # 60 days of history
-horizon: 5          # 5-day forward window
+horizon: 1          # 1-day forward window (also testing 3-day, 5-day separately)
 
 # Experiment tracking
 wandb_project: financial-ts-scaling

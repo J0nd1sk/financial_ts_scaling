@@ -120,7 +120,7 @@
 - Research: Does error ∝ N^(-α)?
 
 **Status (2025-12-11):**
-- ✅ Fixed feature pipeline integration issues (vix_regime encoding, OHLCV exclusion)
+- ✅ Fixed feature pipeline integration issues (vix_regime encoding, non-numeric column filtering)
 - ✅ Config file created: `configs/experiments/threshold_1pct.yaml`
 - ✅ **CRITICAL FIX: Implemented train/val/test data splits (commit 0e9ec1b)**
   - ChunkSplitter class for hybrid splits (val/test=chunks, train=sliding window)

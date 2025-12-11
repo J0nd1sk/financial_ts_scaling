@@ -82,10 +82,11 @@ def experiment_config(micro_dataset_path: Path) -> ExperimentConfig:
 def model_config() -> PatchTSTConfig:
     """Create a tiny PatchTSTConfig for fast testing.
 
-    Note: num_features=20 matches micro_dataset feature columns (excluding OHLCV and Date).
+    Note: Trainer._adjust_model_config() auto-adjusts num_features to match actual data.
+    OHLCV is CORE data and IS included in training (only Date is excluded).
     """
     return PatchTSTConfig(
-        num_features=20,  # 20 fake features (OHLCV now correctly excluded)
+        num_features=25,  # 5 OHLCV + 20 fake features (Trainer auto-adjusts anyway)
         context_length=10,
         patch_length=5,
         stride=5,

@@ -116,7 +116,7 @@ def generate_hpo_script(
                 "script_path": __file__,
                 "run_type": "hpo",
             }})
-            update_experiment_log(result, PROJECT_ROOT / "outputs" / "results" / "experiment_log.csv")
+            update_experiment_log(result, PROJECT_ROOT / "docs" / "experiment_results.csv")
 
             print(f"HPO complete: {{result['status']}}")
     ''')
@@ -230,7 +230,7 @@ def generate_training_script(
                 "script_path": __file__,
                 "run_type": "training",
             }})
-            update_experiment_log(result, PROJECT_ROOT / "outputs" / "results" / "experiment_log.csv")
+            update_experiment_log(result, PROJECT_ROOT / "docs" / "experiment_results.csv")
 
             print(f"Training complete: {{result['status']}}")
     ''')

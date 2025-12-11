@@ -44,12 +44,12 @@ BUDGET = "2M"
 TASK = "threshold_1pct"
 HORIZON = 1
 TIMESCALE = "daily"
-DATA_PATH = "data/processed/v1/SPY_dataset_c.parquet"
+DATA_PATH = "data/processed/v1/SPY_dataset_a25.parquet"
 CONFIG_PATH = "configs/experiments/threshold_1pct.yaml"
 
 # HPO settings
 N_TRIALS = 50
-TIMEOUT_HOURS = 4.0
+TIMEOUT_HOURS = None  # No timeout - let HPO run to completion
 SEARCH_SPACE_PATH = "configs/hpo/default_search.yaml"
 
 # Split settings (MANDATORY for proper val_loss optimization)
@@ -164,12 +164,13 @@ if __name__ == "__main__":
         logger.info("Objective created with val_loss optimization")
 
         # Run optimization
-        logger.info(f"Starting HPO ({N_TRIALS} trials, {TIMEOUT_HOURS}h timeout)...")
+        timeout_msg = f"{TIMEOUT_HOURS}h timeout" if TIMEOUT_HOURS else "no timeout"
+        logger.info(f"Starting HPO ({N_TRIALS} trials, {timeout_msg})...")
         try:
             study.optimize(
                 objective,
                 n_trials=N_TRIALS,
-                timeout=TIMEOUT_HOURS * 3600,
+                timeout=TIMEOUT_HOURS * 3600 if TIMEOUT_HOURS else None,
                 show_progress_bar=False,
             )
 
@@ -217,7 +218,7 @@ if __name__ == "__main__":
         "run_type": "hpo",
         "thermal_max_temp": thermal_status.temperature,
     })
-    update_experiment_log(result, PROJECT_ROOT / "outputs" / "results" / "experiment_log.csv")
+    update_experiment_log(result, PROJECT_ROOT / "docs" / "experiment_results.csv")
 
     logger.info(f"=== HPO Complete ===")
     logger.info(f"Status: {result['status']}")

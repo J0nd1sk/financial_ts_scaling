@@ -368,3 +368,49 @@ Task 3 expanded into 3 sub-tasks:
 - Any coding agent can pick up a task by reading the plan document
 - Sequential dependencies: 5.5.1 → 5.5.2 → 5.5.3 → 5.5.4 → 5.5.5 → 5.5.6
 - After Phase 5.5, ready for Phase 6A (Parameter Scaling Baseline)
+
+## 2025-12-11 OHLCV as Core Training Data
+
+**Context**: Documentation incorrectly stated OHLCV should be excluded from features. User clarified core data architecture.
+
+**Decision**: OHLCV (Open, High, Low, Close, Volume) is CORE training data that must ALWAYS be included. Indicators/features are ADDITIONAL and will expand during feature scaling tests.
+
+**Rationale**: If there was nothing else to train on, OHLCV alone would be the training data. Indicators enhance but do not replace core price data.
+
+**Implementation**:
+- Code was already correct: `NON_FEATURE_COLUMNS = {"Date"}` - only Date excluded
+- Fixed incorrect documentation in `docs/feature_pipeline_integration_issues.md`
+- Fixed misleading test comment in `tests/test_training.py`
+
+**Feature Counts by Phase**:
+- **Phase 6A-6C**: 25 features = 5 OHLCV + 20 indicators (use `SPY_dataset_a25.parquet`)
+- **Phase 6D (data scaling)**: 33 features = 5 OHLCV + 20 indicators + 8 VIX (use `SPY_dataset_c.parquet`)
+
+**Implications**:
+- All experiments train on OHLCV + indicators
+- VIX features added only in data scaling phase (6D)
+- Feature scaling will EXPAND indicator count, never remove OHLCV
+- Model `num_features` must match dataset being used
+
+## 2025-12-11 Experiment Execution Workflow Clarification
+
+**Context**: Clarifying how HPO and training experiments should be monitored and executed.
+
+**Decision**: Agent monitors first run of each model budget only. After validation, user runs remaining scripts manually.
+
+**Workflow**:
+1. **First HPO run per budget**: Agent runs in background, checks every 30 minutes
+2. **Subsequent runs**: User runs manually, agent provides script list and instructions
+3. **Results**: Output to CLI, logs, AND `docs/experiment_results.csv`
+4. **No timeout limits**: Different budgets take different times (2B could take days)
+
+**Runtime Estimates** (for planning monitoring cadence):
+- 2M: ~30 min per full training, HPO with 30% subset ~15-20 min/trial
+- 20M: ~1.5 hr per full training
+- 200M: ~4 hr per full training
+- 2B: ~12 hr per full training
+
+**Implications**:
+- Remove hardcoded TIMEOUT_HOURS from HPO scripts
+- Results CSV stored in `docs/` for versioning
+- Agent provides complete script execution list for each phase

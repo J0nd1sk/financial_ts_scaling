@@ -24,6 +24,23 @@ Before using this skill:
 3. System should be in suitable thermal state
 4. **MANDATORY**: Scripts must use ChunkSplitter for data splits (see below)
 
+## Execution Workflow Philosophy
+
+**Agent monitors first run of each model budget only.** After validation, user runs remaining scripts manually.
+
+1. **First HPO per budget**: Agent runs in background, checks every 30 minutes for errors
+2. **Subsequent runs**: User runs manually from provided script list
+3. **Results**: Output to CLI, logs, AND `docs/experiment_results.csv`
+4. **No timeout limits**: Different budgets take different times (2B could take days)
+
+**Runtime Estimates** (for planning monitoring cadence):
+| Budget | Full Training | HPO Trial (30% subset) |
+|--------|---------------|------------------------|
+| 2M | ~30 min | ~10-15 min |
+| 20M | ~1.5 hr | ~30-45 min |
+| 200M | ~4 hr | ~1-2 hr |
+| 2B | ~12 hr | ~4-6 hr |
+
 ## 🔴 CRITICAL: Data Split Protocol
 
 **ALL experiments MUST use proper train/val/test splits.** Previous experiments that trained on ALL data are methodologically flawed.
@@ -113,7 +130,7 @@ from src.experiments.runner import run_hpo_experiment, update_experiment_log, re
 
 # Define paths
 PROJECT_ROOT = Path("/Users/alexanderthomson/Documents/financial_ts_scaling")
-LOG_PATH = PROJECT_ROOT / "outputs/results/experiment_log.csv"
+LOG_PATH = PROJECT_ROOT / "docs/experiment_results.csv"
 REPORT_PATH = PROJECT_ROOT / "docs/experiment_results.md"
 
 # Run HPO experiment
@@ -155,7 +172,7 @@ from src.experiments.runner import run_training_experiment, update_experiment_lo
 
 # Define paths
 PROJECT_ROOT = Path("/Users/alexanderthomson/Documents/financial_ts_scaling")
-LOG_PATH = PROJECT_ROOT / "outputs/results/experiment_log.csv"
+LOG_PATH = PROJECT_ROOT / "docs/experiment_results.csv"
 REPORT_PATH = PROJECT_ROOT / "docs/experiment_results.md"
 
 # Load hyperparameters from HPO results
@@ -257,10 +274,38 @@ outputs/
 
 | Output | Path |
 |--------|------|
-| Experiment Log (CSV) | `outputs/results/experiment_log.csv` |
+| Experiment Log (CSV) | `docs/experiment_results.csv` |
 | Results Report (MD) | `docs/experiment_results.md` |
 | HPO Outputs | `outputs/hpo/{experiment}/` |
 | Training Outputs | `outputs/training/{experiment}/` |
+
+## User Manual Execution
+
+After agent validates first run of each budget, provide user with complete script list:
+
+```bash
+# Phase 6A HPO Scripts (run sequentially)
+python experiments/phase6a/hpo_2M_threshold_1pct.py    # ~50 trials
+python experiments/phase6a/hpo_2M_threshold_3pct.py
+python experiments/phase6a/hpo_2M_threshold_5pct.py
+# ... repeat for 20M, 200M, 2B
+
+# Phase 6A Training Scripts (after HPO completes)
+python experiments/phase6a/train_2M_threshold_1pct.py
+# ... etc
+```
+
+**Monitoring during manual runs:**
+```bash
+# Watch log output in real-time
+tail -f outputs/hpo/{experiment}/hpo.log
+
+# Check thermal status
+sudo powermetrics --samplers smc -i 1000 -n 1 | grep -i temp
+
+# Check results CSV
+cat docs/experiment_results.csv | column -t -s,
+```
 
 ## CSV Log Schema
 
