@@ -68,7 +68,7 @@
   - 136 tests passing
 - Task 8: ⏸️ Multi-asset builder (optional stretch goal)
 
-## Phase 5.5: Experiment Setup 🔄 NEXT
+## Phase 5.5: Experiment Setup ✅ COMPLETE (2025-12-11)
 **Plan Document:** `docs/phase5_5_experiment_setup_plan.md`
 **Total Estimate:** 10-14 hours
 **Execution:** One task per session, sequential with approval gates
@@ -80,13 +80,13 @@
 | 5.5.3 | Data Dictionary | 1-2 hrs | ✅ COMPLETE | docs/data_dictionary.md, generator script, 9 tests |
 | 5.5.4 | Optuna HPO | 3-4 hrs | ✅ COMPLETE | src/training/hpo.py, run_hpo.py, 18 tests |
 | 5.5.5 | Scaling Analysis | 2 hrs | ✅ COMPLETE | src/analysis/scaling_curves.py, 26 tests |
-| 5.5.6 | Result Aggregation | 1-2 hrs | ⏸️ PENDING | src/analysis/aggregate_results.py |
+| 5.5.6 | Result Aggregation | 1-2 hrs | ✅ COMPLETE | src/analysis/aggregate_results.py, 8 tests |
 
 **Dependencies:** 5.5.1 → 5.5.2 → 5.5.3 → 5.5.4 → 5.5.5 → 5.5.6
 
-**Memory Entities:** Phase5_5_Plan, Phase5_5_Task{1-6}_* (7 entities total)
+**Memory Entities:** Phase5_5_Plan, Phase5_5_Task{1-6}_* (8 entities total)
 
-## Phase 6A: Parameter Scaling ⏸️ NOT STARTED
+## Phase 6A: Parameter Scaling 🔄 NEXT
 - 32 runs: 16 HPO + 16 final evaluation
 - Hold: 20 features, 1-day horizon, SPY
 - Vary: 2M → 20M → 200M → 2B parameters
