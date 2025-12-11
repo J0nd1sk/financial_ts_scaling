@@ -1,15 +1,18 @@
-# Session Handoff - 2025-12-10 ~19:30
+# Session Handoff - 2025-12-10 ~20:30
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: 0cf8e46 fix: correct Memory MCP API in session handoff/restore skills
-- Uncommitted: none (clean working tree)
+- Last commit: 9eda31a docs: session handoff - Phase 5 complete, Phase 5.5 next
+- Uncommitted:
+  - `.claude/context/decision_log.md` (modified)
+  - `.claude/context/phase_tracker.md` (modified)
+  - `docs/phase5_5_experiment_setup_plan.md` (new)
 
 ### Task Status
-- Working on: **Phase 5 complete**, ready for **Phase 5.5**
-- Status: **COMPLETE** - all commits pushed locally
+- Working on: **Phase 5.5 Planning** - COMPLETE
+- Status: **Plan approved, ready for Task 5.5.1 implementation**
 
 ## Test Status
 - Last `make test`: 2025-12-10 — **PASS** (136/136 tests)
@@ -18,33 +21,37 @@
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. Committed Task 7 (VIX integration to combined dataset builder)
-3. Fixed Memory MCP API in session_handoff and session_restore skills
-4. Committed skill fixes
-5. Decision: Phase 5.5 next (not Task 8, not Phase 6A yet)
+2. Planning session for Phase 5.5 (Experiment Setup)
+3. Created comprehensive plan: `docs/phase5_5_experiment_setup_plan.md`
+4. Created 7 Memory MCP entities for Phase 5.5 plan and tasks
+5. Updated phase_tracker.md with detailed task breakdown
+6. Updated decision_log.md with Phase 5.5 Plan Approved entry
 
 ## In Progress
 - Nothing in progress - clean handoff
 
 ## Pending (Next Session)
-1. **Phase 5.5: Experiment Setup** - planning session required
-   - 5.5.1: Config templates for 4 threshold tasks
-   - 5.5.2: Timescale resampling
-   - 5.5.3: Optuna HPO integration
-   - 5.5.4: Scaling curve analysis
-   - 5.5.5: Result aggregation
+1. **Task 5.5.1: Config Templates** (30 min)
+   - Create threshold_2pct, threshold_3pct, threshold_5pct YAML configs
+   - Location: `configs/experiments/`
+   - Tests: Add load validation tests to `tests/test_config.py`
+
+2. **Subsequent tasks (one per session):**
+   - 5.5.2: Timescale Resampling (2-3 hrs)
+   - 5.5.3: Data Dictionary (1-2 hrs)
+   - 5.5.4: Optuna HPO Integration (3-4 hrs)
+   - 5.5.5: Scaling Curve Analysis (2 hrs)
+   - 5.5.6: Result Aggregation (1-2 hrs)
 
 ## Files Modified This Session
-- `scripts/build_dataset_combined.py`: VIX integration (committed)
-- `tests/test_dataset_combined.py`: 5 VIX tests (committed)
-- `.claude/skills/session_handoff/skill.md`: Fixed Memory MCP API (committed)
-- `.claude/skills/session_restore/skill.md`: Fixed Memory MCP API (committed)
-- `.claude/context/decision_log.md`: Added Phase 5.5 decision + Memory fix decision
-- `.claude/context/phase_tracker.md`: Updated (pending commit)
+- `docs/phase5_5_experiment_setup_plan.md`: NEW - Comprehensive 6-task plan (500+ lines)
+- `.claude/context/phase_tracker.md`: Updated Phase 5.5 section with task table
+- `.claude/context/decision_log.md`: Added "Phase 5.5 Plan Approved" entry
 
 ## Key Decisions Made
-1. **Phase 5.5 next**: HPO infrastructure needed before Phase 6A experiments
-2. **Memory MCP fix**: Skills now use correct API + entity tracking in context file
+1. **6-task breakdown for Phase 5.5**: Sequential execution, one task per session
+2. **Data Dictionary added as Task 5.5.3**: Auto-generated docs with schema + statistics
+3. **Task dependencies**: 5.5.1 → 5.5.2 → 5.5.3 → 5.5.4 → 5.5.5 → 5.5.6
 
 ## Data Versions
 
@@ -72,25 +79,40 @@
 - None
 
 ## Memory Entities Updated
-- Phase5_5_Decision (created): Decision to proceed to Phase 5.5 before Phase 6A
-- Memory_MCP_API_Fix (created): Lesson about fixing Memory MCP API in skills
+- Phase5_5_Plan (created): Master plan entity for Phase 5.5, contains scope and execution strategy
+- Phase5_5_Task1_Config_Templates (created): Task spec for threshold config templates
+- Phase5_5_Task2_Timescale_Resampling (created): Task spec for OHLCV resampling
+- Phase5_5_Task3_Data_Dictionary (created): Task spec for data documentation
+- Phase5_5_Task4_Optuna_HPO (created): Task spec for HPO integration
+- Phase5_5_Task5_Scaling_Analysis (created): Task spec for power law fitting and plots
+- Phase5_5_Task6_Result_Aggregation (created): Task spec for result collection
 
 ## Context for Next Session
-- Phase 5 is 7/8 tasks complete (Task 8 multi-asset is optional stretch)
-- Phase 5.5 needs planning session before implementation
-- 136 tests provide good coverage; TDD pattern continues
-- SPY_dataset_c.parquet ready for training when Phase 5.5 complete
+- Phase 5.5 plan is fully documented in `docs/phase5_5_experiment_setup_plan.md`
+- Plan contains detailed specs for all 6 tasks with:
+  - File paths and line estimates
+  - Function signatures
+  - Test cases
+  - Success criteria
+  - Dependencies
+- Any coding agent can pick up Task 5.5.1 by reading the plan document
+- 136 tests provide baseline; each task adds new tests via TDD
+- SPY_dataset_c.parquet ready for training experiments after Phase 5.5
 
 ## Next Session Should
-1. Run session restore (will now retrieve Memory entities correctly)
-2. Run planning_session skill for Phase 5.5
-3. Get approval on Phase 5.5 decomposition
-4. Begin Task 5.5.1 (config templates) with TDD
+1. Run `session restore` or read this file
+2. Read `docs/phase5_5_experiment_setup_plan.md` for full task specs
+3. Begin Task 5.5.1 (Config Templates) with TDD:
+   - Write tests first for loading threshold_2pct, threshold_3pct, threshold_5pct configs
+   - Verify tests fail (RED)
+   - Create the YAML config files
+   - Verify tests pass (GREEN)
+   - Commit: `feat: add threshold_2pct/3pct/5pct config templates (5.5.1)`
 
 ## Phase Status Summary
 - Phase 0-4: COMPLETE
-- **Phase 5: COMPLETE (7/8 tasks, Task 8 optional)**
-- **Phase 5.5: NEXT** (experiment setup)
+- Phase 5: COMPLETE (7/8 tasks, Task 8 optional)
+- **Phase 5.5: PLANNING COMPLETE, Task 5.5.1 READY**
 - Phase 6A-6D: NOT STARTED
 
 ## Commands to Run First
@@ -100,3 +122,9 @@ make test
 make verify
 git status
 ```
+
+## Key Files for Next Session
+- `docs/phase5_5_experiment_setup_plan.md` - Full task specifications
+- `configs/daily/threshold_1pct.yaml` - Template for new configs
+- `src/config/experiment.py` - ExperimentConfig loader
+- `tests/test_config.py` - Where to add new tests

@@ -294,3 +294,34 @@ Task 3 expanded into 3 sub-tasks:
 - Future handoffs must list Memory entity names in session_context.md
 - Future restores use `open_nodes` with those exact names
 - More reliable cross-session knowledge transfer
+
+## 2025-12-10 Phase 5.5 Plan Approved
+
+**Context**: Phase 5 complete, ready for experiment infrastructure. Planning session held to define Phase 5.5 scope.
+
+**Decision**: Adopt 6-task sequential plan for Phase 5.5 (Experiment Setup).
+
+**Tasks Defined**:
+1. **5.5.1 Config Templates** (30 min): Create threshold_2pct, threshold_3pct, threshold_5pct YAML configs
+2. **5.5.2 Timescale Resampling** (2-3 hrs): OHLCV resampling to 2d/3d/5d/weekly
+3. **5.5.3 Data Dictionary** (1-2 hrs): Comprehensive docs/data_dictionary.md with schema + stats
+4. **5.5.4 Optuna HPO** (3-4 hrs): HPO integration with W&B/MLflow tracking
+5. **5.5.5 Scaling Analysis** (2 hrs): Power law fitting, scaling curve plots
+6. **5.5.6 Result Aggregation** (1-2 hrs): Collect and export experiment results
+
+**Total Estimated Effort**: 10-14 hours
+
+**Key Design Decisions**:
+- Data Dictionary: Auto-generated via script, includes dtype, statistics (mean/std/min/max/percentiles)
+- HPO: Optuna with pruning, thermal checks between trials
+- Scaling Analysis: Fit `error = a * params^(-alpha)`, compute R² for fit quality
+- Execution: One task per session, sequential with approval gates
+
+**Documentation**:
+- Plan: `docs/phase5_5_experiment_setup_plan.md`
+- Memory: 7 entities created (Phase5_5_Plan + 6 task specs)
+
+**Implications**:
+- Any coding agent can pick up a task by reading the plan document
+- Sequential dependencies: 5.5.1 → 5.5.2 → 5.5.3 → 5.5.4 → 5.5.5 → 5.5.6
+- After Phase 5.5, ready for Phase 6A (Parameter Scaling Baseline)

@@ -69,11 +69,22 @@
 - Task 8: ⏸️ Multi-asset builder (optional stretch goal)
 
 ## Phase 5.5: Experiment Setup 🔄 NEXT
-- Config templates for 4 threshold tasks
-- HPO infrastructure (Optuna + W&B/MLflow)
-- Timescale resampling
-- Scaling curve analysis tools
-- Result aggregation
+**Plan Document:** `docs/phase5_5_experiment_setup_plan.md`
+**Total Estimate:** 10-14 hours
+**Execution:** One task per session, sequential with approval gates
+
+| Task | Name | Est. | Status | Deliverables |
+|------|------|------|--------|--------------|
+| 5.5.1 | Config Templates | 30 min | ⏸️ PENDING | configs/experiments/threshold_{2,3,5}pct.yaml |
+| 5.5.2 | Timescale Resampling | 2-3 hrs | ⏸️ PENDING | src/features/resample.py, CLI |
+| 5.5.3 | Data Dictionary | 1-2 hrs | ⏸️ PENDING | docs/data_dictionary.md, generator script |
+| 5.5.4 | Optuna HPO | 3-4 hrs | ⏸️ PENDING | src/training/hpo.py, run_hpo.py |
+| 5.5.5 | Scaling Analysis | 2 hrs | ⏸️ PENDING | src/analysis/scaling_curves.py |
+| 5.5.6 | Result Aggregation | 1-2 hrs | ⏸️ PENDING | src/analysis/aggregate_results.py |
+
+**Dependencies:** 5.5.1 → 5.5.2 → 5.5.3 → 5.5.4 → 5.5.5 → 5.5.6
+
+**Memory Entities:** Phase5_5_Plan, Phase5_5_Task{1-6}_* (7 entities total)
 
 ## Phase 6A: Parameter Scaling ⏸️ NOT STARTED
 - 32 runs: 16 HPO + 16 final evaluation
