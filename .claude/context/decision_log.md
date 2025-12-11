@@ -248,3 +248,49 @@ Task 3 expanded into 3 sub-tasks:
 - Training date range now limited by ^DJI start (1992-01-02) when using all indices
 - DIA and QQQ ETF data retained for potential ETF-specific experiments
 - Future work may add ^GSPC for even longer S&P 500 history
+
+## 2025-12-10 Phase 5.5 Selected as Next Phase
+
+**Context**: Phase 5 Task 7 (VIX integration) completed. Decision needed on next phase: Task 8 (multi-asset, optional), Phase 5.5 (experiment setup), or Phase 6A (experiments).
+
+**Decision**: Proceed to Phase 5.5 (Experiment Setup) before Phase 6A experiments.
+
+**Rationale**:
+- Phase 6A requires 32 runs (16 HPO + 16 final evaluation)
+- HPO infrastructure (Optuna) not yet integrated with Trainer
+- Config templates needed for all 4 threshold tasks
+- Timescale resampling not yet implemented
+- Scaling curve analysis tools needed for publication-quality results
+
+**Scope for Phase 5.5**:
+1. Config templates for 4 threshold tasks
+2. Optuna HPO integration with Trainer
+3. Timescale resampling (daily → 2d, 3d, 5d, weekly, 2wk, monthly)
+4. Scaling curve analysis tools (power law fitting)
+5. Result aggregation
+
+**Implications**:
+- Task 8 (multi-asset builder) deferred as optional stretch goal
+- Phase 5.5 infrastructure required before any Phase 6 experiments
+- Estimated 5 sub-tasks following same TDD pattern as Phase 4/5
+
+## 2025-12-10 Memory MCP API Correction
+
+**Context**: Session restore consistently returned empty Memory results despite handoff storing data.
+
+**Investigation**: Both session_handoff and session_restore skills referenced non-existent Memory MCP functions (`mcp__memory__store_memory`, `mcp__memory__search_memory`).
+
+**Decision**: Update both skills to use correct Memory MCP API and add explicit entity tracking.
+
+**Changes**:
+- session_handoff: Use `create_entities`/`add_observations` instead of `store_memory`
+- session_handoff: Add "Memory Entities Updated" section to session_context.md template
+- session_restore: Use `open_nodes` with entity names from context file instead of generic search
+- Established entity naming convention: `Phase[N]_[Topic]_[Type]`
+
+**Rationale**: Context file becomes reliable index of Memory entities, enabling deterministic retrieval via `open_nodes` rather than unreliable keyword search.
+
+**Implications**:
+- Future handoffs must list Memory entity names in session_context.md
+- Future restores use `open_nodes` with those exact names
+- More reliable cross-session knowledge transfer

@@ -1,15 +1,15 @@
-# Session Handoff - 2025-12-10 ~18:00
+# Session Handoff - 2025-12-10 ~19:30
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: dcfdf0a feat: add VIX feature engineering tier c (Phase 5 Task 6)
-- Uncommitted: 3 files (Task 7 implementation, pending commit)
+- Last commit: 0cf8e46 fix: correct Memory MCP API in session handoff/restore skills
+- Uncommitted: none (clean working tree)
 
 ### Task Status
-- Working on: **Phase 5 Task 7** - Combined Dataset Builder
-- Status: **COMPLETE** (pending commit)
+- Working on: **Phase 5 complete**, ready for **Phase 5.5**
+- Status: **COMPLETE** - all commits pushed locally
 
 ## Test Status
 - Last `make test`: 2025-12-10 — **PASS** (136/136 tests)
@@ -18,35 +18,33 @@
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. Updated Memory MCP with Phase 5 progress
-3. Planning session for Phase 5 Task 7 (combined dataset builder)
-4. TDD RED phase: Wrote 5 tests for VIX integration
-5. TDD GREEN phase: Implemented VIX merge in build_dataset_combined.py
-6. Generated SPY_dataset_c.parquet (8,073 rows, 34 columns)
-7. Registered manifest entry for SPY.dataset.c
+2. Committed Task 7 (VIX integration to combined dataset builder)
+3. Fixed Memory MCP API in session_handoff and session_restore skills
+4. Committed skill fixes
+5. Decision: Phase 5.5 next (not Task 8, not Phase 6A yet)
 
 ## In Progress
-- Nothing in progress - Task 7 cleanly completed, awaiting commit
+- Nothing in progress - clean handoff
 
-## Pending (Phase 5 remaining tasks)
-1. Task 8: Multi-asset builder (optional stretch goal)
+## Pending (Next Session)
+1. **Phase 5.5: Experiment Setup** - planning session required
+   - 5.5.1: Config templates for 4 threshold tasks
+   - 5.5.2: Timescale resampling
+   - 5.5.3: Optuna HPO integration
+   - 5.5.4: Scaling curve analysis
+   - 5.5.5: Result aggregation
 
 ## Files Modified This Session
-- `scripts/build_dataset_combined.py`: Modified - added VIX integration (~40 lines)
-- `tests/test_dataset_combined.py`: Modified - added 5 VIX tests (~160 lines)
-- `data/processed/v1/SPY_dataset_c.parquet`: **NEW** - 8,073 rows, 34 features
-- `data/processed/manifest.json`: Updated with SPY.dataset.c entry
-- `.claude/context/phase_tracker.md`: Updated Task 7 status
+- `scripts/build_dataset_combined.py`: VIX integration (committed)
+- `tests/test_dataset_combined.py`: 5 VIX tests (committed)
+- `.claude/skills/session_handoff/skill.md`: Fixed Memory MCP API (committed)
+- `.claude/skills/session_restore/skill.md`: Fixed Memory MCP API (committed)
+- `.claude/context/decision_log.md`: Added Phase 5.5 decision + Memory fix decision
+- `.claude/context/phase_tracker.md`: Updated (pending commit)
 
 ## Key Decisions Made
-1. **Extended existing script**: Added VIX support to build_dataset_combined.py rather than creating new combine.py
-2. **Opt-in VIX**: --include-vix flag makes VIX integration optional (backward compatible)
-3. **Date overlap validation**: Raises ValueError with clear message when no overlapping dates
-
-## Implementation Details
-- `build_combined()` now accepts `vix_path` and `include_vix` parameters
-- Inner join on Date ensures only overlapping dates in output
-- Error message includes date ranges for debugging
+1. **Phase 5.5 next**: HPO infrastructure needed before Phase 6A experiments
+2. **Memory MCP fix**: Skills now use correct API + entity tracking in context file
 
 ## Data Versions
 
@@ -68,26 +66,31 @@
 | DIA.features.a20 | 1 | a20 | ac8ca457 |
 | QQQ.features.a20 | 1 | a20 | c578e3f6 |
 | VIX.features.c | 1 | c | 0f0e8a8d |
-| **SPY.dataset.c** | 1 | c | 108716f9 |
+| SPY.dataset.c | 1 | c | 108716f9 |
 
 ### Pending Registrations
 - None
 
+## Memory Entities Updated
+- Phase5_5_Decision (created): Decision to proceed to Phase 5.5 before Phase 6A
+- Memory_MCP_API_Fix (created): Lesson about fixing Memory MCP API in skills
+
 ## Context for Next Session
-- Phase 5 is 7/8 tasks complete (Tasks 1-7 done)
-- Task 8 (multi-asset) is optional stretch goal
+- Phase 5 is 7/8 tasks complete (Task 8 multi-asset is optional stretch)
+- Phase 5.5 needs planning session before implementation
 - 136 tests provide good coverage; TDD pattern continues
-- Ready to commit Task 7 or proceed to Phase 5.5/6A
+- SPY_dataset_c.parquet ready for training when Phase 5.5 complete
 
 ## Next Session Should
-1. Commit Task 7 changes (if not done yet)
-2. Decide: Task 8 (multi-asset) OR Phase 5.5 (experiment setup) OR Phase 6A (experiments)
-3. Phase 6A can start immediately - SPY_dataset_c.parquet is ready for training
+1. Run session restore (will now retrieve Memory entities correctly)
+2. Run planning_session skill for Phase 5.5
+3. Get approval on Phase 5.5 decomposition
+4. Begin Task 5.5.1 (config templates) with TDD
 
 ## Phase Status Summary
 - Phase 0-4: COMPLETE
-- **Phase 5: IN PROGRESS (7/8 tasks done)**
-- Phase 5.5: PROPOSED (experiment setup)
+- **Phase 5: COMPLETE (7/8 tasks, Task 8 optional)**
+- **Phase 5.5: NEXT** (experiment setup)
 - Phase 6A-6D: NOT STARTED
 
 ## Commands to Run First

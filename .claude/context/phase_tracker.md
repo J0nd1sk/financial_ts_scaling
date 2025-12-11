@@ -38,7 +38,7 @@
 - All tests passing: ✅ 2025-12-09 (94/94 tests)
 - 2B parameter config added: ✅ 2025-12-09
 
-## Phase 5: Data Acquisition 🔄 IN PROGRESS (Started 2025-12-09)
+## Phase 5: Data Acquisition ✅ COMPLETE (2025-12-10)
 - Plan approved: ✅ 2025-12-09 (docs/phase5_data_acquisition_plan.md v1.3)
 - Task 1: ✅ Generalize download script (download_ticker + retry logic)
 - Task 2: ✅ Download ETFs + Indices (2025-12-10)
@@ -68,7 +68,7 @@
   - 136 tests passing
 - Task 8: ⏸️ Multi-asset builder (optional stretch goal)
 
-## Phase 5.5: Experiment Setup ⏸️ PROPOSED
+## Phase 5.5: Experiment Setup 🔄 NEXT
 - Config templates for 4 threshold tasks
 - HPO infrastructure (Optuna + W&B/MLflow)
 - Timescale resampling
