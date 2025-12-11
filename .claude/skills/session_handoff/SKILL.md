@@ -93,6 +93,13 @@ Capture current session state for seamless continuation.
    - Processed manifest: [latest dataset/version/tier or "none"]
    - Pending registrations: [list or "none"]
 
+   ## Memory Entities Updated
+   List all Memory MCP entities created or updated this session:
+   - [EntityName1] (created|updated): [brief description]
+   - [EntityName2] (created|updated): [brief description]
+
+   If none: "No Memory entities updated this session"
+
    ## Commands to Run
    ```bash
    source venv/bin/activate
@@ -108,46 +115,44 @@ Capture current session state for seamless continuation.
 
 8. **Store Lessons in Memory MCP** (additive - context files remain primary)
 
-   Extract and store key learnings from this session:
+   Extract and store key learnings from this session. **Track all entity names for session_context.md.**
 
-   - **Lessons learned** (mistakes and corrections):
+   - **For NEW entities** (first time storing this knowledge):
      ```
-     mcp__memory__store_memory({
-       "content": "Lesson: [specific lesson]",
-       "metadata": {
-         "type": "lesson",
-         "phase": "[current phase]",
-         "context": "[when/why this lesson applies]",
-         "session_date": "[YYYY-MM-DD]"
-       }
+     mcp__memory__create_entities({
+       "entities": [{
+         "name": "Phase[N]_[TaskName]_[Type]",  # e.g., "Phase5_VIX_Integration_Lesson"
+         "entityType": "lesson|pattern|decision",
+         "observations": [
+           "Lesson: [specific lesson]",
+           "Phase: [current phase]",
+           "Context: [when/why this applies]",
+           "Session: [YYYY-MM-DD]"
+         ]
+       }]
      })
      ```
 
-   - **Successful patterns** (what worked well):
+   - **For EXISTING entities** (adding to prior knowledge):
      ```
-     mcp__memory__store_memory({
-       "content": "Pattern: [successful approach]",
-       "metadata": {
-         "type": "pattern",
-         "phase": "[current phase]",
-         "context": "[where this pattern applies]",
-         "session_date": "[YYYY-MM-DD]"
-       }
+     mcp__memory__add_observations({
+       "observations": [{
+         "entityName": "[existing entity name]",
+         "contents": [
+           "Pattern: [new pattern discovered]",
+           "Session: [YYYY-MM-DD]"
+         ]
+       }]
      })
      ```
 
-   - **Key decisions** (architectural or process):
-     ```
-     mcp__memory__store_memory({
-       "content": "Decision: [what was decided]",
-       "metadata": {
-         "type": "decision",
-         "phase": "[current phase]",
-         "rationale": "[why this was chosen]",
-         "session_date": "[YYYY-MM-DD]"
-       }
-     })
-     ```
+   **Entity naming convention**: `Phase[N]_[Topic]_[Type]` using underscores, no spaces.
+   Examples:
+   - `Phase5_VIX_Volume_Handling_Decision`
+   - `Phase4_TDD_Pattern`
+   - `Mock_yfinance_Pattern`
+
+   **CRITICAL**: After storing, record all entity names in session_context.md (see step 6 template).
 
    **Note**: This supplements (not replaces) decision_log.md. Memory MCP enables agent-queryable knowledge; decision_log.md remains the human-readable, version-controlled record.
 

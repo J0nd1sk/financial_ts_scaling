@@ -61,8 +61,12 @@
   - 8 VIX features: close, sma_10, sma_20, percentile_60d, zscore_20d, regime, change_1d, change_5d
   - VIX_features_c.parquet: 8,994 rows
   - 131 tests passing
-- Task 7: ⏸️ Combined dataset builder
-- Task 8: ⏸️ Multi-asset builder (optional)
+- Task 7: ✅ Combined dataset builder (2025-12-10)
+  - VIX integration: --include-vix flag, --vix-path parameter
+  - SPY_dataset_c.parquet: 8,073 rows, 34 columns (Date + 5 OHLCV + 20 ind + 8 VIX)
+  - Date overlap validation with clear error messages
+  - 136 tests passing
+- Task 8: ⏸️ Multi-asset builder (optional stretch goal)
 
 ## Phase 5.5: Experiment Setup ⏸️ PROPOSED
 - Config templates for 4 threshold tasks

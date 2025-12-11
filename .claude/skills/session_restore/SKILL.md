@@ -27,12 +27,20 @@ Restore context and verify readiness for continued work.
 
 2. **Query Memory MCP for Relevant Knowledge** (additive - context files remain primary)
 
-   After reading context files, query Memory for lessons/patterns relevant to current work:
+   After reading context files, retrieve Memory entities listed in the "Memory Entities Updated" section:
 
    ```
-   mcp__memory__search_memory({
-     "query": "[current phase or task keywords]",
-     "limit": 5
+   # Extract entity names from session_context.md "Memory Entities Updated" section
+   # Then retrieve them directly:
+   mcp__memory__open_nodes({
+     "names": ["Entity1", "Entity2", ...]  # exact names from context file
+   })
+   ```
+
+   If no entities listed or section missing, optionally search by phase:
+   ```
+   mcp__memory__search_nodes({
+     "query": "Phase[N]"  # e.g., "Phase5" - use underscores, match naming convention
    })
    ```
 
@@ -43,9 +51,9 @@ Restore context and verify readiness for continued work.
    - Anti-patterns to avoid
 
    Include relevant findings in summary to user. Examples:
-   - "📚 Memory: 3 lessons from Phase 2 work..."
-   - "⚠️ Reminder from previous session: [anti-pattern to avoid]"
-   - "✅ Pattern to apply: [successful approach from past]"
+   - "📚 Memory: Retrieved 3 entities from last session..."
+   - "⚠️ Reminder: [lesson from entity observations]"
+   - "✅ Pattern to apply: [successful approach from entity]"
 
    **Note**: This supplements (not replaces) context files. Memory provides agent-queryable knowledge; context files remain authoritative.
 
@@ -136,6 +144,10 @@ Restore context and verify readiness for continued work.
 ## Data Manifests
 - Raw: [latest dataset/file/md5 or "no entries"]
 - Processed: [latest dataset/version/tier or "none"]
+
+## Memory Retrieved
+- [EntityName]: [key lesson/pattern/decision from observations]
+- (or "No Memory entities listed in context file")
 
 ## Pending from Last Session
 1. [item]
