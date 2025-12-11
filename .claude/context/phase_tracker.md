@@ -57,7 +57,10 @@
   - DIA: 6,819 rows, QQQ: 6,532 rows
   - Fixed date normalization bug in load_raw_data()
   - 116 tests passing
-- Task 6: ⏸️ VIX feature engineering
+- Task 6: ✅ VIX feature engineering (2025-12-10)
+  - 8 VIX features: close, sma_10, sma_20, percentile_60d, zscore_20d, regime, change_1d, change_5d
+  - VIX_features_c.parquet: 8,994 rows
+  - 131 tests passing
 - Task 7: ⏸️ Combined dataset builder
 - Task 8: ⏸️ Multi-asset builder (optional)
 
