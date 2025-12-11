@@ -277,5 +277,90 @@ Total: ~15-16 HPO runs instead of 320.
 
 ---
 
-*Document Version: 1.0*
+## Task 5 Implementation Plan: experiment-generation skill
+
+**Status:** Planned (not yet implemented)
+**Estimated:** ~150 lines
+
+### Objective
+
+Create `.claude/skills/experiment_generation/SKILL.md` - a skill file that guides Claude through generating experiment scripts using `templates.py`.
+
+### Skill Structure
+
+```markdown
+---
+name: experiment_generation
+description: Generate HPO and training experiment scripts...
+---
+
+# Experiment Generation Skill
+
+## When to Use
+- "Generate experiment for 2M threshold_1pct"
+- "Create Phase 6A experiments"
+- etc.
+
+## Execution Steps
+1. Gather parameters (with validation)
+2. Validate prerequisites
+3. Generate scripts using templates.py
+4. Write to experiments/{phase}/
+5. Validate with py_compile
+
+## Parameter Reference Table
+[budget, task, horizon, timescale, data_path, phase]
+
+## Output Paths
+- HPO: experiments/{phase}/hpo_{budget}_{task}.py
+- Training: experiments/{phase}/train_{budget}_{task}.py
+```
+
+### Key Implementation Details
+
+1. **Use existing templates.py functions:**
+   ```python
+   from src.experiments.templates import generate_hpo_script, generate_training_script
+   ```
+
+2. **Parameter validation checklist in skill**
+
+3. **Feature column lookup** - skill should reference data dictionary or manifest
+
+4. **No automated tests** - manual verification in Task 7
+
+### Success Criteria
+
+- [ ] Skill file follows existing format (frontmatter + sections)
+- [ ] Covers all trigger phrases
+- [ ] Complete parameter reference
+- [ ] Uses templates.py correctly
+- [ ] Output paths documented
+
+---
+
+## Task 6 Implementation Plan: experiment-execution skill
+
+**Status:** Planned (not yet implemented)
+**Estimated:** ~200 lines
+
+### Objective
+
+Create `.claude/skills/experiment_execution/SKILL.md` - a skill file that guides Claude through running experiments with thermal monitoring and logging.
+
+### Key Sections
+
+1. Pre-flight checks (thermal, data, script validity)
+2. Execution with monitoring
+3. Result logging to CSV
+4. Report regeneration on success
+
+### Integration
+
+- Uses `runner.py` functions: `run_hpo_experiment()`, `run_training_experiment()`, `update_experiment_log()`, `regenerate_results_report()`
+- Uses `thermal_management` skill for temperature monitoring
+
+---
+
+*Document Version: 1.1*
 *Memory Entity: ExperimentSkills_Plan*

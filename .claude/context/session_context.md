@@ -1,76 +1,73 @@
-# Session Handoff - 2025-12-11 ~10:00
+# Session Handoff - 2025-12-11 ~14:00
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: ae78973 docs: session handoff - Phase 5.5 complete, Phase 6A next
-- Uncommitted: 2 new directories (docs/plans/, src/experiments/)
+- Last commit: e3b9f1b feat: implement experiment script templates (Task 4/7 - TDD)
+- Uncommitted: 1 file (docs/plans/2025-12-11-experiment-skills-design.md)
 
 ### Task Status
-- Working on: **Experiment Skills Implementation** (Task 1 of 7 complete)
-- Status: **In Progress** - module structure created, tests next
+- Working on: **Experiment Skills Implementation** (Tasks 1-4 complete, Task 5 planned)
+- Status: **Ready for Task 5** - planning complete, documented in design doc
 
 ## Test Status
-- Last `make test`: 2025-12-11 — **PASS** (210/210 tests)
+- Last `make test`: 2025-12-11 — **PASS** (239/239 tests)
 - Last `make verify`: PASS
 - Failing: none
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. Brainstorming session on experiment execution architecture
-3. Key design decisions made (see below)
-4. Planning session for experiment skills (approved)
-5. Plan documented: `docs/plans/2025-12-11-experiment-skills-design.md`
-6. **Task 1/7**: Created `src/experiments/` module structure:
-   - `src/experiments/__init__.py` (exports)
-   - `src/experiments/runner.py` (placeholder)
-   - `src/experiments/templates.py` (placeholder)
-   - `experiments/phase6a/` directory
+2. Committed Task 1 work (src/experiments/ module structure)
+3. Task 2: Wrote 19 failing tests for runner.py (TDD RED)
+4. Task 3: Implemented runner.py - all tests pass (TDD GREEN)
+5. Task 4 Planning Session: Approved plan for templates.py
+6. Task 4: Wrote 10 failing tests for templates.py (TDD RED)
+7. Task 4: Implemented templates.py - all 239 tests pass (TDD GREEN)
+8. Task 5 Planning Session: Documented plan in design doc
+9. Updated design doc with Task 5 and Task 6 implementation plans
 
 ## In Progress
-- **Experiment Skills Implementation**: 6 tasks remaining
-  - Task 2: Write tests for experiment runner (TDD RED)
-  - Task 3: Implement runner.py
-  - Task 4: Implement templates.py
-  - Task 5: Create experiment-generation skill
-  - Task 6: Create experiment-execution skill
-  - Task 7: Manual test end-to-end
+- **Task 5: Create experiment-generation skill** - Plan documented, ready to implement
+  - Single file: `.claude/skills/experiment_generation/SKILL.md`
+  - ~150 lines, follows existing skill format
+  - No automated tests (manual verification in Task 7)
 
-## Pending (After Skills Complete)
-1. **Phase 6A: Parameter Scaling** - First actual experiments
-   - 32 runs: 16 HPO + 16 final evaluation
-   - Hybrid HPO strategy: 12 HPO runs (skip 2% task, borrow params)
+## Pending
+1. **Task 5**: Create experiment-generation skill
+2. **Task 6**: Create experiment-execution skill
+3. **Task 7**: Manual test end-to-end
 
-## Files Created This Session
-- `docs/plans/2025-12-11-experiment-skills-design.md`: Full design doc (~200 lines)
-- `src/experiments/__init__.py`: Module exports
-- `src/experiments/runner.py`: Placeholder with function stubs
-- `src/experiments/templates.py`: Placeholder with function stubs
-- `experiments/phase6a/`: Empty directory for generated scripts
+## Files Modified This Session
+- `src/experiments/runner.py`: Full implementation (~310 lines)
+- `src/experiments/templates.py`: Full implementation (~240 lines)
+- `tests/experiments/__init__.py`: Created
+- `tests/experiments/test_experiment_runner.py`: 19 tests (~240 lines)
+- `tests/experiments/test_templates.py`: 10 tests (~180 lines)
+- `docs/plans/2025-12-11-experiment-skills-design.md`: Added Task 5/6 plans
 
-## Key Decisions Made
+## Key Decisions
+- **Planning before implementation**: User feedback that Task 3 should have had planning session first (captured as lesson)
+- **Task 5 scope**: Skill is ~150 lines of markdown documentation, not code
+- **No automated tests for skills**: Skills are process documentation, verified manually
 
-### Experiment Architecture
-1. **Thin wrapper scripts**: ~50-80 lines, all parameters visible inline for reproducibility
-2. **Dynamic data assembly**: Load parquet, select features at runtime (no pre-built datasets)
-3. **Data validation**: Pre-flight check in each script + lightweight check at data load
+## User Preferences Noted
+- Run planning session BEFORE any implementation task
+- Pause after each task to manage context window
+- Document plans in design doc before handoff if not implementing immediately
 
-### HPO Strategy
-4. **Per-budget HPO with task subset**: 12 HPO runs (4 budgets × 3 tasks: 1%, 3%, 5%)
-5. **2% threshold borrows params**: Interpolate from 1% and 3% results
-6. **Feature scaling HPO**: Additional 3-4 runs at 2M budget across feature tiers
+## Context for Next Session
+- **Task 5 plan is fully documented** in `docs/plans/2025-12-11-experiment-skills-design.md`
+- Follow existing skill format from `.claude/skills/thermal_management/SKILL.md`
+- Use `templates.py` functions: `generate_hpo_script()`, `generate_training_script()`
+- Output paths: `experiments/{phase}/[hpo|train]_{budget}_{task}.py`
 
-### Logging/Reporting
-7. **Hybrid CSV approach**:
-   - `outputs/results/experiment_log.csv`: Append-only raw history (including failures)
-   - `docs/experiment_results.md`: Regenerated markdown summary
-8. **CSV schema**: 16 columns (timestamp, experiment, budget, task, status, val_loss, hyperparameters, thermal_max_temp, etc.)
-
-### Skills
-9. **Two skills**:
-   - `experiment-generation`: Generate HPO and training scripts from templates
-   - `experiment-execution`: Run experiments with thermal monitoring, update logs/reports
+## Next Session Should
+1. Run `session restore`
+2. Commit uncommitted design doc changes
+3. Implement Task 5: Create `.claude/skills/experiment_generation/SKILL.md`
+4. Run planning session for Task 6 before implementing
+5. Task 7: Manual end-to-end test
 
 ## Data Versions
 
@@ -100,22 +97,9 @@
 - None
 
 ## Memory Entities Updated
-- ExperimentSkills_Plan (created): Planning decision for experiment-generation and experiment-execution skills
-- ExperimentArchitecture_Decisions (created): Key architecture decisions from brainstorming session
-
-## Context for Next Session
-- **Task 2 is next**: Write tests for experiment runner (TDD RED phase)
-- Plan document at `docs/plans/2025-12-11-experiment-skills-design.md` has full specifications
-- User preference: Pause after each task to manage context window
-- User preference: Flat docs/ structure preferred (will clean up plans/ later)
-- Uncommitted work: `src/experiments/` and `docs/plans/` directories need to be committed
-
-## Next Session Should
-1. Run `session restore` or read this file
-2. Commit uncommitted work: `git add -A && git commit -m "feat: add experiment skills infrastructure (Task 1/7)"`
-3. Continue with Task 2: Write tests for experiment runner
-4. Follow TDD: RED (write failing tests) → GREEN (implement) → commit
-5. Pause after each task for context management
+- Task3_Runner_Implementation (created): Lesson about running planning before implementation
+- Task4_Templates_Complete (created): Decision record for templates.py implementation
+- Task4_Templates_Plan (created earlier): Planning decision for templates.py
 
 ## Commands to Run First
 ```bash
@@ -126,7 +110,6 @@ git status
 ```
 
 ## Key Files for Next Session
-- `docs/plans/2025-12-11-experiment-skills-design.md` - Full design specification
-- `src/experiments/runner.py` - To be implemented (Task 3)
-- `src/experiments/templates.py` - To be implemented (Task 4)
-- `.claude/skills/` - Where new skills will be created (Tasks 5-6)
+- `docs/plans/2025-12-11-experiment-skills-design.md` - Task 5/6 plans documented
+- `.claude/skills/thermal_management/SKILL.md` - Template for skill format
+- `src/experiments/templates.py` - Functions to use in skill

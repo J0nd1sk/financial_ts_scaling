@@ -89,14 +89,15 @@
 ## Phase 6A Prep: Experiment Skills 🔄 IN PROGRESS
 **Plan Document:** `docs/plans/2025-12-11-experiment-skills-design.md`
 **Started:** 2025-12-11
+**Tests:** 239 passing (29 new this session)
 
 | Task | Name | Status |
 |------|------|--------|
 | 1 | Create src/experiments/ module | ✅ COMPLETE |
-| 2 | Write tests for runner (TDD) | ⏸️ PENDING |
-| 3 | Implement runner.py | ⏸️ PENDING |
-| 4 | Implement templates.py | ⏸️ PENDING |
-| 5 | Create experiment-generation skill | ⏸️ PENDING |
+| 2 | Write tests for runner (TDD RED) | ✅ COMPLETE |
+| 3 | Implement runner.py (TDD GREEN) | ✅ COMPLETE |
+| 4 | Implement templates.py (TDD) | ✅ COMPLETE |
+| 5 | Create experiment-generation skill | ⏸️ PLANNED |
 | 6 | Create experiment-execution skill | ⏸️ PENDING |
 | 7 | Manual test end-to-end | ⏸️ PENDING |
 
@@ -105,6 +106,11 @@
 - Dynamic data assembly (no pre-built datasets)
 - Per-budget HPO: 12 runs (skip 2% task, borrow params)
 - Hybrid logging: append-only CSV + regenerated markdown
+
+**Implementation Complete:**
+- `src/experiments/runner.py`: 4 functions (~310 lines)
+- `src/experiments/templates.py`: 2 functions (~240 lines)
+- Task 5/6 plans documented in design doc
 
 ## Phase 6A: Parameter Scaling ⏸️ BLOCKED (needs skills)
 - 32 runs: 16 HPO + 16 final evaluation
