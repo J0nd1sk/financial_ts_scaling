@@ -124,3 +124,42 @@ class TestConfigValidation:
 
         with pytest.raises(ValueError, match="data_path"):
             load_experiment_config(config_path)
+
+
+class TestLoadThresholdConfigs:
+    """Test loading threshold experiment configs from configs/experiments/."""
+
+    EXPERIMENTS_DIR = Path(__file__).resolve().parents[1] / "configs" / "experiments"
+
+    def test_load_threshold_2pct_config(self) -> None:
+        """threshold_2pct config loads successfully with correct task."""
+        from src.config import load_experiment_config
+
+        config_path = self.EXPERIMENTS_DIR / "spy_daily_threshold_2pct.yaml"
+        config = load_experiment_config(config_path)
+
+        assert config.task == "threshold_2pct"
+        assert config.timescale == "daily"
+        assert Path(config.data_path).exists()
+
+    def test_load_threshold_3pct_config(self) -> None:
+        """threshold_3pct config loads successfully with correct task."""
+        from src.config import load_experiment_config
+
+        config_path = self.EXPERIMENTS_DIR / "spy_daily_threshold_3pct.yaml"
+        config = load_experiment_config(config_path)
+
+        assert config.task == "threshold_3pct"
+        assert config.timescale == "daily"
+        assert Path(config.data_path).exists()
+
+    def test_load_threshold_5pct_config(self) -> None:
+        """threshold_5pct config loads successfully with correct task."""
+        from src.config import load_experiment_config
+
+        config_path = self.EXPERIMENTS_DIR / "spy_daily_threshold_5pct.yaml"
+        config = load_experiment_config(config_path)
+
+        assert config.task == "threshold_5pct"
+        assert config.timescale == "daily"
+        assert Path(config.data_path).exists()

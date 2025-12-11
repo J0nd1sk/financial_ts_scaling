@@ -1,0 +1,20 @@
+# Experiment Config: Daily 3% Threshold Classification
+# Task: Predict if max price in next 5 days exceeds 3% gain
+
+# Random seed for reproducibility
+seed: 42
+
+# Data source (Phase 5 combined dataset with VIX features)
+data_path: data/processed/v1/SPY_dataset_c.parquet
+
+# Task configuration
+task: threshold_3pct
+timescale: daily
+
+# Sequence parameters
+context_length: 60  # 60 days of history
+horizon: 5          # 5-day forward window
+
+# Experiment tracking
+wandb_project: financial-ts-scaling
+mlflow_experiment: phase6a-parameter-scaling
