@@ -1,20 +1,16 @@
-# Session Handoff - 2025-12-11 ~17:00
+# Session Handoff - 2025-12-11 ~19:00
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: 24a883a docs: session handoff - Tasks 1-4 complete, Task 5 planned
-- Uncommitted: 4 items
-  - `M .claude/context/phase_tracker.md` (updated Task 5/6 status)
-  - `M .claude/context/session_context.md` (this file)
-  - `D docs/phase5_data_acquisition_plan.md` (deleted - cleanup)
-  - `?? .claude/skills/experiment_generation/` (NEW - Task 5)
-  - `?? .claude/skills/experiment_execution/` (NEW - Task 6)
+- Last commit: 86cb9db docs: Phase 6A Prep complete, add documentation organization rule
+- Uncommitted: none
+- Unpushed: 7 commits (user will push outside session)
 
 ### Task Status
-- Working on: **Experiment Skills Implementation** (Tasks 5-6 complete, Task 7 pending)
-- Status: **Tasks 5 & 6 COMPLETE** - both skills implemented
+- Working on: **Phase 6A Prep** (Experiment Skills)
+- Status: **COMPLETE** - all 7 tasks done, ready for Phase 6A
 
 ## Test Status
 - Last `make test`: 2025-12-11 — **PASS** (239/239 tests)
@@ -23,50 +19,51 @@
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. Task 5: Created experiment-generation skill (228 lines)
-   - TDD approach: 17 acceptance criteria defined, implemented, verified
-3. Task 6 Planning: Defined 10 acceptance criteria
-4. Task 6: Created experiment-execution skill (329 lines)
-   - Pre-flight checklist, execution workflow, result handling
-   - All 10 acceptance criteria verified
+2. Committed Tasks 5 & 6 (experiment skills)
+3. Task 7: Manual end-to-end test of experiment skills
+   - Generated test HPO script successfully
+   - Verified logging (CSV) and reporting (markdown) functions
+4. Documentation cleanup:
+   - Moved `docs/plans/` contents to flat `docs/`
+   - Deleted `docs/plans/` subfolder
+5. Added documentation organization rule to CLAUDE.md
+6. Marked Phase 6A Prep complete in phase_tracker.md
 
 ## In Progress
-- None (Tasks 5 & 6 complete, ready for commit)
+- None - clean handoff
 
 ## Pending
-1. **Commit Tasks 5 & 6**: Stage and commit both skill files
-2. **Task 7**: Manual end-to-end test (generate experiment, run it, verify outputs)
-
-## Files Created This Session
-- `.claude/skills/experiment_generation/SKILL.md`: NEW (228 lines) - experiment generation skill
-- `.claude/skills/experiment_execution/SKILL.md`: NEW (329 lines) - experiment execution skill
+1. **Phase 6A: Parameter Scaling** - READY TO START
+   - 32 runs: 16 HPO + 16 final evaluation
+   - Hold: 28 features, 1-day horizon, SPY
+   - Vary: 2M → 20M → 200M → 2B parameters
 
 ## Files Modified This Session
-- `.claude/context/phase_tracker.md`: Updated Task 5/6 status to COMPLETE
-- `docs/phase5_data_acquisition_plan.md`: DELETED (cleanup from prior phase)
+- `.claude/skills/experiment_generation/SKILL.md`: Committed (Task 5)
+- `.claude/skills/experiment_execution/SKILL.md`: Committed (Task 6)
+- `.claude/context/phase_tracker.md`: Updated Phase 6A Prep → COMPLETE
+- `CLAUDE.md`: Added documentation organization rule
+- `docs/experiment_skills_design.md`: Moved from docs/plans/
 
 ## Key Decisions
-- **TDD for documentation**: Applied TDD mindset to skill creation - defined acceptance criteria before implementing
-- **Comprehensive execution skill**: Made execution skill more detailed (329 lines vs 200 estimate) to include complete workflow
+- **Documentation organization rule**: ALL docs in flat `docs/`, no subfolders (temporary subfolders allowed during active work only)
+- **Task 7 approach**: Tested logging/reporting functions directly rather than running full HPO (validated skill integration without long-running experiments)
 
 ## User Preferences Noted
-- Run planning session BEFORE any implementation task
-- Use TDD + sequential thinking for implementation
-- Pause after tasks for context management
+- User will push commits outside session
+- Prefers clean context for Phase 6A start
 
 ## Context for Next Session
-- **Tasks 5 & 6 need commit** - skill files are untracked
-- **Task 7 is manual testing** - use both skills end-to-end
-- Phase 6A Prep will be complete after Task 7
+- Phase 6A is READY - skills are complete and tested
+- First experiment should be: 2M budget, threshold_1pct task
+- Use `experiment_generation` skill to create scripts
+- Use `experiment_execution` skill to run them
 
 ## Next Session Should
 1. Run `session restore`
-2. Commit Tasks 5 & 6 (both skill files + phase tracker update)
-3. Task 7: Manual end-to-end test
-   - Use experiment_generation skill to create a test script
-   - Use experiment_execution skill to run it
-   - Verify CSV log and markdown report are created
-4. Mark Phase 6A Prep complete, start Phase 6A experiments
+2. Start Phase 6A: Generate first experiment (2M, threshold_1pct)
+3. Execute HPO with thermal monitoring
+4. Log results and iterate through budget matrix
 
 ## Data Versions
 
@@ -96,9 +93,8 @@
 - None
 
 ## Memory Entities Updated
-- Task5_Experiment_Generation_Skill_Complete (created): TDD approach, 17 criteria, 228 lines
-- Task6_Experiment_Execution_Skill_Plan (created): Planning decision for Task 6
-- Task6_Experiment_Execution_Skill_Complete (created): 10 criteria verified, 329 lines
+- Documentation_Organization_Rule (created): Rule for flat docs/ structure
+- Phase6A_Prep_Complete (created): Milestone marking Phase 6A Prep done
 
 ## Commands to Run First
 ```bash
@@ -109,7 +105,8 @@ git status
 ```
 
 ## Key Files for Next Session
-- `.claude/skills/experiment_generation/SKILL.md` - Task 5 deliverable (needs commit)
-- `.claude/skills/experiment_execution/SKILL.md` - Task 6 deliverable (needs commit)
-- `src/experiments/runner.py` - Functions used by execution skill
-- `src/experiments/templates.py` - Functions used by generation skill
+- `.claude/skills/experiment_generation/SKILL.md` - Use to generate HPO scripts
+- `.claude/skills/experiment_execution/SKILL.md` - Use to run experiments
+- `src/experiments/runner.py` - Core experiment execution functions
+- `src/experiments/templates.py` - Script generation functions
+- `data/processed/v1/SPY_dataset_c.parquet` - Primary dataset (28 features)
