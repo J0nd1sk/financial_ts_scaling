@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""Build a combined dataset parquet with OHLCV, features, and optional labels.
+"""Build a combined dataset parquet with OHLCV, features, optional VIX, and labels.
 
 Inputs:
 - Raw OHLCV: data/raw/SPY.parquet
 - Features: data/processed/v1/SPY_features_a20.parquet
+- Optional VIX features: data/processed/v1/VIX_features_c.parquet (--include-vix)
 - Optional labels: data/processed/v1/SPY_labels_thresholds.parquet
 
 Outputs:
 - Combined parquet (default: data/processed/v1/SPY_dataset_a20.parquet)
-- Manifest registration as processed dataset with sources = raw + features (+ labels if provided)
+- With VIX: data/processed/v1/SPY_dataset_c.parquet (tier c)
+- Manifest registration as processed dataset with sources
 
 Columns order:
-Date, Open, High, Low, Close, Volume, [features...], [labels...]
+Date, Open, High, Low, Close, Volume, [features...], [vix_features...], [labels...]
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ from scripts import manage_data_versions as dv
 
 DEFAULT_RAW_PATH = Path("data/raw/SPY.parquet")
 DEFAULT_FEATURES_PATH = Path("data/processed/v1/SPY_features_a20.parquet")
+DEFAULT_VIX_PATH = Path("data/processed/v1/VIX_features_c.parquet")
 DEFAULT_LABELS_PATH = Path("data/processed/v1/SPY_labels_thresholds.parquet")
 DEFAULT_OUTPUT_PATH = Path("data/processed/v1/SPY_dataset_a20.parquet")
 
@@ -40,7 +43,25 @@ def build_combined(
     features_path: Path,
     labels_path: Path | None,
     include_labels: bool,
+    vix_path: Path | None = None,
+    include_vix: bool = False,
 ) -> pd.DataFrame:
+    """Build combined dataset from raw OHLCV, features, optional VIX, and labels.
+
+    Args:
+        raw_path: Path to raw OHLCV parquet
+        features_path: Path to asset features parquet
+        labels_path: Path to labels parquet (optional)
+        include_labels: Whether to include labels
+        vix_path: Path to VIX features parquet (optional)
+        include_vix: Whether to include VIX features
+
+    Returns:
+        Combined DataFrame with all features merged on Date
+
+    Raises:
+        ValueError: If include_vix=True but no overlapping dates between asset and VIX
+    """
     raw = pd.read_parquet(raw_path)
     feats = pd.read_parquet(features_path)
 
@@ -48,6 +69,25 @@ def build_combined(
     feats["Date"] = pd.to_datetime(feats["Date"])
 
     df = pd.merge(raw, feats, on="Date", how="inner", validate="one_to_one")
+
+    # Merge VIX features if requested
+    if include_vix and vix_path:
+        vix = pd.read_parquet(vix_path)
+        vix["Date"] = pd.to_datetime(vix["Date"])
+
+        # Check for date overlap before merge
+        asset_dates = set(df["Date"])
+        vix_dates = set(vix["Date"])
+        overlap = asset_dates & vix_dates
+
+        if not overlap:
+            raise ValueError(
+                f"Cannot combine: no overlapping dates between asset features "
+                f"({min(df['Date'])} to {max(df['Date'])}) and VIX features "
+                f"({min(vix['Date'])} to {max(vix['Date'])})"
+            )
+
+        df = pd.merge(df, vix, on="Date", how="inner", validate="one_to_one")
 
     if include_labels and labels_path and labels_path.exists():
         labels = pd.read_parquet(labels_path)
@@ -79,6 +119,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build combined dataset parquet.")
     parser.add_argument("--raw-path", type=Path, default=DEFAULT_RAW_PATH, help="Path to raw OHLCV parquet")
     parser.add_argument("--features-path", type=Path, default=DEFAULT_FEATURES_PATH, help="Path to features parquet")
+    parser.add_argument("--vix-path", type=Path, default=DEFAULT_VIX_PATH, help="Path to VIX features parquet")
+    parser.add_argument("--include-vix", action="store_true", help="Include VIX features (tier c)")
     parser.add_argument("--labels-path", type=Path, default=DEFAULT_LABELS_PATH, help="Path to labels parquet (optional)")
     parser.add_argument("--include-labels", action="store_true", help="Include labels if labels-path exists")
     parser.add_argument("--output-path", type=Path, default=DEFAULT_OUTPUT_PATH, help="Path to write combined parquet")
@@ -96,11 +138,15 @@ def main() -> int:
         features_path=args.features_path,
         labels_path=args.labels_path if args.include_labels else None,
         include_labels=args.include_labels,
+        vix_path=args.vix_path if args.include_vix else None,
+        include_vix=args.include_vix,
     )
     args.output_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(args.output_path, index=False)
 
     sources = [args.raw_path, args.features_path]
+    if args.include_vix and args.vix_path.exists():
+        sources.append(args.vix_path)
     if args.include_labels and args.labels_path.exists():
         sources.append(args.labels_path)
     register_combined(
