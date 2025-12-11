@@ -97,8 +97,8 @@
 | 2 | Write tests for runner (TDD RED) | ✅ COMPLETE |
 | 3 | Implement runner.py (TDD GREEN) | ✅ COMPLETE |
 | 4 | Implement templates.py (TDD) | ✅ COMPLETE |
-| 5 | Create experiment-generation skill | ⏸️ PLANNED |
-| 6 | Create experiment-execution skill | ⏸️ PENDING |
+| 5 | Create experiment-generation skill | ✅ COMPLETE |
+| 6 | Create experiment-execution skill | ✅ COMPLETE |
 | 7 | Manual test end-to-end | ⏸️ PENDING |
 
 **Key Decisions:**
@@ -110,7 +110,8 @@
 **Implementation Complete:**
 - `src/experiments/runner.py`: 4 functions (~310 lines)
 - `src/experiments/templates.py`: 2 functions (~240 lines)
-- Task 5/6 plans documented in design doc
+- `.claude/skills/experiment_generation/SKILL.md`: 228 lines (Task 5)
+- `.claude/skills/experiment_execution/SKILL.md`: 329 lines (Task 6)
 
 ## Phase 6A: Parameter Scaling ⏸️ BLOCKED (needs skills)
 - 32 runs: 16 HPO + 16 final evaluation
