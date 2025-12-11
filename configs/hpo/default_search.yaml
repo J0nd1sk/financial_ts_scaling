@@ -1,0 +1,39 @@
+# Default HPO search space for scaling experiments
+#
+# Used by scripts/run_hpo.py to define hyperparameter ranges.
+# Optuna samples from these ranges during optimization.
+
+# Study configuration
+n_trials: 50
+timeout_hours: 4.0
+direction: minimize  # minimize validation loss
+
+# Hyperparameter search space
+# Types: log_uniform, uniform, int, categorical
+search_space:
+  learning_rate:
+    type: log_uniform
+    low: 1.0e-5
+    high: 1.0e-2
+
+  epochs:
+    type: int
+    low: 20
+    high: 200
+    step: 10
+
+  weight_decay:
+    type: log_uniform
+    low: 1.0e-6
+    high: 1.0e-2
+
+  warmup_steps:
+    type: int
+    low: 0
+    high: 1000
+    step: 100
+
+  dropout:
+    type: uniform
+    low: 0.0
+    high: 0.3
