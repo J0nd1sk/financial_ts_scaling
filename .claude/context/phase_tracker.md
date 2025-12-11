@@ -34,23 +34,9 @@
 - All tests passing: ✅ 2025-12-08 (17/17 tests)
 
 ## Phase 4: Boilerplate ✅ COMPLETE (2025-12-09)
-- Planning session: ✅ 2025-12-08 (Option A: Sequential TDD approved)
-- Plan documented: ✅ 2025-12-08 (docs/phase4_boilerplate_plan.md)
-- Execution strategy: 7 sub-tasks with individual approval gates
+- All 7 sub-tasks completed with TDD
 - All tests passing: ✅ 2025-12-09 (94/94 tests)
 - 2B parameter config added: ✅ 2025-12-09
-
-### Sub-Tasks
-1. ✅ Config System (src/config/experiment.py) - 2025-12-08
-2. ✅ Dataset Class (src/data/dataset.py) - 2025-12-08
-3. ✅ PatchTST Model & Configs (REVISED 2025-12-08: implement from scratch, not HuggingFace)
-   - 3a. ✅ PatchTST Backbone (src/models/patchtst.py) - 2025-12-09
-   - 3b. ✅ Parameter Budget Configs (configs/model/patchtst_{2m,20m,200m,2b}.yaml) - 2025-12-09
-   - 3c. ✅ Integration Tests (tests/test_patchtst_integration.py) - 2025-12-09
-4. ✅ Thermal Callback (src/training/thermal.py) - 2025-12-09
-5. ✅ Tracking Integration (src/training/tracking.py) - 2025-12-09
-6. ✅ Training Script (scripts/train.py) - 2025-12-09
-7. ✅ Batch Size Discovery (scripts/find_batch_size.py) - 2025-12-09
 
 ## Phase 5: Data Acquisition 🔄 IN PROGRESS (Started 2025-12-09)
 - Plan approved: ✅ 2025-12-09 (docs/phase5_data_acquisition_plan.md v1.3)
@@ -63,8 +49,14 @@
   - ^VIX: 9,053 rows (1990+)
   - Relaxed Volume validation to allow NaN/0 (VIX has no volume)
   - 103 tests passing
-- Task 4: ⏸️ Generalize feature pipeline
-- Task 5: ⏸️ Build DIA/QQQ features
+- Task 4: ✅ Generalize feature pipeline (2025-12-10)
+  - Added --ticker CLI arg to build_features_a20.py
+  - Dynamic path/dataset name construction
+  - 110 tests passing
+- Task 5: ✅ Build DIA/QQQ features (2025-12-10)
+  - DIA: 6,819 rows, QQQ: 6,532 rows
+  - Fixed date normalization bug in load_raw_data()
+  - 116 tests passing
 - Task 6: ⏸️ VIX feature engineering
 - Task 7: ⏸️ Combined dataset builder
 - Task 8: ⏸️ Multi-asset builder (optional)

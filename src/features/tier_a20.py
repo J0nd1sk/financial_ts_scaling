@@ -39,7 +39,7 @@ FEATURE_LIST = [
 def load_raw_data(path: Path) -> pd.DataFrame:
     """Read raw parquet file and return sorted DataFrame."""
     df = pd.read_parquet(path)
-    df["Date"] = pd.to_datetime(df["Date"])
+    df["Date"] = pd.to_datetime(df["Date"]).dt.normalize()  # Strip time component
     df = df.sort_values("Date")
     return df.reset_index(drop=True)
 
