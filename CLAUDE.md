@@ -81,6 +81,19 @@ Never:
 - Add unnecessary abstractions
 - Add dependencies without justification
 
+### 🔴 CRITICAL: Documentation Organization
+
+**ALL documentation must be placed in `docs/` - no subfolders allowed.**
+
+- `docs/` contains all project documentation (plans, designs, references)
+- No `docs/plans/`, `docs/archive/`, or other subfolders
+- Temporary working files may be placed in subfolders but MUST be deleted when work is complete
+- `.claude/context/` is for session state only (phase_tracker, session_context, decision_log)
+- `.claude/rules/` is for agent rules only
+- `.claude/skills/` is for Claude Code skills only
+
+**Rationale:** Flat structure prevents documentation sprawl and ensures discoverability.
+
 ---
 
 ## Experimental Protocol (Non-Negotiable)

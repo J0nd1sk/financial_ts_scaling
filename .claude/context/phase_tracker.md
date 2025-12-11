@@ -86,10 +86,10 @@
 
 **Memory Entities:** Phase5_5_Plan, Phase5_5_Task{1-6}_* (8 entities total)
 
-## Phase 6A Prep: Experiment Skills 🔄 IN PROGRESS
-**Plan Document:** `docs/plans/2025-12-11-experiment-skills-design.md`
-**Started:** 2025-12-11
-**Tests:** 239 passing (29 new this session)
+## Phase 6A Prep: Experiment Skills ✅ COMPLETE (2025-12-11)
+**Plan Document:** `docs/experiment_skills_design.md`
+**Completed:** 2025-12-11
+**Tests:** 239 passing
 
 | Task | Name | Status |
 |------|------|--------|
@@ -99,7 +99,7 @@
 | 4 | Implement templates.py (TDD) | ✅ COMPLETE |
 | 5 | Create experiment-generation skill | ✅ COMPLETE |
 | 6 | Create experiment-execution skill | ✅ COMPLETE |
-| 7 | Manual test end-to-end | ⏸️ PENDING |
+| 7 | Manual test end-to-end | ✅ COMPLETE |
 
 **Key Decisions:**
 - Thin wrapper scripts (~50-80 lines) with all params visible
@@ -113,7 +113,7 @@
 - `.claude/skills/experiment_generation/SKILL.md`: 228 lines (Task 5)
 - `.claude/skills/experiment_execution/SKILL.md`: 329 lines (Task 6)
 
-## Phase 6A: Parameter Scaling ⏸️ BLOCKED (needs skills)
+## Phase 6A: Parameter Scaling 🔜 READY TO START
 - 32 runs: 16 HPO + 16 final evaluation
 - Hold: 20 features, 1-day horizon, SPY
 - Vary: 2M → 20M → 200M → 2B parameters
