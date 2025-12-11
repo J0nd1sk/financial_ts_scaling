@@ -76,7 +76,7 @@
 | Task | Name | Est. | Status | Deliverables |
 |------|------|------|--------|--------------|
 | 5.5.1 | Config Templates | 30 min | ✅ COMPLETE | configs/experiments/threshold_{2,3,5}pct.yaml |
-| 5.5.2 | Timescale Resampling | 2-3 hrs | ⏸️ PENDING | src/features/resample.py, CLI |
+| 5.5.2 | Timescale Resampling | 2-3 hrs | ✅ COMPLETE | src/features/resample.py, CLI, 10 tests |
 | 5.5.3 | Data Dictionary | 1-2 hrs | ⏸️ PENDING | docs/data_dictionary.md, generator script |
 | 5.5.4 | Optuna HPO | 3-4 hrs | ⏸️ PENDING | src/training/hpo.py, run_hpo.py |
 | 5.5.5 | Scaling Analysis | 2 hrs | ⏸️ PENDING | src/analysis/scaling_curves.py |
