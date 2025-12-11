@@ -1,57 +1,59 @@
-# Session Handoff - 2025-12-10 ~20:30
+# Session Handoff - 2025-12-10 ~21:30
 
 ## Current State
 
 ### Branch & Git
 - Branch: main
-- Last commit: 9eda31a docs: session handoff - Phase 5 complete, Phase 5.5 next
-- Uncommitted:
-  - `.claude/context/decision_log.md` (modified)
-  - `.claude/context/phase_tracker.md` (modified)
-  - `docs/phase5_5_experiment_setup_plan.md` (new)
+- Last commit: 3bb0452 feat: add threshold_2pct/3pct/5pct config templates (Task 5.5.1)
+- Uncommitted: none (clean working tree)
 
 ### Task Status
-- Working on: **Phase 5.5 Planning** - COMPLETE
-- Status: **Plan approved, ready for Task 5.5.1 implementation**
+- Working on: **Task 5.5.1 Config Templates** - COMPLETE
+- Status: **Ready for Task 5.5.2**
 
 ## Test Status
-- Last `make test`: 2025-12-10 — **PASS** (136/136 tests)
+- Last `make test`: 2025-12-10 — **PASS** (139/139 tests)
 - Last `make verify`: PASS
 - Failing: none
 
 ## Completed This Session
 1. Session restore from previous handoff
-2. Planning session for Phase 5.5 (Experiment Setup)
-3. Created comprehensive plan: `docs/phase5_5_experiment_setup_plan.md`
-4. Created 7 Memory MCP entities for Phase 5.5 plan and tasks
-5. Updated phase_tracker.md with detailed task breakdown
-6. Updated decision_log.md with Phase 5.5 Plan Approved entry
+2. Task 5.5.1 planning session (approved)
+3. TDD implementation:
+   - Created `configs/experiments/` directory
+   - Wrote 3 failing tests (RED confirmed)
+   - Created 3 YAML config files
+   - Tests pass (GREEN confirmed: 136 → 139)
+4. Committed and pushed: 3bb0452
 
 ## In Progress
 - Nothing in progress - clean handoff
 
 ## Pending (Next Session)
-1. **Task 5.5.1: Config Templates** (30 min)
-   - Create threshold_2pct, threshold_3pct, threshold_5pct YAML configs
-   - Location: `configs/experiments/`
-   - Tests: Add load validation tests to `tests/test_config.py`
+1. **Task 5.5.2: Timescale Resampling** (2-3 hrs)
+   - Create `src/features/resample.py` with `resample_ohlcv(df, freq)` function
+   - Create `scripts/resample_timescales.py` CLI
+   - Create `tests/features/test_resample.py`
+   - Frequencies: 2D, 3D, 5D, W-FRI (weekly ending Friday)
+   - OHLCV aggregation: Open=first, High=max, Low=min, Close=last, Volume=sum
 
-2. **Subsequent tasks (one per session):**
-   - 5.5.2: Timescale Resampling (2-3 hrs)
+2. **Subsequent tasks:**
    - 5.5.3: Data Dictionary (1-2 hrs)
    - 5.5.4: Optuna HPO Integration (3-4 hrs)
    - 5.5.5: Scaling Curve Analysis (2 hrs)
    - 5.5.6: Result Aggregation (1-2 hrs)
 
 ## Files Modified This Session
-- `docs/phase5_5_experiment_setup_plan.md`: NEW - Comprehensive 6-task plan (500+ lines)
-- `.claude/context/phase_tracker.md`: Updated Phase 5.5 section with task table
-- `.claude/context/decision_log.md`: Added "Phase 5.5 Plan Approved" entry
+- `configs/experiments/spy_daily_threshold_2pct.yaml`: NEW
+- `configs/experiments/spy_daily_threshold_3pct.yaml`: NEW
+- `configs/experiments/spy_daily_threshold_5pct.yaml`: NEW
+- `tests/test_config.py`: Added TestLoadThresholdConfigs class (3 tests)
+- `.claude/context/phase_tracker.md`: Updated Task 5.5.1 status to COMPLETE
 
 ## Key Decisions Made
-1. **6-task breakdown for Phase 5.5**: Sequential execution, one task per session
-2. **Data Dictionary added as Task 5.5.3**: Auto-generated docs with schema + statistics
-3. **Task dependencies**: 5.5.1 → 5.5.2 → 5.5.3 → 5.5.4 → 5.5.5 → 5.5.6
+1. **Config location**: `configs/experiments/` (separate from `configs/daily/`)
+2. **Data path**: All new configs point to `SPY_dataset_c.parquet` (Phase 5 combined dataset with VIX)
+3. **Tracking defaults**: `wandb_project: financial-ts-scaling`, `mlflow_experiment: phase6a-parameter-scaling`
 
 ## Data Versions
 
@@ -79,40 +81,30 @@
 - None
 
 ## Memory Entities Updated
-- Phase5_5_Plan (created): Master plan entity for Phase 5.5, contains scope and execution strategy
-- Phase5_5_Task1_Config_Templates (created): Task spec for threshold config templates
-- Phase5_5_Task2_Timescale_Resampling (created): Task spec for OHLCV resampling
-- Phase5_5_Task3_Data_Dictionary (created): Task spec for data documentation
-- Phase5_5_Task4_Optuna_HPO (created): Task spec for HPO integration
-- Phase5_5_Task5_Scaling_Analysis (created): Task spec for power law fitting and plots
-- Phase5_5_Task6_Result_Aggregation (created): Task spec for result collection
+- Task5_5_1_Plan_Approved (created): Planning decision for Task 5.5.1 with TDD completion confirmation
+- Phase5_5_Plan (existing): Master plan for Phase 5.5
+- Phase5_5_Task1_Config_Templates (existing): Task spec referenced during implementation
 
 ## Context for Next Session
-- Phase 5.5 plan is fully documented in `docs/phase5_5_experiment_setup_plan.md`
-- Plan contains detailed specs for all 6 tasks with:
-  - File paths and line estimates
-  - Function signatures
-  - Test cases
-  - Success criteria
-  - Dependencies
-- Any coding agent can pick up Task 5.5.1 by reading the plan document
-- 136 tests provide baseline; each task adds new tests via TDD
-- SPY_dataset_c.parquet ready for training experiments after Phase 5.5
+- Phase 5.5 plan document: `docs/phase5_5_experiment_setup_plan.md` (lines 115-150 for Task 5.5.2 spec)
+- Task 5.5.2 requires reading raw OHLCV from `data/raw/*.parquet`
+- Resampling must preserve date alignment (use W-FRI for weekly to match trading week)
+- After resampling, features need to be regenerated for each timescale
+- 139 tests provide baseline; Task 5.5.2 should add ~8-10 new tests
 
 ## Next Session Should
 1. Run `session restore` or read this file
-2. Read `docs/phase5_5_experiment_setup_plan.md` for full task specs
-3. Begin Task 5.5.1 (Config Templates) with TDD:
-   - Write tests first for loading threshold_2pct, threshold_3pct, threshold_5pct configs
-   - Verify tests fail (RED)
-   - Create the YAML config files
-   - Verify tests pass (GREEN)
-   - Commit: `feat: add threshold_2pct/3pct/5pct config templates (5.5.1)`
+2. Read Task 5.5.2 spec in `docs/phase5_5_experiment_setup_plan.md` (lines 115-180)
+3. Run planning session for Task 5.5.2
+4. Begin TDD implementation:
+   - Write failing tests for `resample_ohlcv()` function
+   - Implement `src/features/resample.py`
+   - Create CLI script
+   - Commit: `feat: add timescale resampling utilities (Task 5.5.2)`
 
 ## Phase Status Summary
-- Phase 0-4: COMPLETE
-- Phase 5: COMPLETE (7/8 tasks, Task 8 optional)
-- **Phase 5.5: PLANNING COMPLETE, Task 5.5.1 READY**
+- Phase 0-5: COMPLETE
+- **Phase 5.5: Task 5.5.1 COMPLETE, Task 5.5.2 READY**
 - Phase 6A-6D: NOT STARTED
 
 ## Commands to Run First
@@ -124,7 +116,7 @@ git status
 ```
 
 ## Key Files for Next Session
-- `docs/phase5_5_experiment_setup_plan.md` - Full task specifications
-- `configs/daily/threshold_1pct.yaml` - Template for new configs
-- `src/config/experiment.py` - ExperimentConfig loader
-- `tests/test_config.py` - Where to add new tests
+- `docs/phase5_5_experiment_setup_plan.md` - Task 5.5.2 spec (lines 115-180)
+- `data/raw/SPY.parquet` - Source for resampling tests
+- `src/features/tier_a20.py` - Reference for feature engineering patterns
+- `tests/features/test_indicators.py` - Reference for test patterns
