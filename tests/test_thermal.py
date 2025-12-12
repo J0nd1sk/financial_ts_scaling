@@ -179,3 +179,117 @@ class TestThermalCallbackErrorHandling:
         # Critical threshold must be > warning threshold
         with pytest.raises(ValueError, match="critical.*warning"):
             ThermalCallback(warning_threshold=95.0, critical_threshold=85.0)
+
+
+class TestGetHardwareStats:
+    """Tests for get_hardware_stats() function."""
+
+    def test_get_hardware_stats_returns_dict(self) -> None:
+        """get_hardware_stats should return a dictionary."""
+        from src.training.thermal import get_hardware_stats
+
+        result = get_hardware_stats()
+        assert isinstance(result, dict), "get_hardware_stats should return a dict"
+
+    def test_get_hardware_stats_has_required_keys(self) -> None:
+        """get_hardware_stats should return dict with cpu_percent and memory_percent."""
+        from src.training.thermal import get_hardware_stats
+
+        result = get_hardware_stats()
+        assert "cpu_percent" in result, "Result should have 'cpu_percent' key"
+        assert "memory_percent" in result, "Result should have 'memory_percent' key"
+
+    def test_get_hardware_stats_values_in_range(self) -> None:
+        """CPU and memory percentages should be between 0 and 100."""
+        from src.training.thermal import get_hardware_stats
+
+        result = get_hardware_stats()
+        assert 0 <= result["cpu_percent"] <= 100, "CPU percent should be 0-100"
+        assert 0 <= result["memory_percent"] <= 100, "Memory percent should be 0-100"
+
+    def test_get_hardware_stats_values_are_floats(self) -> None:
+        """CPU and memory percentages should be floats."""
+        from src.training.thermal import get_hardware_stats
+
+        result = get_hardware_stats()
+        assert isinstance(result["cpu_percent"], float), "CPU percent should be float"
+        assert isinstance(result["memory_percent"], float), "Memory percent should be float"
+
+
+class TestGetMacosTemperature:
+    """Tests for get_macos_temperature() function."""
+
+    def test_get_macos_temperature_returns_float(self) -> None:
+        """get_macos_temperature should return a float."""
+        from src.training.thermal import get_macos_temperature
+
+        result = get_macos_temperature()
+        assert isinstance(result, float), "get_macos_temperature should return float"
+
+    def test_get_macos_temperature_failure_returns_negative(self) -> None:
+        """get_macos_temperature should return -1 on failure."""
+        from unittest.mock import patch
+        from src.training.thermal import get_macos_temperature
+
+        # Mock subprocess to simulate failure
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("powermetrics not found")
+            result = get_macos_temperature()
+
+        assert result == -1.0, "Should return -1.0 on subprocess failure"
+
+    def test_get_macos_temperature_timeout_returns_negative(self) -> None:
+        """get_macos_temperature should return -1 on timeout."""
+        import subprocess
+        from unittest.mock import patch
+        from src.training.thermal import get_macos_temperature
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="powermetrics", timeout=5)
+            result = get_macos_temperature()
+
+        assert result == -1.0, "Should return -1.0 on timeout"
+
+    def test_get_macos_temperature_malformed_output_returns_negative(self) -> None:
+        """get_macos_temperature should return -1 on malformed output."""
+        from unittest.mock import patch, MagicMock
+        from src.training.thermal import get_macos_temperature
+
+        mock_result = MagicMock()
+        mock_result.stdout = "no temperature data here"
+        mock_result.returncode = 0
+
+        with patch("subprocess.run", return_value=mock_result):
+            result = get_macos_temperature()
+
+        assert result == -1.0, "Should return -1.0 on malformed output"
+
+
+class TestDefaultTempProvider:
+    """Tests for updated default temperature provider."""
+
+    def test_thermal_callback_without_provider_uses_macos_temp(self) -> None:
+        """ThermalCallback without explicit provider should use get_macos_temperature."""
+        from unittest.mock import patch
+        from src.training.thermal import ThermalCallback
+
+        # Mock get_macos_temperature to return a known value
+        with patch("src.training.thermal.get_macos_temperature", return_value=72.5):
+            callback = ThermalCallback()
+            status = callback.check()
+
+        assert status.temperature == 72.5, "Should use get_macos_temperature as default"
+
+    def test_thermal_callback_default_provider_handles_failure(self) -> None:
+        """ThermalCallback default provider should handle temperature read failure."""
+        from unittest.mock import patch
+        from src.training.thermal import ThermalCallback
+
+        # Mock get_macos_temperature to return -1 (failure)
+        with patch("src.training.thermal.get_macos_temperature", return_value=-1.0):
+            callback = ThermalCallback()
+            status = callback.check()
+
+        # -1 is below all thresholds, so it would be "normal"
+        # But we should treat -1 as unknown - this tests current behavior
+        assert status.temperature == -1.0

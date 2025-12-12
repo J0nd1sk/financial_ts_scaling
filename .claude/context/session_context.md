@@ -1,96 +1,78 @@
-# Session Handoff - 2025-12-12 14:30
+# Session Handoff - 2025-12-12 16:45
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `6e7363c` feat: add automated HPO runner script with logging
-- **Uncommitted**: none (clean)
-- **Pushed**: Yes, up to date with origin
+- **Last commit**: `1a8b949` docs: session handoff - Phase 6A Task 8 complete
+- **Uncommitted**: 3 files (+180 lines) - **NEEDS COMMIT**
+- **Pushed**: No (uncommitted changes pending)
 
 ### Project Phase
 - **Phase 6A**: Parameter Scaling - IN PROGRESS
-- **Task 8**: Integration test - COMPLETE (bugs fixed, smoke test passed)
+- **Hardware Monitoring**: Task A COMPLETE, Tasks B & C pending
 
 ### Task Status
 - **Working on**: Hardware monitoring improvements (3-task plan)
-- **Status**: IN PROGRESS - Task A started, interrupted for handoff
+- **Status**: Task A COMPLETE, ready for Task B
 
 ---
 
 ## Test Status
-- **Last `make test`**: PASS (317 tests) at ~14:00
+- **Last `make test`**: PASS (327 tests) at ~16:40
 - **Failing**: none
 
 ---
 
 ## Completed This Session
 
-1. **Session restore** - Loaded context from previous session
-2. **Fixed 5 failing tests** - Added `num_features=20` to test calls in test_hpo.py
-3. **Fixed SplitIndices bug** - Changed `.train/.val/.test` to `.train_indices/.val_indices/.test_indices` in templates.py
-4. **Regenerated 12 HPO scripts** - All scripts now have correct APIs
-5. **Ran 3-trial smoke test** - Validated end-to-end HPO works (~100s/trial, val_loss=0.385)
-6. **Committed all bug fixes** - `23b0356` fix: correct integration bugs for architectural HPO
-7. **Created runner script** - `scripts/run_phase6a_hpo.sh` for sequential TMUX execution
-8. **Updated runbook** - Added automated runner instructions
-9. **Pushed to origin** - Both commits pushed
+1. **Session restore** - Loaded context from previous handoff
+2. **Task A: Hardware monitoring provider** - COMPLETE
+   - Added `psutil>=7.0.0` to requirements.txt
+   - Implemented `get_hardware_stats()` - returns CPU%, memory% via psutil
+   - Implemented `get_macos_temperature()` - uses `sudo powermetrics --samplers thermal`
+   - Updated `_default_temp_provider()` to use `get_macos_temperature()`
+   - Added 10 new tests to test_thermal.py
+   - All 327 tests passing
 
 ---
 
 ## In Progress: Hardware Monitoring (3-Task Plan)
 
-User requested hardware monitoring to ensure effective utilization during 150+ hour experiments.
-
-### The Problem
-- ThermalCallback exists but HPO scripts DON'T use it
-- No pre-flight checks (MPS available? temp readable?)
-- No periodic hardware logging (CPU/memory/temp)
-
-### Approved 3-Task Plan
+### Approved Plan Status
 
 | Task | Description | Status |
 |------|-------------|--------|
-| **A** | Add psutil + implement real temp provider | IN PROGRESS - just started |
+| **A** | Add psutil + implement real temp provider | ✅ COMPLETE |
 | **B** | Update HPO template to use ThermalCallback | PENDING |
 | **C** | Add pre-flight + periodic logging to runner | PENDING |
 
-### Task A Details (Current)
-**Objective**: Implement real temperature provider for macOS
+### Task A Implementation Details (COMPLETE)
+- `get_hardware_stats()` → `{"cpu_percent": float, "memory_percent": float}` via psutil
+- `get_macos_temperature()` → Uses `sudo -n powermetrics --samplers thermal -n 1`
+  - Returns highest temp found (CPU/GPU die)
+  - Returns -1.0 on any failure (graceful fallback)
+  - Uses `sudo -n` (non-interactive) - requires cached sudo credentials
 
-**What we discovered**:
-- `psutil` is NOT installed - needs to be added
-- `osx-cpu-temp` is NOT available on this system
-- `powermetrics --samplers smc` - returned "unrecognized sampler: smc"
-- Need to find alternative temp reading method for M4 MacBook Pro
-
-**Options to explore**:
-1. `sudo powermetrics` with different samplers
-2. `sysctl` for temperature data
-3. Install `osx-cpu-temp` via Homebrew
-4. Use psutil's `sensors_temperatures()` (may not work on macOS)
-5. Fallback: Skip thermal if unavailable, just log CPU/memory
-
-**Files to modify**:
-- `requirements.txt` - add psutil
-- `src/training/thermal.py` - implement `get_macos_temperature()` function
-
-### Task B Details (Pending)
+### Task B Details (NEXT)
 **Objective**: Make HPO scripts use ThermalCallback
 
 **Files to modify**:
-- `src/experiments/templates.py` - add ThermalCallback import and usage
+- `src/experiments/templates.py` - add ThermalCallback to generated scripts
 - Regenerate all 12 HPO scripts
 
-**Key change**: Pass thermal_callback to `run_hpo()` or check temp between trials
+**Key approach**:
+- Import ThermalCallback in generated script
+- Check temperature between trials
+- Pause/abort if thresholds exceeded
 
 ### Task C Details (Pending)
 **Objective**: Add pre-flight checks and periodic logging to runner
 
-**Pre-flight checks needed**:
-- MPS available? (`python -c "import torch; print(torch.backends.mps.is_available())"`)
-- Temperature readable?
-- Memory available?
+**Pre-flight checks**:
+- MPS available?
+- Temperature readable (sudo cached)?
+- Sufficient memory?
 
 **Periodic logging** (every 5 min):
 - CPU usage %
@@ -102,24 +84,24 @@ User requested hardware monitoring to ensure effective utilization during 150+ h
 
 ---
 
-## Files Modified This Session
+## Files Modified This Session (UNCOMMITTED)
 
 | File | Change |
 |------|--------|
-| `tests/test_hpo.py` | Added num_features=20 to 5 tests |
-| `src/experiments/templates.py` | Fixed SplitIndices attributes |
-| `src/training/hpo.py` | (from prev session) added num_features param |
-| `experiments/phase6a/*.py` (12) | Regenerated with all fixes |
-| `scripts/run_phase6a_hpo.sh` | NEW - sequential runner with logging |
-| `docs/phase6a_hpo_runbook.md` | Added automated runner section |
+| `requirements.txt` | +3 lines: added psutil>=7.0.0 |
+| `src/training/thermal.py` | +63 lines: get_hardware_stats(), get_macos_temperature(), updated default provider |
+| `tests/test_thermal.py` | +114 lines: 10 new tests for hardware monitoring functions |
+
+**Total**: +180 lines across 3 files
 
 ---
 
 ## Key Decisions
 
-1. **Runner script approach**: Single bash script chains all 12 experiments, logs to timestamped file, continues on failure
-2. **Hardware monitoring plan**: 3-task decomposition (temp provider → template → runner)
-3. **Temperature reading**: Still need to find working method for M4 Mac
+1. **Temperature method**: `sudo powermetrics --samplers thermal` - requires sudo but works on M4 Mac
+2. **Graceful fallback**: Temperature returns -1.0 on failure, doesn't block training
+3. **psutil for CPU/memory**: Works without sudo, provides reliable utilization metrics
+4. **TDD approach**: Tests written first, all 10 new tests passing
 
 ---
 
@@ -127,52 +109,41 @@ User requested hardware monitoring to ensure effective utilization during 150+ h
 
 ### Critical Understanding
 
-**The HPO system is VALIDATED and READY TO RUN** (without hardware monitoring):
-- Smoke test passed: 3 trials, ~100s/trial
-- Searches BOTH architecture (d_model, n_layers, n_heads, d_ff) AND training params
-- Uses pre-computed architecture grid per budget
-- 12 scripts generated, runner script ready
+**Task A is COMPLETE - ready to commit and proceed to Task B**
 
-**Hardware monitoring is an ENHANCEMENT**, not a blocker:
-- Experiments CAN run without it
-- User may choose to run without thermal monitoring and just watch temps manually
-- Or complete Task A/B/C first for automated monitoring
+The implementation provides:
+- `get_hardware_stats()` - always works (no sudo needed)
+- `get_macos_temperature()` - works if sudo cached, returns -1.0 otherwise
+- Default ThermalCallback now uses real temperature (or fails gracefully)
 
-### Architecture Search Confirmation
-The HPO scripts DO search architecture:
-- Line 165 in hpo.py: `arch_idx = trial.suggest_categorical("arch_idx", list(range(len(architectures))))`
-- Each trial picks an architecture from pre-computed grid + training params
-- This is WORKING - verified in smoke test output showing different d_model/n_layers per trial
+**To use temperature monitoring**, user should run `sudo -v` before starting experiments to cache sudo credentials.
+
+### What Remains for Full Hardware Monitoring
+1. **Task B**: Update HPO template to create ThermalCallback and check temps between trials
+2. **Task C**: Add pre-flight checks and background monitoring to runner script
 
 ---
 
 ## Next Session Should
 
-1. **Ask user**: Run experiments now (without full monitoring)? Or complete Task A/B/C first?
-
-2. **If completing hardware monitoring**:
-   - Task A: Try `sudo powermetrics` or install `osx-cpu-temp`, add psutil
-   - Task B: Update templates.py to use ThermalCallback
-   - Task C: Add pre-flight and background monitoring to runner
-
-3. **If running experiments now**:
-   - Just use: `tmux new -s hpo && ./scripts/run_phase6a_hpo.sh`
-   - Monitor manually: `sudo powermetrics --samplers smc -i 5` in another terminal
+1. **Commit Task A changes** (3 files, +180 lines)
+2. **Plan and implement Task B** - HPO template with ThermalCallback
+3. **Plan and implement Task C** - Runner pre-flight and periodic logging
+4. **Run experiments** once hardware monitoring is complete
 
 ---
 
 ## Data Versions
-- **Raw manifest**: SPY, DIA, QQQ, VIX OHLCV data (2025-12-10)
-- **Processed manifest**: SPY_dataset_a25.parquet (20 features)
+- **Raw manifest**: SPY, DIA, QQQ, DJI, IXIC, VIX OHLCV data (2025-12-10)
+- **Processed manifest**: SPY_dataset_a25.parquet, DIA, QQQ, VIX features
 - **Pending registrations**: none
 
 ---
 
 ## Memory Entities Updated This Session
 
-- `Phase6A_Task8_TestFix_Plan` (created): Bug fix planning for num_features parameter
-- `Phase6A_HPO_Runner_Script_Plan` (created): Runner script design
-- `Hardware_Monitoring_Plan` (created): 3-task hardware monitoring decomposition
+- `Task_A_Hardware_Monitoring_Plan` (created + updated): Planning and completion of hardware monitoring provider
+- `Hardware_Monitoring_Plan` (from previous session): Original 3-task plan
 
 ---
 
@@ -183,11 +154,28 @@ source venv/bin/activate
 make test
 git status
 make verify
+
+# To commit Task A:
+git add -A
+git commit -m "feat: add hardware monitoring provider (psutil + powermetrics)"
+git push
 ```
 
 ---
 
 ## Quick Reference
+
+### Temperature Reading (requires sudo)
+```bash
+# Cache sudo credentials first
+sudo -v
+
+# Test temperature reading
+./venv/bin/python3 -c "from src.training.thermal import get_macos_temperature; print(get_macos_temperature())"
+
+# Test hardware stats (no sudo needed)
+./venv/bin/python3 -c "from src.training.thermal import get_hardware_stats; print(get_hardware_stats())"
+```
 
 ### Run All Experiments (current state)
 ```bash

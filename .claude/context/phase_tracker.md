@@ -181,7 +181,16 @@
   - Smoke test passed: 3 trials, ~100s/trial, val_loss=0.385
   - Runner script created: scripts/run_phase6a_hpo.sh
   - Commits: 23b0356 (bug fixes), 6e7363c (runner script)
-- 🔜 **Next: Hardware monitoring (optional), then run full HPO experiments**
+- 🔄 **Hardware Monitoring Enhancement (2025-12-12)**
+  - ✅ Task A COMPLETE: Hardware monitoring provider
+    - Added psutil>=7.0.0 to requirements.txt
+    - Implemented get_hardware_stats() (CPU%, memory% via psutil)
+    - Implemented get_macos_temperature() (sudo powermetrics --samplers thermal)
+    - Updated _default_temp_provider() to use get_macos_temperature()
+    - 10 new tests, 327 total tests passing
+  - ⏳ Task B PENDING: Update HPO template to use ThermalCallback
+  - ⏳ Task C PENDING: Add pre-flight + periodic logging to runner
+- 🔜 **Next: Complete Tasks B & C, then run full HPO experiments**
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)

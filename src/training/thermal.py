@@ -11,8 +11,12 @@ Thresholds (from CLAUDE.md):
 
 from __future__ import annotations
 
+import re
+import subprocess
 from dataclasses import dataclass
 from typing import Callable
+
+import psutil
 
 
 @dataclass
@@ -32,16 +36,68 @@ class ThermalStatus:
     message: str
 
 
-def _default_temp_provider() -> float:
-    """Default temperature provider using powermetrics.
+def get_hardware_stats() -> dict[str, float]:
+    """Get current CPU and memory utilization.
 
-    Note: This requires sudo access on macOS. For production use,
-    consider alternatives like osx-cpu-temp or reading from sysctl.
+    Returns:
+        Dictionary with 'cpu_percent' and 'memory_percent' keys.
+        Values are floats between 0 and 100.
     """
-    raise NotImplementedError(
-        "Default temperature provider not implemented. "
-        "Please provide a custom temp_provider function."
-    )
+    cpu_percent = psutil.cpu_percent(interval=0.1)
+    memory_percent = psutil.virtual_memory().percent
+    return {
+        "cpu_percent": float(cpu_percent),
+        "memory_percent": float(memory_percent),
+    }
+
+
+def get_macos_temperature() -> float:
+    """Get CPU temperature on macOS using powermetrics.
+
+    Requires sudo access. Returns -1.0 if temperature cannot be read.
+
+    Note: On M4 MacBook Pro, this requires:
+        sudo powermetrics --samplers thermal -n 1
+
+    Returns:
+        Temperature in Celsius, or -1.0 on any failure.
+    """
+    try:
+        # Run powermetrics with thermal sampler, single sample
+        # Timeout after 5 seconds to avoid hanging
+        result = subprocess.run(
+            ["sudo", "-n", "powermetrics", "--samplers", "thermal", "-n", "1"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+
+        # Parse output for temperature
+        # Look for patterns like "CPU die temperature: 45.67 C"
+        # or "GPU die temperature: 45.67 C"
+        output = result.stdout
+        temp_pattern = r"(?:CPU|GPU|die)\s+(?:die\s+)?temperature:\s*([\d.]+)\s*C"
+        matches = re.findall(temp_pattern, output, re.IGNORECASE)
+
+        if matches:
+            # Return the highest temperature found (most relevant for throttling)
+            temps = [float(t) for t in matches]
+            return max(temps)
+
+        # No temperature found in output
+        return -1.0
+
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, ValueError):
+        return -1.0
+
+
+def _default_temp_provider() -> float:
+    """Default temperature provider using get_macos_temperature.
+
+    Returns temperature from powermetrics on macOS.
+    Returns -1.0 if temperature cannot be read.
+    """
+    return get_macos_temperature()
 
 
 class ThermalCallback:
