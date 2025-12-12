@@ -1,0 +1,40 @@
+# Architectural HPO search space for scaling experiments
+#
+# This config is used for Phase 6A architectural HPO where we search both
+# model architecture (from arch_grid.py) AND training parameters.
+#
+# Key difference from default_search.yaml:
+# - Architecture params (d_model, n_layers, n_heads, d_ff) come from pre-computed
+#   valid architecture grid, not from this config
+# - Training params use NARROWER ranges since we have fewer trials per architecture
+# - Key is "training_search_space" (not "search_space") to distinguish purpose
+
+# Study configuration
+n_trials: 50
+timeout_hours: null  # No timeout - rely on n_trials
+direction: minimize  # Minimize validation loss
+
+# Training parameter search space (narrower ranges for architectural HPO)
+# Architecture params are sampled separately from arch_grid.py
+training_search_space:
+  learning_rate:
+    type: log_uniform
+    low: 1.0e-4
+    high: 1.0e-3
+
+  epochs:
+    type: categorical
+    choices: [50, 75, 100]
+
+  batch_size:
+    type: categorical
+    choices: [32, 64, 128, 256]
+
+  weight_decay:
+    type: log_uniform
+    low: 1.0e-5
+    high: 1.0e-3
+
+  warmup_steps:
+    type: categorical
+    choices: [100, 200, 300, 500]

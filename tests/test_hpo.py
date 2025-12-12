@@ -701,3 +701,128 @@ class TestObjectiveWithoutSplitsUsesTrainLoss:
 
         # Should return train_loss for backward compatibility
         assert result == 0.5
+
+
+# --- Tests for architectural search config ---
+
+
+class TestArchitecturalSearchConfigExists:
+    """Test that architectural search config file exists."""
+
+    def test_architectural_search_config_exists(self) -> None:
+        """Test that architectural_search.yaml config file exists."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        assert config_path.exists(), f"Config file not found: {config_path}"
+
+
+class TestArchitecturalSearchConfigValidYaml:
+    """Test that architectural search config is valid YAML."""
+
+    def test_architectural_search_config_parses_as_yaml(self) -> None:
+        """Test that config file parses as valid YAML."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+        assert isinstance(config, dict)
+
+    def test_architectural_search_config_has_top_level_keys(self) -> None:
+        """Test that config has expected top-level keys."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+        assert "n_trials" in config
+        assert "direction" in config
+        assert "training_search_space" in config
+
+
+class TestArchitecturalSearchConfigHasRequiredKeys:
+    """Test that config has all required training param keys."""
+
+    def test_architectural_search_config_has_all_training_params(self) -> None:
+        """Test that training_search_space has all 5 required parameters."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        training_space = config["training_search_space"]
+        required_params = [
+            "learning_rate",
+            "epochs",
+            "batch_size",
+            "weight_decay",
+            "warmup_steps",
+        ]
+        for param in required_params:
+            assert param in training_space, f"Missing required param: {param}"
+
+
+class TestArchitecturalSearchConfigValueRanges:
+    """Test that config value ranges match design doc."""
+
+    def test_learning_rate_range_matches_design(self) -> None:
+        """Test learning_rate is log_uniform 1e-4 to 1e-3."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        lr = config["training_search_space"]["learning_rate"]
+        assert lr["type"] == "log_uniform"
+        assert lr["low"] == 1.0e-4
+        assert lr["high"] == 1.0e-3
+
+    def test_epochs_choices_match_design(self) -> None:
+        """Test epochs is categorical [50, 75, 100]."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        epochs = config["training_search_space"]["epochs"]
+        assert epochs["type"] == "categorical"
+        assert epochs["choices"] == [50, 75, 100]
+
+    def test_batch_size_choices_match_design(self) -> None:
+        """Test batch_size is categorical [32, 64, 128, 256]."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        batch_size = config["training_search_space"]["batch_size"]
+        assert batch_size["type"] == "categorical"
+        assert batch_size["choices"] == [32, 64, 128, 256]
+
+    def test_weight_decay_range_matches_design(self) -> None:
+        """Test weight_decay is log_uniform 1e-5 to 1e-3."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        wd = config["training_search_space"]["weight_decay"]
+        assert wd["type"] == "log_uniform"
+        assert wd["low"] == 1.0e-5
+        assert wd["high"] == 1.0e-3
+
+    def test_warmup_steps_choices_match_design(self) -> None:
+        """Test warmup_steps is categorical [100, 200, 300, 500]."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        warmup = config["training_search_space"]["warmup_steps"]
+        assert warmup["type"] == "categorical"
+        assert warmup["choices"] == [100, 200, 300, 500]
+
+    def test_n_trials_is_50(self) -> None:
+        """Test n_trials is set to 50 per design doc."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        assert config["n_trials"] == 50
+
+    def test_direction_is_minimize(self) -> None:
+        """Test direction is minimize."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        assert config["direction"] == "minimize"
