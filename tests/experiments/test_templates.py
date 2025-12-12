@@ -223,3 +223,50 @@ class TestGenerateHpoScriptArchitecture:
 
         # Should call create_architectural_objective to create the objective
         assert "create_architectural_objective(" in script
+
+
+# =============================================================================
+# Test: generate_hpo_script - Thermal Callback (Task B)
+# =============================================================================
+
+
+class TestGenerateHpoScriptThermal:
+    """Tests for thermal callback integration in generated HPO scripts.
+
+    Task B: Generated HPO scripts should include ThermalCallback to monitor
+    temperature between trials and pause/abort if thresholds exceeded.
+    """
+
+    def test_hpo_script_imports_thermal_callback(self, hpo_params):
+        """Test that script imports ThermalCallback from thermal module."""
+        script = generate_hpo_script(**hpo_params)
+
+        assert "from src.training.thermal import ThermalCallback" in script
+
+    def test_hpo_script_imports_time(self, hpo_params):
+        """Test that script imports time module for thermal pause."""
+        script = generate_hpo_script(**hpo_params)
+
+        assert "import time" in script
+
+    def test_hpo_script_creates_thermal_callback(self, hpo_params):
+        """Test that script creates ThermalCallback instance."""
+        script = generate_hpo_script(**hpo_params)
+
+        # Should create ThermalCallback instance
+        assert "thermal_callback = ThermalCallback()" in script
+
+    def test_hpo_script_has_thermal_check_callback(self, hpo_params):
+        """Test that script defines thermal_check_callback function."""
+        script = generate_hpo_script(**hpo_params)
+
+        # Should have callback function that checks thermal status
+        assert "def thermal_check_callback(" in script
+        assert "thermal_callback.check()" in script
+
+    def test_hpo_script_passes_callbacks_to_optimize(self, hpo_params):
+        """Test that script passes thermal callback to study.optimize()."""
+        script = generate_hpo_script(**hpo_params)
+
+        # Should pass callbacks to optimize
+        assert "callbacks=[thermal_check_callback]" in script

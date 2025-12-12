@@ -72,8 +72,12 @@ def generate_hpo_script(
             create_study,
             save_best_params,
         )
+        from src.training.thermal import ThermalCallback
         from src.data.dataset import ChunkSplitter
         from src.experiments.runner import update_experiment_log
+
+        # Thermal pause duration in seconds when warning threshold exceeded
+        THERMAL_PAUSE_SECONDS = 60
 
         # ============================================================
         # EXPERIMENT CONFIGURATION (all parameters visible)
@@ -140,11 +144,36 @@ def generate_hpo_script(
             return splitter.split()
 
         # ============================================================
+        # THERMAL MONITORING
+        # ============================================================
+
+        def thermal_check_callback(study, trial):
+            """Check thermal status between trials.
+
+            Pauses on warning, stops on critical.
+            """
+            global stopped_early, stop_reason
+
+            status = thermal_callback.check()
+
+            if status.status == "critical":
+                stopped_early = True
+                stop_reason = "thermal"
+                print(f"\\n🚨 THERMAL CRITICAL: {{status.message}}")
+                study.stop()
+            elif status.status == "warning":
+                print(f"\\n⚠️ THERMAL WARNING: {{status.message}}")
+                print(f"   Pausing {{THERMAL_PAUSE_SECONDS}}s to cool down...")
+                time.sleep(THERMAL_PAUSE_SECONDS)
+
+        # ============================================================
         # MAIN
         # ============================================================
 
         if __name__ == "__main__":
             start_time = time.time()
+            stopped_early = False
+            stop_reason = None
 
             # Validate data and get splits
             df = validate_data()
@@ -154,6 +183,10 @@ def generate_hpo_script(
             # Load training search space
             training_search_space = load_training_search_space()
             print(f"✓ Training params: {{list(training_search_space.keys())}}")
+
+            # Create thermal callback for monitoring
+            thermal_callback = ThermalCallback()
+            print("✓ Thermal monitoring enabled")
 
             # Create Optuna study
             study = create_study(
@@ -172,12 +205,13 @@ def generate_hpo_script(
                 num_features=len(FEATURE_COLUMNS),
             )
 
-            # Run optimization
+            # Run optimization with thermal monitoring
             print(f"\\nStarting HPO: {{N_TRIALS}} trials, {{len(ARCHITECTURES)}} architectures...")
             study.optimize(
                 objective,
                 n_trials=N_TRIALS,
                 timeout=TIMEOUT_HOURS * 3600 if TIMEOUT_HOURS else None,
+                callbacks=[thermal_check_callback],
             )
 
             # Save best params (includes architecture info)
