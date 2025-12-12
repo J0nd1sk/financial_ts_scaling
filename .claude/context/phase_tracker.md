@@ -114,10 +114,10 @@
 - `.claude/skills/experiment_execution/SKILL.md`: 329 lines (Task 6)
 
 ## Phase 6A: Parameter Scaling 🔄 IN PROGRESS
-- 32 runs: 16 HPO + 16 final evaluation
-- Hold: 28 features, 1-day horizon, SPY
-- Vary: 2M → 20M → 200M → 2B parameters
-- Research: Does error ∝ N^(-α)?
+- 12 HPO runs: 4 scales × 3 horizons (testing horizon variance)
+- Hold: 25 features, SPY
+- Vary: 2M → 20M → 200M → 2B parameters × 1d/3d/5d horizons
+- Research: Does error ∝ N^(-α)? Do optimal params vary by horizon?
 
 **Status (2025-12-11):**
 - ✅ Fixed feature pipeline integration issues (vix_regime encoding, non-numeric column filtering)
@@ -126,8 +126,14 @@
   - ChunkSplitter class for hybrid splits (val/test=chunks, train=sliding window)
   - HPO now optimizes val_loss instead of train_loss
   - 264 tests passing
-- ✅ HPO script regenerated with ChunkSplitter: `experiments/phase6a/hpo_2M_threshold_1pct.py`
-- Ready to run HPO with proper splits
+- ✅ HPO validation test passed (3 trials, 2M/1-day, ~50s/trial)
+- ✅ **12 HPO scripts generated (commit 93e43b8)**
+  - `experiments/phase6a/hpo_{2M,20M,200M,2B}_h{1,3,5}_threshold_1pct.py`
+  - Consistent naming convention: `hpo_{budget}_h{horizon}_{task}.py`
+- ✅ **Runbook created: `docs/phase6a_hpo_runbook.md`**
+  - Run/monitor/analyze instructions
+  - Estimated times: 2M ~45min, 20M ~2-3hrs, 200M ~8-12hrs, 2B ~24-48hrs
+- 🔜 Ready to execute HPO matrix (~150-250 hours total)
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)

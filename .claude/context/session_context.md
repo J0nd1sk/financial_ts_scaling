@@ -1,63 +1,73 @@
-# Session Handoff - 2025-12-11 (Planning & Config Fixes)
+# Session Handoff - 2025-12-11 (HPO Scripts & Runbook)
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `a436a3d` fix: Phase 6A config and data path corrections
+- **Last commit**: `93e43b8` feat: add 12 HPO scripts for Phase 6A horizon variance study
 - **Uncommitted**: none
-- **Ahead of origin**: 3 commits (need to push)
+- **Origin**: up to date
 
 ### Project Phase
-- **Phase 6A**: IN PROGRESS - Ready for first HPO test run
+- **Phase 6A**: IN PROGRESS - Ready to run full HPO matrix
 
 ### Task Status
-- **Working on**: Phase 6A Parameter Scaling - Stage 1 Validation
-- **Status**: Ready to execute (all prep complete)
+- **Working on**: Phase 6A Parameter Scaling - HPO execution
+- **Status**: Scripts ready, runbook created, ready to execute
 
 ---
 
 ## Test Status
 - **Last `make test`**: ✅ 264 passed (this session)
-- **Last `make verify`**: ✅ Passed (this session)
+- **Last `make verify`**: ✅ Passed (previous session)
 - **Failing tests**: none
 
 ---
 
 ## Completed This Session
 
-1. ✅ Session restore and planning session
-2. ✅ Fixed HPO script DATA_PATH: `SPY_dataset_c.parquet` → `SPY_dataset_a25.parquet`
-3. ✅ Updated all config files horizon: 5 → 1 (testing horizons separately)
-4. ✅ Rewrote `docs/phase6a_execution_plan.md` with:
-   - Correct feature count (25, not 33)
-   - Staged execution strategy (validate → horizon variance → full matrix)
-   - Horizon testing plan (1-day, 3-day, 5-day)
-5. ✅ Cleaned up manifest: removed duplicate entries, fixed checksums
-6. ✅ All tests passing, make verify passing
-7. ✅ Committed all changes
+1. ✅ Session restore from previous handoff
+2. ✅ Ran HPO validation test (3 trials, 2M/1-day) - pipeline works
+3. ✅ Verified outputs: experiment_results.csv and outputs/hpo/ populated correctly
+4. ✅ Generated 12 HPO scripts (4 scales × 3 horizons)
+5. ✅ Created comprehensive runbook: `docs/phase6a_hpo_runbook.md`
+6. ✅ Cleaned up old validation script, added outputs/hpo/ to .gitignore
+7. ✅ Committed and pushed all changes
 
 ---
 
-## In Progress
+## HPO Matrix Ready to Execute
 
-- **Stage 1 HPO Validation**: Ready to run - script validated, configs correct
+| Script | Budget | Horizon | Est. Time |
+|--------|--------|---------|-----------|
+| `hpo_2M_h1_threshold_1pct.py` | 2M | 1-day | ~45 min |
+| `hpo_2M_h3_threshold_1pct.py` | 2M | 3-day | ~45 min |
+| `hpo_2M_h5_threshold_1pct.py` | 2M | 5-day | ~45 min |
+| `hpo_20M_h1_threshold_1pct.py` | 20M | 1-day | ~2-3 hrs |
+| `hpo_20M_h3_threshold_1pct.py` | 20M | 3-day | ~2-3 hrs |
+| `hpo_20M_h5_threshold_1pct.py` | 20M | 5-day | ~2-3 hrs |
+| `hpo_200M_h1_threshold_1pct.py` | 200M | 1-day | ~8-12 hrs |
+| `hpo_200M_h3_threshold_1pct.py` | 200M | 3-day | ~8-12 hrs |
+| `hpo_200M_h5_threshold_1pct.py` | 200M | 5-day | ~8-12 hrs |
+| `hpo_2B_h1_threshold_1pct.py` | 2B | 1-day | ~24-48 hrs |
+| `hpo_2B_h3_threshold_1pct.py` | 2B | 3-day | ~24-48 hrs |
+| `hpo_2B_h5_threshold_1pct.py` | 2B | 5-day | ~24-48 hrs |
+
+**Total**: ~150-250 hours (run sequentially)
 
 ---
 
 ## Pending (Next Session)
 
-1. **Run first HPO test** (2-3 trials, ~30-45 min)
-   - Command: `python experiments/phase6a/hpo_2M_threshold_1pct.py`
-   - Need to modify N_TRIALS from 50 to 2-3 for validation test
-   - Or run full 50 trials if time permits
+1. **Run HPO experiments** - Start with 2M models, scale up
+   ```bash
+   cd /Users/alexanderthomson/Documents/financial_ts_scaling
+   ./venv/bin/python experiments/phase6a/hpo_2M_h1_threshold_1pct.py
+   ```
 
-2. **After Stage 1 validates:**
-   - Generate horizon test scripts (3-day, 5-day variants for 2M)
-   - Run Stage 2 horizon variance test
-   - Decide: separate HPO per horizon or borrow params
+2. **Monitor execution** - See runbook for monitoring commands
 
-3. **Push commits to origin** (3 commits ahead)
+3. **After HPO completes**: Analyze horizon variance, generate training scripts
 
 ---
 
@@ -65,68 +75,67 @@
 
 | File | Change |
 |------|--------|
-| `experiments/phase6a/hpo_2M_threshold_1pct.py` | DATA_PATH → a25 dataset |
-| `configs/experiments/threshold_1pct.yaml` | horizon: 5 → 1 |
-| `configs/experiments/spy_daily_threshold_*.yaml` | horizon: 5 → 1 (all 3) |
-| `docs/phase6a_execution_plan.md` | **NEW** - comprehensive execution plan |
-| `data/processed/manifest.json` | Cleaned up duplicates, fixed checksums |
+| `experiments/phase6a/hpo_*_h*_threshold_1pct.py` | **NEW** - 12 HPO scripts |
+| `docs/phase6a_hpo_runbook.md` | **NEW** - run/monitor/analyze instructions |
+| `docs/experiment_results.csv` | **NEW** - experiment log with validation data |
+| `.gitignore` | Added outputs/hpo/ |
+| `experiments/phase6a/hpo_2M_threshold_1pct.py` | DELETED (replaced) |
 
 ---
 
 ## Key Decisions
 
-### 1. Feature Count for Phase 6A-6C
-- **Decision**: Use 25 features (5 OHLCV + 20 indicators)
-- **Rationale**: VIX features (8) are reserved for Phase 6D data scaling only
-- **Data file**: `SPY_dataset_a25.parquet`
+### 1. HPO Script Naming Convention
+- **Decision**: `hpo_{budget}_h{horizon}_{task}.py`
+- **Rationale**: Consistent naming enables easy identification and scripted execution
 
-### 2. Horizon Testing Strategy
-- **Decision**: Test 1-day, 3-day, 5-day horizons to measure param variance
-- **Rationale**: If HPO params vary >20% by horizon, need separate HPO per horizon; if similar, can borrow params (significant time savings)
-- **Implementation**: Staged approach - validate first, then test variance with 2M only, then decide full matrix strategy
+### 2. Run in Foreground (Not Background)
+- **Decision**: User runs scripts directly in terminal, not backgrounded
+- **Rationale**: Enables real-time CLI monitoring + log file checking
 
-### 3. Staged Execution for Phase 6A
-- **Stage 1**: Validate pipeline (2-3 trials, ~30-45 min)
-- **Stage 2**: Horizon variance test (2M only, 3 horizons)
-- **Stage 3**: Full HPO matrix (12 or 36 runs depending on Stage 2)
-- **Stage 4**: Final training with best params
+### 3. Validation Data Kept
+- **Decision**: Keep validation run (3 trials) in experiment_results.csv
+- **Rationale**: Real data that validated pipeline, contributes to experiment record
 
 ---
 
 ## Context for Next Session
 
-### HPO Script Ready
-The script `experiments/phase6a/hpo_2M_threshold_1pct.py`:
-- Uses correct data: `SPY_dataset_a25.parquet` (25 features)
-- Uses ChunkSplitter for proper train/val/test splits
-- Optimizes val_loss (not train_loss)
-- Logs to `docs/experiment_results.csv`
-- Currently set to N_TRIALS=50 (modify to 2-3 for quick validation)
+### Running HPO
+```bash
+# Recommended: use tmux for long runs
+tmux new -s hpo
+./venv/bin/python experiments/phase6a/hpo_2M_h1_threshold_1pct.py
+# Detach: Ctrl+B, D
+# Reattach: tmux attach -t hpo
+```
 
-### Data Files Summary
-| File | Features | Notes |
-|------|----------|-------|
-| `SPY_dataset_a25.parquet` | 25 | Phase 6A-6C (OHLCV + indicators) |
-| `SPY_dataset_c.parquet` | 33 | Phase 6D (adds VIX features) |
-| `SPY_dataset_a20.parquet` | 34 | Legacy, same as c (confusing name!) |
+### Monitoring
+- **CLI**: Watch trial progress in terminal
+- **Thermal**: `sudo powermetrics --samplers smc -i 5000 | grep -i temp`
+- **Results**: `tail -20 docs/experiment_results.csv`
+- **Best params**: `cat outputs/hpo/{experiment}/best_params.json`
 
-### Note on a20 vs c naming
-`SPY_dataset_a20.parquet` and `SPY_dataset_c.parquet` are identical files (same MD5: 4949cd0e...). The naming is confusing - both have 34 columns including VIX. `a25` is the correct 25-feature file for Phase 6A-6C.
+### Key Files
+- Runbook: `docs/phase6a_hpo_runbook.md`
+- Scripts: `experiments/phase6a/hpo_*.py`
+- Results: `docs/experiment_results.csv`
+- Outputs: `outputs/hpo/{experiment}/best_params.json`
 
 ---
 
 ## Next Session Should
 
-1. **Run HPO validation test** (modify N_TRIALS=2 or 3, run script)
-2. **Verify outputs**: Check `docs/experiment_results.csv` and `outputs/hpo/`
-3. **If validation passes**: Generate 3-day and 5-day horizon scripts
-4. **Push to origin**: 3 commits waiting
+1. **Start HPO execution** - Begin with 2M models (~2.5 hrs for all 3)
+2. **Monitor thermal** - Watch temps during larger model runs
+3. **Analyze results** - After completion, compare params across horizons
+4. **Generate training scripts** - Use best params for final evaluation
 
 ---
 
 ## Data Versions
 
-- **Raw manifest latest**: VIX.OHLCV.daily - `data/raw/VIX.parquet` (e8cdd9f6...)
+- **Raw manifest latest**: VIX.OHLCV.daily - `data/raw/VIX.parquet`
 - **Processed manifest latest**: SPY.dataset.a25 v1 tier=a25 (6b1309a5...)
 - **Pending registrations**: none
 
@@ -134,8 +143,8 @@ The script `experiments/phase6a/hpo_2M_threshold_1pct.py`:
 
 ## Memory Entities Updated
 
-- `Phase6A_Feature_Config` (updated): Added clarification that a25 is correct dataset
-- `Phase6A_Horizon_Strategy` (created): Testing 1d/3d/5d to measure param variance
+- `Phase6A_HPO_Matrix` (created): 12 HPO scripts ready for horizon variance study
+- `Phase6A_Runbook` (created): Execution instructions in docs/phase6a_hpo_runbook.md
 
 ---
 
@@ -144,12 +153,13 @@ The script `experiments/phase6a/hpo_2M_threshold_1pct.py`:
 ```bash
 source venv/bin/activate
 make test
-make verify
 git status
 git log -3 --oneline
 
-# To run HPO validation (modify N_TRIALS first or run full):
-python experiments/phase6a/hpo_2M_threshold_1pct.py
+# Start HPO (recommended order):
+./venv/bin/python experiments/phase6a/hpo_2M_h1_threshold_1pct.py
+./venv/bin/python experiments/phase6a/hpo_2M_h3_threshold_1pct.py
+./venv/bin/python experiments/phase6a/hpo_2M_h5_threshold_1pct.py
 ```
 
 ---
