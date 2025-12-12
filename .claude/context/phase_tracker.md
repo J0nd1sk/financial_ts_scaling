@@ -155,7 +155,11 @@
   - `save_best_params()` now includes architecture info when available
   - Fixed `_sample_hyperparameter()` categorical handling
   - 6 new tests, 309 total tests passing
-- 🔜 **Next: Task 4-8, then re-run experiments**
+- ✅ **Task 4 COMPLETE: Runner CSV Architecture Columns (2025-12-12)**
+  - Added 5 columns to EXPERIMENT_LOG_COLUMNS: d_model, n_layers, n_heads, d_ff, param_count
+  - Backwards compatible: missing arch fields auto-set to None
+  - 3 new tests, 312 total tests passing
+- 🔜 **Next: Task 5-8, then re-run experiments**
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)
