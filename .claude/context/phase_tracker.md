@@ -170,7 +170,13 @@
   - All scripts use get_architectures_for_budget(), create_architectural_objective()
   - All scripts reference configs/hpo/architectural_search.yaml
   - 317 tests still passing
-- 🔜 **Next: Task 7-8, then re-run experiments**
+- ✅ **Task 7 COMPLETE: Update Runbook (2025-12-12)**
+  - Updated docs/phase6a_hpo_runbook.md for architectural HPO
+  - Sections updated: Overview, CLI Output, Outputs, Analyzing Results, Next Steps
+  - Added new section: "Interpreting Architectural Results"
+  - Document: 429 lines (+173/-44 from original)
+  - 317 tests still passing
+- 🔜 **Next: Task 8 (integration test), then re-run experiments**
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)
