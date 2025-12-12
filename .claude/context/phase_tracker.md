@@ -164,7 +164,13 @@
   - Generated scripts now: import arch_grid, compute architectures, use create_architectural_objective()
   - Self-contained scripts with visible architecture search
   - 5 new tests, 317 total tests passing
-- 🔜 **Next: Task 6-8, then re-run experiments**
+- ✅ **Task 6 COMPLETE: Regenerate 12 HPO Scripts (2025-12-12)**
+  - Deleted old scripts (training-only HPO)
+  - Regenerated 12 scripts with architectural HPO template
+  - All scripts use get_architectures_for_budget(), create_architectural_objective()
+  - All scripts reference configs/hpo/architectural_search.yaml
+  - 317 tests still passing
+- 🔜 **Next: Task 7-8, then re-run experiments**
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)

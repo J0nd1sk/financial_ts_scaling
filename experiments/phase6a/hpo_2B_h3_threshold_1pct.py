@@ -1,39 +1,32 @@
 #!/usr/bin/env python3
 """
-PHASE6A Experiment: 2B parameters, threshold_1pct task, 3-day horizon
-Type: HPO (Hyperparameter Optimization)
-Generated: 2025-12-11
+PHASE6A Experiment: 2B parameters, threshold_1pct task
+Type: HPO (Hyperparameter Optimization) with Architectural Search
+Generated: 2025-12-12T16:59:14.961458+00:00
 
-CRITICAL: This script uses ChunkSplitter for proper data splits.
-HPO optimizes val_loss, NOT train_loss.
+This script searches both model ARCHITECTURE (d_model, n_layers, n_heads, d_ff)
+and TRAINING parameters (lr, epochs, batch_size) to find optimal configuration.
 """
-import json
-import logging
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    stream=sys.stdout,
-)
-sys.stdout.reconfigure(line_buffering=True)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-import torch
 import pandas as pd
-from src.data.dataset import ChunkSplitter, SplitIndices
+import yaml
+from src.models.arch_grid import get_architectures_for_budget
+from src.training.hpo import (
+    create_architectural_objective,
+    create_study,
+    save_best_params,
+)
+from src.data.splitter import ChunkSplitter
 from src.experiments.runner import update_experiment_log
-from src.training.hpo import load_search_space, create_study, create_objective
-from src.training.thermal import ThermalCallback
 
 # ============================================================
-# EXPERIMENT CONFIGURATION
+# EXPERIMENT CONFIGURATION (all parameters visible)
 # ============================================================
 
 EXPERIMENT = "phase6a_2B_h3_threshold_1pct"
@@ -43,95 +36,137 @@ TASK = "threshold_1pct"
 HORIZON = 3
 TIMESCALE = "daily"
 DATA_PATH = "data/processed/v1/SPY_dataset_a25.parquet"
-CONFIG_PATH = "configs/experiments/threshold_1pct.yaml"
+FEATURE_COLUMNS = ['dema_9', 'dema_10', 'sma_12', 'dema_20', 'dema_25', 'sma_50', 'dema_90', 'sma_100', 'sma_200', 'rsi_daily', 'rsi_weekly', 'stochrsi_daily', 'stochrsi_weekly', 'macd_line', 'obv', 'adosc', 'atr_14', 'adx_14', 'bb_percent_b', 'vwap_20']
 
+# HPO settings
 N_TRIALS = 50
-TIMEOUT_HOURS = None
-SEARCH_SPACE_PATH = "configs/hpo/default_search.yaml"
-
-CONTEXT_LENGTH = 60
-VAL_RATIO = 0.15
-TEST_RATIO = 0.15
-HPO_TRAIN_FRACTION = 0.3
-SEED = 42
+TIMEOUT_HOURS = 4.0
+SEARCH_SPACE_PATH = "configs/hpo/architectural_search.yaml"
+CONFIG_PATH = f"configs/experiments/{TASK}.yaml"
 
 # ============================================================
-# DATA VALIDATION AND SPLIT CREATION
+# ARCHITECTURE GRID (pre-computed valid architectures for budget)
 # ============================================================
 
-def validate_and_create_splits() -> tuple[pd.DataFrame, SplitIndices]:
-    logger = logging.getLogger(__name__)
+ARCHITECTURES = get_architectures_for_budget(
+    budget=BUDGET,
+    num_features=len(FEATURE_COLUMNS),
+)
+print(f"✓ Architecture grid: {len(ARCHITECTURES)} valid configs for {BUDGET}")
+
+# ============================================================
+# DATA VALIDATION
+# ============================================================
+
+def validate_data():
+    """Validate data file before running experiment."""
     df = pd.read_parquet(PROJECT_ROOT / DATA_PATH)
-    total_days = len(df)
-    assert total_days > 1000, f"Insufficient data: {total_days} rows"
-    assert not df.isna().any().any(), "NaN values in data"
-    logger.info(f"✓ Data loaded: {total_days} rows")
+    assert len(df) > 1000, f"Insufficient data: {len(df)} rows"
+    assert all(col in df.columns for col in FEATURE_COLUMNS), "Missing feature columns"
+    assert not df[FEATURE_COLUMNS].isna().any().any(), "NaN values in features"
+    print(f"✓ Data validated: {len(df)} rows, {len(FEATURE_COLUMNS)} features")
+    return df
 
+# ============================================================
+# HPO CONFIGURATION
+# ============================================================
+
+def load_training_search_space():
+    """Load training parameter search space from YAML."""
+    config_path = PROJECT_ROOT / SEARCH_SPACE_PATH
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+    return config.get("training_search_space", {})
+
+def get_split_indices(df):
+    """Get train/val/test split indices."""
     splitter = ChunkSplitter(
-        total_days=total_days,
-        context_length=CONTEXT_LENGTH,
-        horizon=HORIZON,
-        val_ratio=VAL_RATIO,
-        test_ratio=TEST_RATIO,
-        seed=SEED,
+        val_size=252,  # 1 year validation
+        test_size=252,  # 1 year test
+        train_window=None,  # Use all available
     )
-    splits = splitter.split()
-    logger.info(f"✓ Splits: train={len(splits.train_indices)}, val={len(splits.val_indices)}, test={len(splits.test_indices)}")
-
-    hpo_train_indices = splitter.get_hpo_subset(splits, fraction=HPO_TRAIN_FRACTION)
-    hpo_splits = SplitIndices(
-        train_indices=hpo_train_indices,
-        val_indices=splits.val_indices,
-        test_indices=splits.test_indices,
-        chunk_size=splits.chunk_size,
-    )
-    logger.info(f"✓ HPO subset: {len(hpo_train_indices)} train samples ({HPO_TRAIN_FRACTION*100:.0f}%)")
-    return df, hpo_splits
+    return splitter.split(df)
 
 # ============================================================
 # MAIN
 # ============================================================
 
 if __name__ == "__main__":
-    logger = logging.getLogger(__name__)
     start_time = time.time()
 
-    device = "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
-    logger.info(f"=== {EXPERIMENT} ===")
-    logger.info(f"Device: {device}, Budget: {BUDGET}, Horizon: {HORIZON}d, N_TRIALS: {N_TRIALS}")
+    # Validate data and get splits
+    df = validate_data()
+    split_indices = get_split_indices(df)
+    print(f"✓ Splits: train={len(split_indices.train)}, val={len(split_indices.val)}, test={len(split_indices.test)}")
 
-    thermal = ThermalCallback()
-    thermal_status = thermal.check()
-    logger.info(f"Thermal: {thermal_status.status} ({thermal_status.temperature}°C)")
+    # Load training search space
+    training_search_space = load_training_search_space()
+    print(f"✓ Training params: {list(training_search_space.keys())}")
 
-    if thermal_status.status == "critical":
-        logger.error("THERMAL ABORT")
-        result = {"status": "thermal_abort", "val_loss": None, "error_message": f"Thermal: {thermal_status.temperature}°C", "duration_seconds": time.time() - start_time}
-    else:
-        df, hpo_splits = validate_and_create_splits()
-        search_config = load_search_space(PROJECT_ROOT / SEARCH_SPACE_PATH)
-        search_space = search_config.get("search_space", {})
+    # Create Optuna study
+    study = create_study(
+        experiment_name=EXPERIMENT,
+        budget=BUDGET,
+        direction="minimize",
+    )
 
-        study = create_study(experiment_name=EXPERIMENT, budget=BUDGET, direction="minimize")
-        objective = create_objective(config_path=str(PROJECT_ROOT / CONFIG_PATH), budget=BUDGET, search_space=search_space, split_indices=hpo_splits)
+    # Create architectural objective
+    objective = create_architectural_objective(
+        config_path=str(PROJECT_ROOT / CONFIG_PATH),
+        budget=BUDGET,
+        architectures=ARCHITECTURES,
+        training_search_space=training_search_space,
+        split_indices=split_indices,
+    )
 
-        logger.info(f"Starting HPO ({N_TRIALS} trials)...")
-        try:
-            study.optimize(objective, n_trials=N_TRIALS, timeout=TIMEOUT_HOURS * 3600 if TIMEOUT_HOURS else None, show_progress_bar=False)
+    # Run optimization
+    print(f"\nStarting HPO: {N_TRIALS} trials, {len(ARCHITECTURES)} architectures...")
+    study.optimize(
+        objective,
+        n_trials=N_TRIALS,
+        timeout=TIMEOUT_HOURS * 3600 if TIMEOUT_HOURS else None,
+    )
 
-            output_dir = PROJECT_ROOT / "outputs" / "hpo" / EXPERIMENT
-            output_dir.mkdir(parents=True, exist_ok=True)
-            with open(output_dir / "best_params.json", "w") as f:
-                json.dump({"experiment": EXPERIMENT, "budget": BUDGET, "horizon": HORIZON, "best_params": study.best_params, "best_value": study.best_value, "n_trials": len(study.trials), "timestamp": datetime.now(timezone.utc).isoformat()}, f, indent=2)
+    # Save best params (includes architecture info)
+    output_dir = PROJECT_ROOT / "outputs" / "hpo" / EXPERIMENT
+    output_path = save_best_params(
+        study=study,
+        experiment_name=EXPERIMENT,
+        budget=BUDGET,
+        output_dir=output_dir,
+        architectures=ARCHITECTURES,
+    )
 
-            result = {"status": "success", "val_loss": study.best_value, "hyperparameters": study.best_params, "duration_seconds": time.time() - start_time}
-        except Exception as e:
-            logger.exception(f"HPO failed: {e}")
-            result = {"status": "failed", "val_loss": None, "error_message": str(e), "duration_seconds": time.time() - start_time}
+    duration = time.time() - start_time
 
-    result.update({"timestamp": datetime.now(timezone.utc).isoformat(), "experiment": EXPERIMENT, "phase": PHASE, "budget": BUDGET, "task": TASK, "horizon": HORIZON, "timescale": TIMESCALE, "script_path": str(Path(__file__).relative_to(PROJECT_ROOT)), "run_type": "hpo", "thermal_max_temp": thermal_status.temperature})
+    # Get best architecture info
+    best_arch = ARCHITECTURES[study.best_params.get("arch_idx", 0)]
+
+    # Prepare result for logging
+    result = {
+        "experiment": EXPERIMENT,
+        "phase": PHASE,
+        "budget": BUDGET,
+        "task": TASK,
+        "horizon": HORIZON,
+        "timescale": TIMESCALE,
+        "script_path": __file__,
+        "run_type": "hpo",
+        "status": "success",
+        "val_loss": study.best_value,
+        "hyperparameters": study.best_params,
+        "duration_seconds": duration,
+        "d_model": best_arch["d_model"],
+        "n_layers": best_arch["n_layers"],
+        "n_heads": best_arch["n_heads"],
+        "d_ff": best_arch["d_ff"],
+        "param_count": best_arch["param_count"],
+    }
+
+    # Log to experiment CSV
     update_experiment_log(result, PROJECT_ROOT / "docs" / "experiment_results.csv")
 
-    logger.info(f"=== Complete: {result['status']}, {result['duration_seconds']:.1f}s ===")
-    if result.get('val_loss'): logger.info(f"Best val_loss: {result['val_loss']:.6f}")
-    if result.get('hyperparameters'): logger.info(f"Best params: {result['hyperparameters']}")
+    print(f"\n✓ HPO complete in {duration/60:.1f} min")
+    print(f"  Best val_loss: {study.best_value:.6f}")
+    print(f"  Best arch: d_model={best_arch['d_model']}, n_layers={best_arch['n_layers']}, params={best_arch['param_count']:,}")
+    print(f"  Results saved to: {output_path}")

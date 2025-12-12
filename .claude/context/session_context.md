@@ -1,100 +1,101 @@
-# Session Handoff - 2025-12-12 (Architectural HPO Task 5 Complete)
+# Session Handoff - 2025-12-12 (Architectural HPO Task 6 Complete)
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `e083586` feat: update HPO template for architectural search (Task 5)
-- **Uncommitted**: none (clean working tree)
-- **Origin**: up to date with origin/main
+- **Last commit**: (pending) feat: regenerate 12 HPO scripts with architectural search (Task 6)
+- **Uncommitted**: none after commit
 
 ### Project Phase
-- **Phase 6A**: IN PROGRESS - Architectural HPO implementation (Tasks 1-5 of 8 complete)
+- **Phase 6A**: IN PROGRESS - Architectural HPO implementation (Tasks 1-6 of 8 complete)
 
 ### Task Status
 - **Working on**: Architectural HPO implementation
-- **Status**: Tasks 1-5 complete, Tasks 6-8 pending
+- **Status**: Tasks 1-6 complete, Tasks 7-8 pending
 
 ---
 
 ## Test Status
 - **Last `make test`**: 317 passed
 - **Failing tests**: none
-- **New tests added**: 5 (architectural HPO template tests in test_templates.py)
 
 ---
 
 ## Completed This Session
 
 1. Session restore from previous handoff
-2. Planning session for Task 5 (templates.py architectural HPO)
-3. TDD RED: Wrote 5 failing tests for architectural HPO template
-4. TDD GREEN: Rewrote `generate_hpo_script()` for architectural search
-5. All 317 tests pass
-6. Committed and pushed Task 5
+2. Planning session for Task 6 (regenerate HPO scripts)
+3. Deleted 12 old HPO scripts (training-only approach)
+4. Generated 12 new HPO scripts with architectural search
+5. Verified all scripts compile and contain arch HPO markers
+6. All 317 tests pass
+7. Committed and pushed Task 6
 
 ---
 
-## Task 5 Implementation Summary
+## Task 6 Implementation Summary
 
-### Files Modified
-| File | Changes |
-|------|---------|
-| `src/experiments/templates.py` | +127 lines (major rewrite of generate_hpo_script) |
-| `tests/experiments/test_templates.py` | +50 lines (5 new tests) |
+### Process
+1. Deleted 12 old scripts in `experiments/phase6a/`
+2. Used Python script to call `generate_hpo_script()` 12 times
+3. Generated scripts for 4 budgets × 3 horizons matrix
 
 ### What Changed
-The `generate_hpo_script()` function now generates self-contained scripts that:
-1. Import `get_architectures_for_budget` from arch_grid
-2. Pre-compute valid architectures for the parameter budget
-3. Load training search space from `configs/hpo/architectural_search.yaml`
-4. Use `create_architectural_objective()` for combined arch + training search
-5. Log architecture info (d_model, n_layers, n_heads, d_ff, param_count) in results
+Old scripts:
+- Used `create_objective()` with `default_search.yaml`
+- Only searched training parameters
+
+New scripts:
+- Use `create_architectural_objective()` with `architectural_search.yaml`
+- Search architecture (d_model, n_layers, n_heads, d_ff) AND training params
+- Import `get_architectures_for_budget()` to pre-compute valid architectures
+- Log architecture info in results
 
 ---
 
-## Remaining Tasks (6-8)
+## Remaining Tasks (7-8)
 
 | Task | File | Est. | Status |
 |------|------|------|--------|
-| 6 | Regenerate 12 HPO scripts | 30 min | **NEXT** |
-| 7 | Update runbook | 30 min | Pending |
-| 8 | Integration test | 1 hr | Pending |
+| 7 | Update runbook | 30 min | **NEXT** |
+| 8 | Integration test (3-trial) | 1 hr | Pending |
 
 ---
 
 ## Key Decisions
 
-### 1. Self-Contained Scripts
-- **Decision**: Generated scripts directly use Optuna and create_architectural_objective()
-- **Rationale**: Makes all parameters and logic visible in the script itself for reproducibility
-
-### 2. Test Flexibility
-- **Decision**: Updated test to check for import module and function separately (multi-line import support)
-- **Rationale**: Generated code uses multi-line imports for readability
+### 1. Script Regeneration Approach
+- **Decision**: Delete all old scripts and regenerate fresh (not patch)
+- **Rationale**: Cleaner than trying to patch; template produces complete scripts
 
 ---
 
 ## Context for Next Session
 
 ### What to Know
-- Task 5 is committed and pushed to main
-- Task 6 will regenerate the 12 HPO scripts using the new template
-- The new scripts will search both architecture AND training parameters
+- Task 6 is committed and pushed to main
+- Task 7 will update `docs/phase6a_hpo_runbook.md` with new architectural HPO docs
+- Task 8 is the integration test: run 3 trials on 2M/h1 to verify end-to-end
 
-### Key Implementation Details for Task 6
-- Delete existing 12 scripts in `experiments/phase6a/`
-- Generate new scripts using updated `generate_hpo_script()`
-- Verify scripts use new architectural HPO approach
+### Key Implementation Details for Task 7
+- Document new architectural search approach
+- Update output format docs (now includes d_model, n_layers, etc.)
+- Add section on interpreting architectural results
+
+### Key Implementation Details for Task 8
+- Run `experiments/phase6a/hpo_2M_h1_threshold_1pct.py` with N_TRIALS=3
+- Verify architecture varies between trials
+- Verify output includes architecture info
+- Verify param counts are within budget (±25%)
 
 ---
 
 ## Next Session Should
 
-1. **Task 6**: Delete old HPO scripts and regenerate with new template
-2. **Task 7**: Update runbook to document new architectural HPO approach
-3. **Task 8**: Run integration test (3-trial validation) to verify everything works
-4. After Task 8: Re-run 12 HPO experiments with architectural search
+1. **Task 7**: Update runbook to document new architectural HPO approach
+2. **Task 8**: Run integration test (3 trials) to validate end-to-end workflow
+3. After Task 8: Re-run all 12 HPO experiments with architectural search
 
 ---
 
@@ -108,7 +109,8 @@ The `generate_hpo_script()` function now generates self-contained scripts that:
 
 ## Memory Entities Updated
 
-- `Task5_TemplatesArchHPO_Plan` (created + updated): Planning and completion of Task 5
+- `Task5_TemplatesArchHPO_Plan` (from previous session): Planning and completion of Task 5
+- `Task6_RegenerateHPOScripts` (created): Planning and completion of Task 6
 
 ---
 
