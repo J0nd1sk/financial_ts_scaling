@@ -149,7 +149,13 @@
   - `configs/hpo/architectural_search.yaml`: narrow training param ranges
   - 11 new tests in test_hpo.py validating config structure/values
   - 303 total tests passing
-- 🔜 **Next: Task 3-8, then re-run experiments**
+- ✅ **Task 3 COMPLETE: Architectural Objective Function (2025-12-11)**
+  - `create_architectural_objective()` in hpo.py (~80 lines)
+  - Samples arch from pre-computed list + training params from narrow ranges
+  - `save_best_params()` now includes architecture info when available
+  - Fixed `_sample_hyperparameter()` categorical handling
+  - 6 new tests, 309 total tests passing
+- 🔜 **Next: Task 4-8, then re-run experiments**
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)
