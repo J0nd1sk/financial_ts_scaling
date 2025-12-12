@@ -176,7 +176,12 @@
   - Added new section: "Interpreting Architectural Results"
   - Document: 429 lines (+173/-44 from original)
   - 317 tests still passing
-- 🔜 **Next: Task 8 (integration test), then re-run experiments**
+- ✅ **Task 8 COMPLETE: Integration smoke test (2025-12-12)**
+  - Fixed 4 bugs: import path, ChunkSplitter API, num_features param, SplitIndices attrs
+  - Smoke test passed: 3 trials, ~100s/trial, val_loss=0.385
+  - Runner script created: scripts/run_phase6a_hpo.sh
+  - Commits: 23b0356 (bug fixes), 6e7363c (runner script)
+- 🔜 **Next: Hardware monitoring (optional), then run full HPO experiments**
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)

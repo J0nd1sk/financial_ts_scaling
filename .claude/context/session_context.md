@@ -1,158 +1,204 @@
-# Session Handoff - 2025-12-12 (Integration Test Bug Fixing)
+# Session Handoff - 2025-12-12 14:30
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `0044e22` docs: update runbook for architectural HPO (Task 7)
-- **Uncommitted**: 14 files (12 scripts + templates.py + hpo.py)
-- **Status**: Bug fixes in progress, NOT YET TESTED
+- **Last commit**: `6e7363c` feat: add automated HPO runner script with logging
+- **Uncommitted**: none (clean)
+- **Pushed**: Yes, up to date with origin
 
 ### Project Phase
-- **Phase 6A**: IN PROGRESS - Task 8 (integration test) revealed bugs
+- **Phase 6A**: Parameter Scaling - IN PROGRESS
+- **Task 8**: Integration test - COMPLETE (bugs fixed, smoke test passed)
 
 ### Task Status
-- **Working on**: Task 8 integration smoke test
-- **Status**: BLOCKED - fixing bugs discovered during test
-
----
-
-## Critical Bugs Found & Fixed (UNCOMMITTED)
-
-Integration test (Task 8) discovered 3 bugs. All fixes applied but NOT yet tested/verified:
-
-### Bug 1: Wrong Import Path ✅ FIXED
-**File**: `src/experiments/templates.py` line 75
-```python
-# Was:
-from src.data.splitter import ChunkSplitter
-# Fixed to:
-from src.data.dataset import ChunkSplitter
-```
-
-### Bug 2: Wrong ChunkSplitter API ✅ FIXED
-**File**: `src/experiments/templates.py` lines 131-140
-```python
-# Was:
-splitter = ChunkSplitter(
-    val_size=252,
-    test_size=252,
-    train_window=None,
-)
-return splitter.split(df)
-
-# Fixed to:
-splitter = ChunkSplitter(
-    total_days=len(df),
-    context_length=60,
-    horizon=HORIZON,
-    val_ratio=0.15,
-    test_ratio=0.15,
-)
-return splitter.split()
-```
-
-### Bug 3: Missing num_features Parameter ✅ FIXED
-**File**: `src/training/hpo.py` - `create_architectural_objective()`
-```python
-# Was:
-num_features=experiment_config.num_features  # ExperimentConfig doesn't have this
-
-# Fixed to:
-# Added num_features parameter to function signature
-# Pass num_features=len(FEATURE_COLUMNS) from template
-```
-
----
-
-## Files Modified (Uncommitted)
-
-| File | Change |
-|------|--------|
-| `src/experiments/templates.py` | Fixed import + ChunkSplitter API + added num_features param |
-| `src/training/hpo.py` | Added num_features parameter to create_architectural_objective |
-| `experiments/phase6a/*.py` (12 files) | Regenerated with fixes |
-
----
-
-## Next Session MUST Do
-
-1. **Run tests**: `make test` to verify fixes don't break anything
-2. **Regenerate scripts**: Scripts were regenerated but need fresh regeneration after all fixes
-3. **Run smoke test**: 3-trial HPO to validate end-to-end
-4. **Commit all fixes**: Single commit with all bug fixes
-5. **Push**: Get fixes to origin
-
----
-
-## Commands for Next Session
-
-```bash
-# 1. Verify environment
-source venv/bin/activate
-make test
-
-# 2. Regenerate all 12 scripts (REQUIRED after template fixes)
-PYTHONPATH=. ./venv/bin/python3 << 'SCRIPT'
-from pathlib import Path
-from src.experiments.templates import generate_hpo_script
-
-BUDGETS = ['2M', '20M', '200M', '2B']
-HORIZONS = [1, 3, 5]
-EXPERIMENTS_DIR = Path('experiments/phase6a')
-DATA_PATH = 'data/processed/v1/SPY_dataset_a25.parquet'
-FEATURE_COLUMNS = ['dema_9', 'dema_10', 'sma_12', 'dema_20', 'dema_25', 'sma_50', 'dema_90', 'sma_100', 'sma_200', 'rsi_daily', 'rsi_weekly', 'stochrsi_daily', 'stochrsi_weekly', 'macd_line', 'obv', 'adosc', 'atr_14', 'adx_14', 'bb_percent_b', 'vwap_20']
-
-for budget in BUDGETS:
-    for horizon in HORIZONS:
-        experiment = f"phase6a_{budget}_h{horizon}_threshold_1pct"
-        script = generate_hpo_script(
-            experiment=experiment, phase="phase6a", budget=budget, task="threshold_1pct",
-            horizon=horizon, timescale="daily", data_path=DATA_PATH, feature_columns=FEATURE_COLUMNS,
-        )
-        filepath = EXPERIMENTS_DIR / f"hpo_{budget}_h{horizon}_threshold_1pct.py"
-        filepath.write_text(script)
-print("✓ Regenerated 12 scripts")
-SCRIPT
-
-# 3. Run 3-trial smoke test
-PYTHONPATH=. ./venv/bin/python3 experiments/phase6a/hpo_2M_h1_threshold_1pct.py
-# (modify N_TRIALS to 3 first, or run inline test)
-
-# 4. Commit all
-git add -A
-git commit -m "fix: correct ChunkSplitter API and add num_features to arch HPO
-
-- Fix import: src.data.splitter -> src.data.dataset
-- Fix ChunkSplitter API: use total_days, context_length, horizon, val_ratio
-- Add num_features param to create_architectural_objective
-- Regenerate all 12 HPO scripts with fixes
-
-Bugs discovered during Task 8 integration test."
-```
+- **Working on**: Hardware monitoring improvements (3-task plan)
+- **Status**: IN PROGRESS - Task A started, interrupted for handoff
 
 ---
 
 ## Test Status
-- **Last `make test`**: 317 passed (before bug fixes)
-- **Current**: UNKNOWN - tests not run after fixes
+- **Last `make test`**: PASS (317 tests) at ~14:00
+- **Failing**: none
 
 ---
 
-## Key Context
+## Completed This Session
 
-- GPT-5 identified two gaps: runbook outdated + no integration test
-- Task 7 (runbook) was completed and committed
-- Task 8 (integration test) revealed 3 bugs in template/hpo code
-- Bugs were from Task 5/6 implementation - missed during testing because unit tests don't run actual HPO
-- Integration test is essential - catches real runtime issues
-
----
-
-## Memory Entities
-
-- `Task7_RunbookUpdate_Plan`: Planning and completion of Task 7
+1. **Session restore** - Loaded context from previous session
+2. **Fixed 5 failing tests** - Added `num_features=20` to test calls in test_hpo.py
+3. **Fixed SplitIndices bug** - Changed `.train/.val/.test` to `.train_indices/.val_indices/.test_indices` in templates.py
+4. **Regenerated 12 HPO scripts** - All scripts now have correct APIs
+5. **Ran 3-trial smoke test** - Validated end-to-end HPO works (~100s/trial, val_loss=0.385)
+6. **Committed all bug fixes** - `23b0356` fix: correct integration bugs for architectural HPO
+7. **Created runner script** - `scripts/run_phase6a_hpo.sh` for sequential TMUX execution
+8. **Updated runbook** - Added automated runner instructions
+9. **Pushed to origin** - Both commits pushed
 
 ---
 
-*Session: 2025-12-12 (context window limit reached during bug fixing)*
+## In Progress: Hardware Monitoring (3-Task Plan)
+
+User requested hardware monitoring to ensure effective utilization during 150+ hour experiments.
+
+### The Problem
+- ThermalCallback exists but HPO scripts DON'T use it
+- No pre-flight checks (MPS available? temp readable?)
+- No periodic hardware logging (CPU/memory/temp)
+
+### Approved 3-Task Plan
+
+| Task | Description | Status |
+|------|-------------|--------|
+| **A** | Add psutil + implement real temp provider | IN PROGRESS - just started |
+| **B** | Update HPO template to use ThermalCallback | PENDING |
+| **C** | Add pre-flight + periodic logging to runner | PENDING |
+
+### Task A Details (Current)
+**Objective**: Implement real temperature provider for macOS
+
+**What we discovered**:
+- `psutil` is NOT installed - needs to be added
+- `osx-cpu-temp` is NOT available on this system
+- `powermetrics --samplers smc` - returned "unrecognized sampler: smc"
+- Need to find alternative temp reading method for M4 MacBook Pro
+
+**Options to explore**:
+1. `sudo powermetrics` with different samplers
+2. `sysctl` for temperature data
+3. Install `osx-cpu-temp` via Homebrew
+4. Use psutil's `sensors_temperatures()` (may not work on macOS)
+5. Fallback: Skip thermal if unavailable, just log CPU/memory
+
+**Files to modify**:
+- `requirements.txt` - add psutil
+- `src/training/thermal.py` - implement `get_macos_temperature()` function
+
+### Task B Details (Pending)
+**Objective**: Make HPO scripts use ThermalCallback
+
+**Files to modify**:
+- `src/experiments/templates.py` - add ThermalCallback import and usage
+- Regenerate all 12 HPO scripts
+
+**Key change**: Pass thermal_callback to `run_hpo()` or check temp between trials
+
+### Task C Details (Pending)
+**Objective**: Add pre-flight checks and periodic logging to runner
+
+**Pre-flight checks needed**:
+- MPS available? (`python -c "import torch; print(torch.backends.mps.is_available())"`)
+- Temperature readable?
+- Memory available?
+
+**Periodic logging** (every 5 min):
+- CPU usage %
+- Memory usage %
+- Temperature (if available)
+
+**Files to modify**:
+- `scripts/run_phase6a_hpo.sh` - add preflight function, background monitor
+
+---
+
+## Files Modified This Session
+
+| File | Change |
+|------|--------|
+| `tests/test_hpo.py` | Added num_features=20 to 5 tests |
+| `src/experiments/templates.py` | Fixed SplitIndices attributes |
+| `src/training/hpo.py` | (from prev session) added num_features param |
+| `experiments/phase6a/*.py` (12) | Regenerated with all fixes |
+| `scripts/run_phase6a_hpo.sh` | NEW - sequential runner with logging |
+| `docs/phase6a_hpo_runbook.md` | Added automated runner section |
+
+---
+
+## Key Decisions
+
+1. **Runner script approach**: Single bash script chains all 12 experiments, logs to timestamped file, continues on failure
+2. **Hardware monitoring plan**: 3-task decomposition (temp provider → template → runner)
+3. **Temperature reading**: Still need to find working method for M4 Mac
+
+---
+
+## Context for Next Session
+
+### Critical Understanding
+
+**The HPO system is VALIDATED and READY TO RUN** (without hardware monitoring):
+- Smoke test passed: 3 trials, ~100s/trial
+- Searches BOTH architecture (d_model, n_layers, n_heads, d_ff) AND training params
+- Uses pre-computed architecture grid per budget
+- 12 scripts generated, runner script ready
+
+**Hardware monitoring is an ENHANCEMENT**, not a blocker:
+- Experiments CAN run without it
+- User may choose to run without thermal monitoring and just watch temps manually
+- Or complete Task A/B/C first for automated monitoring
+
+### Architecture Search Confirmation
+The HPO scripts DO search architecture:
+- Line 165 in hpo.py: `arch_idx = trial.suggest_categorical("arch_idx", list(range(len(architectures))))`
+- Each trial picks an architecture from pre-computed grid + training params
+- This is WORKING - verified in smoke test output showing different d_model/n_layers per trial
+
+---
+
+## Next Session Should
+
+1. **Ask user**: Run experiments now (without full monitoring)? Or complete Task A/B/C first?
+
+2. **If completing hardware monitoring**:
+   - Task A: Try `sudo powermetrics` or install `osx-cpu-temp`, add psutil
+   - Task B: Update templates.py to use ThermalCallback
+   - Task C: Add pre-flight and background monitoring to runner
+
+3. **If running experiments now**:
+   - Just use: `tmux new -s hpo && ./scripts/run_phase6a_hpo.sh`
+   - Monitor manually: `sudo powermetrics --samplers smc -i 5` in another terminal
+
+---
+
+## Data Versions
+- **Raw manifest**: SPY, DIA, QQQ, VIX OHLCV data (2025-12-10)
+- **Processed manifest**: SPY_dataset_a25.parquet (20 features)
+- **Pending registrations**: none
+
+---
+
+## Memory Entities Updated This Session
+
+- `Phase6A_Task8_TestFix_Plan` (created): Bug fix planning for num_features parameter
+- `Phase6A_HPO_Runner_Script_Plan` (created): Runner script design
+- `Hardware_Monitoring_Plan` (created): 3-task hardware monitoring decomposition
+
+---
+
+## Commands to Run
+
+```bash
+source venv/bin/activate
+make test
+git status
+make verify
+```
+
+---
+
+## Quick Reference
+
+### Run All Experiments (current state)
+```bash
+tmux new -s hpo
+./scripts/run_phase6a_hpo.sh
+# Ctrl+B, D to detach
+```
+
+### Estimated Runtime
+- 2M: ~2.5 hrs
+- 20M: ~8 hrs
+- 200M: ~30 hrs
+- 2B: ~100+ hrs
+- **Total: ~150-200 hours**
