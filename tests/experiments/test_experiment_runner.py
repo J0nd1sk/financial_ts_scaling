@@ -54,6 +54,12 @@ def sample_experiment_result():
         "error_message": None,
         "thermal_max_temp": 72.5,
         "data_md5": "abc123def456",
+        # Architecture columns (new for architectural HPO)
+        "d_model": 128,
+        "n_layers": 4,
+        "n_heads": 4,
+        "d_ff": 512,
+        "param_count": 2_100_000,
     }
 
 
@@ -139,6 +145,12 @@ class TestUpdateExperimentLogSchema:
             "error_message",
             "thermal_max_temp",
             "data_md5",
+            # Architecture columns (new for architectural HPO)
+            "d_model",
+            "n_layers",
+            "n_heads",
+            "d_ff",
+            "param_count",
         ]
         for col in expected_columns:
             assert col in df.columns, f"Missing column: {col}"
@@ -205,6 +217,71 @@ class TestUpdateExperimentLogFailedRuns:
         assert df.iloc[0]["status"] == "failed"
         assert df.iloc[0]["error_message"] == "CUDA out of memory"
         assert pd.isna(df.iloc[0]["val_loss"])
+
+
+class TestUpdateExperimentLogArchitecture:
+    """Tests for architecture column handling in CSV logging."""
+
+    def test_update_experiment_log_includes_architecture_columns(
+        self, tmp_path, sample_experiment_result
+    ):
+        """Test that CSV includes the 5 architecture columns."""
+        log_path = tmp_path / "results" / "experiment_log.csv"
+
+        update_experiment_log(sample_experiment_result, log_path)
+
+        df = pd.read_csv(log_path)
+        arch_columns = ["d_model", "n_layers", "n_heads", "d_ff", "param_count"]
+        for col in arch_columns:
+            assert col in df.columns, f"Missing architecture column: {col}"
+
+    def test_update_experiment_log_architecture_values_correct(
+        self, tmp_path, sample_experiment_result
+    ):
+        """Test that architecture values are correctly written to CSV."""
+        log_path = tmp_path / "results" / "experiment_log.csv"
+
+        update_experiment_log(sample_experiment_result, log_path)
+
+        df = pd.read_csv(log_path)
+        assert df.iloc[0]["d_model"] == 128
+        assert df.iloc[0]["n_layers"] == 4
+        assert df.iloc[0]["n_heads"] == 4
+        assert df.iloc[0]["d_ff"] == 512
+        assert df.iloc[0]["param_count"] == 2_100_000
+
+    def test_update_experiment_log_without_architecture(self, tmp_path):
+        """Test backwards compatibility - result without architecture fields logs with None."""
+        # Result dict without architecture columns (legacy format)
+        legacy_result = {
+            "timestamp": "2025-12-11T12:00:00",
+            "experiment": "legacy_experiment",
+            "phase": "phase6a",
+            "budget": "2M",
+            "task": "threshold_1pct",
+            "horizon": 1,
+            "timescale": "daily",
+            "script_path": "experiments/legacy.py",
+            "run_type": "hpo",
+            "status": "success",
+            "duration_seconds": 1800.0,
+            "val_loss": 0.49,
+            "test_accuracy": 0.51,
+            "hyperparameters": {"learning_rate": 0.001},
+            "error_message": None,
+            "thermal_max_temp": 70.0,
+            "data_md5": "legacy123",
+            # No architecture columns - simulating legacy result
+        }
+        log_path = tmp_path / "results" / "experiment_log.csv"
+
+        update_experiment_log(legacy_result, log_path)
+
+        df = pd.read_csv(log_path)
+        # Architecture columns should exist but have null values
+        assert "d_model" in df.columns
+        assert pd.isna(df.iloc[0]["d_model"])
+        assert pd.isna(df.iloc[0]["param_count"])
 
 
 # =============================================================================

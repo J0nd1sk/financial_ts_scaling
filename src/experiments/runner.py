@@ -21,7 +21,7 @@ from src.training.thermal import ThermalCallback
 from src.training.trainer import Trainer
 
 
-# CSV schema columns (16 total)
+# CSV schema columns (22 total: 17 core + 5 architecture)
 EXPERIMENT_LOG_COLUMNS = [
     "timestamp",
     "experiment",
@@ -40,6 +40,12 @@ EXPERIMENT_LOG_COLUMNS = [
     "error_message",
     "thermal_max_temp",
     "data_md5",
+    # Architecture columns (for architectural HPO)
+    "d_model",
+    "n_layers",
+    "n_heads",
+    "d_ff",
+    "param_count",
 ]
 
 
