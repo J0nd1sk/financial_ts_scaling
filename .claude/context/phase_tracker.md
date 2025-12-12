@@ -131,9 +131,21 @@
   - `experiments/phase6a/hpo_{2M,20M,200M,2B}_h{1,3,5}_threshold_1pct.py`
   - Consistent naming convention: `hpo_{budget}_h{horizon}_{task}.py`
 - ✅ **Runbook created: `docs/phase6a_hpo_runbook.md`**
-  - Run/monitor/analyze instructions
-  - Estimated times: 2M ~45min, 20M ~2-3hrs, 200M ~8-12hrs, 2B ~24-48hrs
-- 🔜 Ready to execute HPO matrix (~150-250 hours total)
+- ⚠️ **CRITICAL DISCOVERY (2025-12-11): HPO only searched training params, not architecture!**
+  - Original HPO varied: lr, epochs, weight_decay, warmup_steps, dropout
+  - Missing: d_model, n_layers, n_heads, d_ff (architecture search)
+  - This is essential for scaling law research - must find best arch per budget
+- ✅ **Architectural HPO redesign complete**
+  - Design doc: `docs/architectural_hpo_design.md`
+  - Implementation plan: `docs/architectural_hpo_implementation_plan.md`
+  - 8 tasks, 6-10 hours estimated
+  - Pre-compute valid arch grid per budget, search arch + training params
+- ✅ **Task 1 COMPLETE: Architecture Grid Generator (2025-12-11)**
+  - `src/models/arch_grid.py`: estimate_param_count(), generate_architecture_grid(), filter_by_budget(), get_architectures_for_budget()
+  - `tests/test_arch_grid.py`: 28 tests, all passing
+  - Param estimation matches actual model within 0.1%
+  - 292 total tests passing
+- 🔜 **Next: Task 2-8, then re-run experiments**
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)

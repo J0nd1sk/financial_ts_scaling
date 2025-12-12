@@ -1,165 +1,190 @@
-# Session Handoff - 2025-12-11 (HPO Scripts & Runbook)
+# Session Handoff - 2025-12-11 (Architectural HPO Task 1 Complete)
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `93e43b8` feat: add 12 HPO scripts for Phase 6A horizon variance study
-- **Uncommitted**: none
-- **Origin**: up to date
+- **Last commit**: `352c0a1` docs: session handoff - Phase 6A HPO ready to execute
+- **Uncommitted**: 4 new files, 3 modified files (see below)
+- **Origin**: up to date with last commit
 
 ### Project Phase
-- **Phase 6A**: IN PROGRESS - Ready to run full HPO matrix
+- **Phase 6A**: IN PROGRESS - Architectural HPO implementation (Task 1 of 8 complete)
 
 ### Task Status
-- **Working on**: Phase 6A Parameter Scaling - HPO execution
-- **Status**: Scripts ready, runbook created, ready to execute
+- **Working on**: Architectural HPO implementation
+- **Status**: Task 1 complete, Tasks 2-8 pending
 
 ---
 
 ## Test Status
-- **Last `make test`**: ✅ 264 passed (this session)
-- **Last `make verify`**: ✅ Passed (previous session)
+- **Last `make test`**: ✅ 292 passed (just now)
 - **Failing tests**: none
+- **New tests added**: 28 (tests/test_arch_grid.py)
 
 ---
 
 ## Completed This Session
 
 1. ✅ Session restore from previous handoff
-2. ✅ Ran HPO validation test (3 trials, 2M/1-day) - pipeline works
-3. ✅ Verified outputs: experiment_results.csv and outputs/hpo/ populated correctly
-4. ✅ Generated 12 HPO scripts (4 scales × 3 horizons)
-5. ✅ Created comprehensive runbook: `docs/phase6a_hpo_runbook.md`
-6. ✅ Cleaned up old validation script, added outputs/hpo/ to .gitignore
-7. ✅ Committed and pushed all changes
+2. ✅ Planning session for Task 1 (arch_grid.py)
+3. ✅ TDD RED: Wrote 28 failing tests for arch_grid.py
+4. ✅ TDD GREEN: Implemented arch_grid.py (~180 lines)
+5. ✅ All tests pass (292 total)
 
 ---
 
-## HPO Matrix Ready to Execute
+## Task 1 Implementation Summary
 
-| Script | Budget | Horizon | Est. Time |
-|--------|--------|---------|-----------|
-| `hpo_2M_h1_threshold_1pct.py` | 2M | 1-day | ~45 min |
-| `hpo_2M_h3_threshold_1pct.py` | 2M | 3-day | ~45 min |
-| `hpo_2M_h5_threshold_1pct.py` | 2M | 5-day | ~45 min |
-| `hpo_20M_h1_threshold_1pct.py` | 20M | 1-day | ~2-3 hrs |
-| `hpo_20M_h3_threshold_1pct.py` | 20M | 3-day | ~2-3 hrs |
-| `hpo_20M_h5_threshold_1pct.py` | 20M | 5-day | ~2-3 hrs |
-| `hpo_200M_h1_threshold_1pct.py` | 200M | 1-day | ~8-12 hrs |
-| `hpo_200M_h3_threshold_1pct.py` | 200M | 3-day | ~8-12 hrs |
-| `hpo_200M_h5_threshold_1pct.py` | 200M | 5-day | ~8-12 hrs |
-| `hpo_2B_h1_threshold_1pct.py` | 2B | 1-day | ~24-48 hrs |
-| `hpo_2B_h3_threshold_1pct.py` | 2B | 3-day | ~24-48 hrs |
-| `hpo_2B_h5_threshold_1pct.py` | 2B | 5-day | ~24-48 hrs |
+### Files Created
+| File | Lines | Purpose |
+|------|-------|---------|
+| `src/models/arch_grid.py` | ~180 | Architecture grid generation |
+| `tests/test_arch_grid.py` | ~390 | 28 comprehensive tests |
 
-**Total**: ~150-250 hours (run sequentially)
+### Functions Implemented
+| Function | Purpose |
+|----------|---------|
+| `estimate_param_count()` | Matches actual model params within 0.1% |
+| `ARCH_SEARCH_SPACE` | Constant with design doc values |
+| `generate_architecture_grid()` | Enumerates all valid combos |
+| `filter_by_budget()` | Applies ±25% tolerance |
+| `get_architectures_for_budget()` | Main entry point |
+
+### Architecture Counts Per Budget
+| Budget | Valid Architectures |
+|--------|---------------------|
+| 2M | 75 |
+| 20M | 35 |
+| 200M | 75 |
+| 2B | 60 |
+
+### Param Estimation Formula (Critical)
+```python
+# Components that contribute to parameter count:
+# 1. PatchEmbedding: (patch_len * num_features) * d_model + d_model
+# 2. PositionalEncoding: (num_patches + 10) * d_model
+# 3. Per TransformerEncoderLayer:
+#    - MHA: 4 * d_model² + 4 * d_model
+#    - LayerNorms: 4 * d_model
+#    - FFN: 2 * d_model * d_ff + d_ff + d_model
+# 4. Encoder final norm: 2 * d_model
+# 5. PredictionHead: (d_model * num_patches) * num_classes + num_classes
+```
 
 ---
 
-## Pending (Next Session)
+## Remaining Tasks (2-8)
 
-1. **Run HPO experiments** - Start with 2M models, scale up
-   ```bash
-   cd /Users/alexanderthomson/Documents/financial_ts_scaling
-   ./venv/bin/python experiments/phase6a/hpo_2M_h1_threshold_1pct.py
-   ```
-
-2. **Monitor execution** - See runbook for monitoring commands
-
-3. **After HPO completes**: Analyze horizon variance, generate training scripts
+| Task | File | Est. | Status |
+|------|------|------|--------|
+| 2 | NEW `configs/hpo/architectural_search.yaml` | 30 min | Pending |
+| 3 | MODIFY `src/training/hpo.py` | 2-3 hrs | Pending |
+| 4 | MODIFY `src/experiments/runner.py` | 1 hr | Pending |
+| 5 | MODIFY `src/experiments/templates.py` | 1 hr | Pending |
+| 6 | Regenerate 12 HPO scripts | 30 min | Pending |
+| 7 | Update runbook | 30 min | Pending |
+| 8 | Integration test | 1 hr | Pending |
 
 ---
 
-## Files Modified This Session
+## Files Modified/Created This Session
 
-| File | Change |
-|------|--------|
-| `experiments/phase6a/hpo_*_h*_threshold_1pct.py` | **NEW** - 12 HPO scripts |
-| `docs/phase6a_hpo_runbook.md` | **NEW** - run/monitor/analyze instructions |
-| `docs/experiment_results.csv` | **NEW** - experiment log with validation data |
-| `.gitignore` | Added outputs/hpo/ |
-| `experiments/phase6a/hpo_2M_threshold_1pct.py` | DELETED (replaced) |
+### New Files (uncommitted)
+- `src/models/arch_grid.py`: Architecture grid generation module
+- `tests/test_arch_grid.py`: 28 tests for arch_grid
+
+### Modified Files (uncommitted)
+- `.claude/context/phase_tracker.md`: Updated Task 1 completion
+- `.claude/context/session_context.md`: This file
+- `docs/experiment_results.csv`: (from previous session)
+
+### Previously Created (uncommitted from last session)
+- `docs/architectural_hpo_design.md`: Full design doc
+- `docs/architectural_hpo_implementation_plan.md`: Task breakdown
 
 ---
 
 ## Key Decisions
 
-### 1. HPO Script Naming Convention
-- **Decision**: `hpo_{budget}_h{horizon}_{task}.py`
-- **Rationale**: Consistent naming enables easy identification and scripted execution
+### 1. Param Estimation Formula
+- **Decision**: Derive exact formula from PatchTST implementation
+- **Rationale**: Must match `model.parameters().numel()` for accurate budget filtering
+- **Validation**: Tested against 2M, 20M, 200M configs - all match within 0.1%
 
-### 2. Run in Foreground (Not Background)
-- **Decision**: User runs scripts directly in terminal, not backgrounded
-- **Rationale**: Enables real-time CLI monitoring + log file checking
+### 2. Architecture Count Flexibility
+- **Decision**: Accept 75 architectures for 2M instead of design doc's 25-35
+- **Rationale**: More architectures = better HPO exploration; design estimate was conservative
 
-### 3. Validation Data Kept
-- **Decision**: Keep validation run (3 trials) in experiment_results.csv
-- **Rationale**: Real data that validated pipeline, contributes to experiment record
+### 3. Position Encoding Buffer
+- **Decision**: Include +10 buffer in position embedding count
+- **Rationale**: PatchTST uses `max_patches = num_patches + 10` as buffer
 
 ---
 
 ## Context for Next Session
 
-### Running HPO
-```bash
-# Recommended: use tmux for long runs
-tmux new -s hpo
-./venv/bin/python experiments/phase6a/hpo_2M_h1_threshold_1pct.py
-# Detach: Ctrl+B, D
-# Reattach: tmux attach -t hpo
-```
+### What to Know
+- Task 1 is complete but NOT COMMITTED - 4 new files + 3 modified files pending
+- Design docs from previous session also uncommitted
+- Total: 7 files to commit
 
-### Monitoring
-- **CLI**: Watch trial progress in terminal
-- **Thermal**: `sudo powermetrics --samplers smc -i 5000 | grep -i temp`
-- **Results**: `tail -20 docs/experiment_results.csv`
-- **Best params**: `cat outputs/hpo/{experiment}/best_params.json`
+### Starting Point
+1. Review uncommitted files
+2. Consider committing Task 1 separately from design docs
+3. Start Task 2: Create `configs/hpo/architectural_search.yaml`
 
-### Key Files
-- Runbook: `docs/phase6a_hpo_runbook.md`
-- Scripts: `experiments/phase6a/hpo_*.py`
-- Results: `docs/experiment_results.csv`
-- Outputs: `outputs/hpo/{experiment}/best_params.json`
+### Key Implementation Details for Task 3
+- New function: `create_architectural_objective()` in `hpo.py`
+- Architecture list is categorical in Optuna: `trial.suggest_categorical("arch_idx", list(range(len(architectures))))`
+- Keep existing `create_objective()` for backwards compatibility
 
 ---
 
 ## Next Session Should
 
-1. **Start HPO execution** - Begin with 2M models (~2.5 hrs for all 3)
-2. **Monitor thermal** - Watch temps during larger model runs
-3. **Analyze results** - After completion, compare params across horizons
-4. **Generate training scripts** - Use best params for final evaluation
+1. **Commit work** - Either all at once or staged (design docs, then Task 1)
+2. **Start Task 2** - Create architectural search config (~30 min)
+3. **Continue Task 3** - Modify hpo.py with `create_architectural_objective()` (2-3 hrs)
+4. **Follow TDD** - Tests first for each task
 
 ---
 
 ## Data Versions
 
 - **Raw manifest latest**: VIX.OHLCV.daily - `data/raw/VIX.parquet`
-- **Processed manifest latest**: SPY.dataset.a25 v1 tier=a25 (6b1309a5...)
+- **Processed manifest latest**: SPY.dataset.a25 v1 tier=a25
 - **Pending registrations**: none
 
 ---
 
 ## Memory Entities Updated
 
-- `Phase6A_HPO_Matrix` (created): 12 HPO scripts ready for horizon variance study
-- `Phase6A_Runbook` (created): Execution instructions in docs/phase6a_hpo_runbook.md
+- `Task1_ArchGrid_Plan` (created): Planning decision with scope, test strategy, risks
+- `Task1_ArchGrid_Plan` (updated): Completion status, implementation details
 
 ---
 
-## Commands to Run
+## Commands to Run Next Session
 
 ```bash
 source venv/bin/activate
 make test
 git status
-git log -3 --oneline
+make verify
 
-# Start HPO (recommended order):
-./venv/bin/python experiments/phase6a/hpo_2M_h1_threshold_1pct.py
-./venv/bin/python experiments/phase6a/hpo_2M_h3_threshold_1pct.py
-./venv/bin/python experiments/phase6a/hpo_2M_h5_threshold_1pct.py
+# To commit all uncommitted work:
+git add -A
+git commit -m "feat: implement architectural HPO Task 1 (arch_grid.py)
+
+- Add src/models/arch_grid.py with grid generation functions
+- Add 28 tests in tests/test_arch_grid.py
+- Param estimation matches actual model within 0.1%
+- Design docs for architectural HPO approach
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
 ```
 
 ---
