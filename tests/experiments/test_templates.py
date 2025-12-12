@@ -173,3 +173,53 @@ class TestGenerateTrainingScriptContent:
         script = generate_training_script(**training_params)
 
         assert "def validate_data():" in script
+
+
+# =============================================================================
+# Test: generate_hpo_script - Architectural HPO
+# =============================================================================
+
+
+class TestGenerateHpoScriptArchitecture:
+    """Tests for architectural HPO in generated scripts.
+
+    Phase 6A requires HPO to search both architecture (d_model, n_layers, etc.)
+    AND training parameters. These tests verify the template generates scripts
+    that properly set up architectural search.
+    """
+
+    def test_hpo_script_imports_arch_grid(self, hpo_params):
+        """Test that script imports get_architectures_for_budget from arch_grid."""
+        script = generate_hpo_script(**hpo_params)
+
+        assert "from src.models.arch_grid import get_architectures_for_budget" in script
+
+    def test_hpo_script_imports_architectural_objective(self, hpo_params):
+        """Test that script imports create_architectural_objective from hpo."""
+        script = generate_hpo_script(**hpo_params)
+
+        # Check for import from hpo module and the function name (may be multi-line)
+        assert "from src.training.hpo import" in script
+        assert "create_architectural_objective" in script
+
+    def test_hpo_script_computes_architecture_grid(self, hpo_params):
+        """Test that script computes architecture grid for the budget."""
+        script = generate_hpo_script(**hpo_params)
+
+        # Should call get_architectures_for_budget with budget
+        assert "get_architectures_for_budget(" in script
+        # Should store result in ARCHITECTURES constant
+        assert "ARCHITECTURES = " in script
+
+    def test_hpo_script_loads_architectural_search_config(self, hpo_params):
+        """Test that script loads architectural search config."""
+        script = generate_hpo_script(**hpo_params)
+
+        assert "architectural_search.yaml" in script
+
+    def test_hpo_script_uses_architectural_objective(self, hpo_params):
+        """Test that script uses create_architectural_objective for HPO."""
+        script = generate_hpo_script(**hpo_params)
+
+        # Should call create_architectural_objective to create the objective
+        assert "create_architectural_objective(" in script
