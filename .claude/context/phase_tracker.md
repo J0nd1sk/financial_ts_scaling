@@ -159,7 +159,12 @@
   - Added 5 columns to EXPERIMENT_LOG_COLUMNS: d_model, n_layers, n_heads, d_ff, param_count
   - Backwards compatible: missing arch fields auto-set to None
   - 3 new tests, 312 total tests passing
-- 🔜 **Next: Task 5-8, then re-run experiments**
+- ✅ **Task 5 COMPLETE: Template Update for Architectural HPO (2025-12-12)**
+  - Rewrote `generate_hpo_script()` in templates.py (~127 lines changed)
+  - Generated scripts now: import arch_grid, compute architectures, use create_architectural_objective()
+  - Self-contained scripts with visible architecture search
+  - 5 new tests, 317 total tests passing
+- 🔜 **Next: Task 6-8, then re-run experiments**
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)
