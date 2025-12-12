@@ -1,0 +1,2 @@
+timestamp,experiment,phase,budget,task,horizon,timescale,script_path,run_type,status,duration_seconds,val_loss,test_accuracy,hyperparameters,error_message,thermal_max_temp,data_md5
+2025-12-12T00:19:44.799261+00:00,phase6a_2M_threshold_1pct,phase6a,2M,threshold_1pct,1,daily,experiments/phase6a/hpo_2M_threshold_1pct.py,hpo,success,151.43599700927734,0.3913607597351074,,"{""learning_rate"": 3.780283089873185e-05, ""epochs"": 140, ""weight_decay"": 2.35373528415094e-06, ""warmup_steps"": 600, ""dropout"": 0.021723894040637515}",,-1.0,
