@@ -414,3 +414,31 @@ Task 3 expanded into 3 sub-tasks:
 - Remove hardcoded TIMEOUT_HOURS from HPO scripts
 - Results CSV stored in `docs/` for versioning
 - Agent provides complete script execution list for each phase
+
+## 2025-12-11 Horizon Testing Strategy for Phase 6A
+
+**Context**: Planning session for first HPO run. User confirmed testing 1-day, 3-day, and 5-day horizons to determine if optimal hyperparameters vary significantly by prediction horizon.
+
+**Decision**: Implement staged execution with horizon variance testing before full HPO matrix.
+
+**Stage Breakdown**:
+1. **Stage 1 (Validation)**: Run 2-3 trial HPO to validate pipeline works end-to-end
+2. **Stage 2 (Horizon Variance)**: Run full HPO for 2M budget across all 3 horizons (1d, 3d, 5d)
+3. **Stage 3 (Full Matrix)**: Based on Stage 2 results:
+   - If params vary >20% by horizon: Run separate HPO per horizon (36 runs)
+   - If params similar: Borrow params across horizons (12 runs)
+4. **Stage 4 (Training)**: Final training with best params
+
+**Rationale**:
+- Testing horizon variance early informs whether we need 3x the HPO runs for future phases
+- 2M budget is cheapest (~12-15 hrs per HPO), best for exploratory testing
+- Could save 200+ hours of HPO if params don't vary significantly
+
+**Key Decision Point**: After Stage 2, compare `best_params` across horizons:
+- If learning_rate, batch_size, or d_model differ >20% → separate HPO per horizon
+- If similar → borrow params (significant time savings for Phase 6B/6C)
+
+**Implications**:
+- Execution plan updated in `docs/phase6a_execution_plan.md`
+- Config files default to horizon=1 (varies by script)
+- Need to generate 3-day and 5-day variant scripts after Stage 1 validates
