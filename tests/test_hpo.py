@@ -4,6 +4,7 @@ All tests are mocked to avoid actual training. Tests cover:
 - Search space loading from YAML
 - Optuna study creation
 - Objective function creation
+- Architectural objective function creation
 - Best params saving
 - HPO workflow with thermal integration
 """
@@ -23,6 +24,7 @@ from src.training.hpo import (
     load_search_space,
     create_study,
     create_objective,
+    create_architectural_objective,
     save_best_params,
     run_hpo,
 )
@@ -826,3 +828,281 @@ class TestArchitecturalSearchConfigValueRanges:
             config = yaml.safe_load(f)
 
         assert config["direction"] == "minimize"
+
+
+# --- Tests for create_architectural_objective ---
+
+
+@pytest.fixture
+def sample_architectures() -> list[dict]:
+    """Sample architecture list for testing."""
+    return [
+        {"d_model": 64, "n_layers": 4, "n_heads": 2, "d_ff": 128, "param_count": 1_500_000},
+        {"d_model": 128, "n_layers": 8, "n_heads": 4, "d_ff": 256, "param_count": 2_000_000},
+        {"d_model": 256, "n_layers": 6, "n_heads": 8, "d_ff": 512, "param_count": 2_500_000},
+    ]
+
+
+@pytest.fixture
+def sample_training_search_space() -> dict:
+    """Sample training search space matching architectural_search.yaml format."""
+    return {
+        "learning_rate": {"type": "log_uniform", "low": 1e-4, "high": 1e-3},
+        "epochs": {"type": "categorical", "choices": [50, 75, 100]},
+        "batch_size": {"type": "categorical", "choices": [32, 64, 128, 256]},
+        "weight_decay": {"type": "log_uniform", "low": 1e-5, "high": 1e-3},
+        "warmup_steps": {"type": "categorical", "choices": [100, 200, 300, 500]},
+    }
+
+
+class TestCreateArchitecturalObjectiveReturnsCallable:
+    """Test that create_architectural_objective returns a callable."""
+
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    def test_create_arch_objective_returns_callable(
+        self,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_experiment_config: MagicMock,
+        sample_architectures: list[dict],
+        sample_training_search_space: dict,
+    ) -> None:
+        """Test that create_architectural_objective returns a callable function."""
+        mock_load_exp.return_value = mock_experiment_config
+
+        objective = create_architectural_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            architectures=sample_architectures,
+            training_search_space=sample_training_search_space,
+        )
+        assert callable(objective)
+
+
+class TestArchObjectiveSamplesArchitecture:
+    """Test that architectural objective samples from architecture list."""
+
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    def test_arch_objective_samples_architecture_idx(
+        self,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_experiment_config: MagicMock,
+        sample_architectures: list[dict],
+        sample_training_search_space: dict,
+    ) -> None:
+        """Test that objective calls trial.suggest_categorical with 'arch_idx'."""
+        mock_load_exp.return_value = mock_experiment_config
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.55}
+        mock_trainer_cls.return_value = mock_trainer
+
+        # Create mock trial
+        mock_trial = MagicMock()
+        mock_trial.suggest_categorical.return_value = 1  # Select second architecture
+        mock_trial.suggest_float.return_value = 0.0005
+
+        objective = create_architectural_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            architectures=sample_architectures,
+            training_search_space=sample_training_search_space,
+        )
+
+        objective(mock_trial)
+
+        # Verify suggest_categorical was called with arch_idx
+        arch_idx_calls = [
+            call for call in mock_trial.suggest_categorical.call_args_list
+            if call[0][0] == "arch_idx"
+        ]
+        assert len(arch_idx_calls) == 1
+        # Verify it was called with indices [0, 1, 2]
+        assert arch_idx_calls[0][0][1] == [0, 1, 2]
+
+
+class TestArchObjectiveSamplesTrainingParams:
+    """Test that architectural objective samples training params from narrow ranges."""
+
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    def test_arch_objective_samples_training_params(
+        self,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_experiment_config: MagicMock,
+        sample_architectures: list[dict],
+        sample_training_search_space: dict,
+    ) -> None:
+        """Test that objective samples all training params from search space."""
+        mock_load_exp.return_value = mock_experiment_config
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.55}
+        mock_trainer_cls.return_value = mock_trainer
+
+        mock_trial = MagicMock()
+        mock_trial.suggest_categorical.side_effect = lambda name, choices: choices[0]
+        mock_trial.suggest_float.return_value = 0.0005
+
+        objective = create_architectural_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            architectures=sample_architectures,
+            training_search_space=sample_training_search_space,
+        )
+
+        objective(mock_trial)
+
+        # Verify learning_rate was sampled (log_uniform -> suggest_float with log=True)
+        lr_calls = [
+            call for call in mock_trial.suggest_float.call_args_list
+            if call[0][0] == "learning_rate"
+        ]
+        assert len(lr_calls) == 1
+
+        # Verify categorical params were sampled
+        categorical_params = ["epochs", "batch_size", "warmup_steps"]
+        for param in categorical_params:
+            param_calls = [
+                call for call in mock_trial.suggest_categorical.call_args_list
+                if call[0][0] == param
+            ]
+            assert len(param_calls) == 1, f"Missing categorical sampling for {param}"
+
+
+class TestArchObjectiveBuildsConfigFromArch:
+    """Test that objective builds PatchTSTConfig from sampled architecture."""
+
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    def test_arch_objective_builds_config_from_arch(
+        self,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_experiment_config: MagicMock,
+        sample_architectures: list[dict],
+        sample_training_search_space: dict,
+    ) -> None:
+        """Test that Trainer receives PatchTSTConfig built from sampled architecture."""
+        mock_load_exp.return_value = mock_experiment_config
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.55}
+        mock_trainer_cls.return_value = mock_trainer
+
+        mock_trial = MagicMock()
+        # Select architecture index 1 (d_model=128, n_layers=8)
+        mock_trial.suggest_categorical.side_effect = lambda name, choices: (
+            1 if name == "arch_idx" else choices[0]
+        )
+        mock_trial.suggest_float.return_value = 0.0005
+
+        objective = create_architectural_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            architectures=sample_architectures,
+            training_search_space=sample_training_search_space,
+        )
+
+        objective(mock_trial)
+
+        # Verify Trainer was called with model_config containing arch values
+        mock_trainer_cls.assert_called_once()
+        call_kwargs = mock_trainer_cls.call_args.kwargs
+        model_config = call_kwargs.get("model_config")
+        assert model_config is not None
+        # Architecture at index 1 should have d_model=128, n_layers=8
+        assert model_config.d_model == 128
+        assert model_config.n_layers == 8
+        assert model_config.n_heads == 4
+        assert model_config.d_ff == 256
+
+
+class TestArchObjectiveReturnsValLoss:
+    """Test that architectural objective returns val_loss when splits provided."""
+
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    def test_arch_objective_returns_val_loss(
+        self,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_experiment_config: MagicMock,
+        sample_architectures: list[dict],
+        sample_training_search_space: dict,
+    ) -> None:
+        """Test that objective returns val_loss when split_indices provided."""
+        from src.data.dataset import SplitIndices
+        import numpy as np
+
+        mock_load_exp.return_value = mock_experiment_config
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.42}
+        mock_trainer_cls.return_value = mock_trainer
+
+        mock_trial = MagicMock()
+        mock_trial.suggest_categorical.side_effect = lambda name, choices: choices[0]
+        mock_trial.suggest_float.return_value = 0.0005
+
+        split_indices = SplitIndices(
+            train_indices=np.array([0, 1, 2, 3, 4]),
+            val_indices=np.array([5, 6]),
+            test_indices=np.array([7, 8]),
+            chunk_size=13,
+        )
+
+        objective = create_architectural_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            architectures=sample_architectures,
+            training_search_space=sample_training_search_space,
+            split_indices=split_indices,
+        )
+
+        result = objective(mock_trial)
+
+        # Should return val_loss (0.42), not train_loss (0.5)
+        assert result == 0.42
+
+
+class TestSaveBestParamsIncludesArchitecture:
+    """Test that save_best_params includes architecture info when available."""
+
+    def test_save_best_params_includes_architecture(
+        self,
+        tmp_path: Path,
+        sample_architectures: list[dict],
+    ) -> None:
+        """Test that JSON includes architecture when arch_idx in best_params."""
+        mock_study = MagicMock()
+        mock_study.best_params = {
+            "arch_idx": 1,  # Index into architectures list
+            "learning_rate": 0.0005,
+            "epochs": 75,
+            "batch_size": 128,
+        }
+        mock_study.best_value = 0.42
+        mock_study.study_name = "test_2M"
+        mock_study.trials = [MagicMock()]
+        mock_study.trials[0].state.name = "COMPLETE"
+
+        output_dir = tmp_path / "hpo"
+        result_path = save_best_params(
+            study=mock_study,
+            experiment_name="test_exp",
+            budget="2M",
+            output_dir=output_dir,
+            architectures=sample_architectures,  # New parameter
+        )
+
+        with open(result_path) as f:
+            data = json.load(f)
+
+        # Should include architecture info
+        assert "architecture" in data
+        assert data["architecture"]["d_model"] == 128
+        assert data["architecture"]["n_layers"] == 8
+        assert data["architecture"]["n_heads"] == 4
+        assert data["architecture"]["d_ff"] == 256
+        assert data["architecture"]["param_count"] == 2_000_000

@@ -98,12 +98,21 @@ def _sample_hyperparameter(
     Args:
         trial: Optuna trial object
         name: Parameter name
-        spec: Parameter specification with 'type', 'low', 'high', and optional 'step'
+        spec: Parameter specification with 'type' and either:
+            - 'low'/'high' for numeric types (uniform, log_uniform, int)
+            - 'choices' for categorical type
 
     Returns:
         Sampled parameter value
     """
     param_type = spec.get("type", "uniform")
+
+    # Handle categorical separately since it uses 'choices' not 'low'/'high'
+    if param_type == "categorical":
+        choices = spec["choices"]
+        return trial.suggest_categorical(name, choices)
+
+    # All other types use low/high
     low = spec["low"]
     high = spec["high"]
 
@@ -114,12 +123,113 @@ def _sample_hyperparameter(
     elif param_type == "int":
         step = spec.get("step", 1)
         return trial.suggest_int(name, low, high, step=step)
-    elif param_type == "categorical":
-        choices = spec.get("choices", [low, high])
-        return trial.suggest_categorical(name, choices)
     else:
         # Default to uniform
         return trial.suggest_float(name, low, high)
+
+
+def create_architectural_objective(
+    config_path: str,
+    budget: str,
+    architectures: list[dict],
+    training_search_space: dict,
+    split_indices: SplitIndices | None = None,
+) -> Callable[[optuna.Trial], float]:
+    """Create Optuna objective function for architectural HPO.
+
+    Searches both model architecture AND training parameters simultaneously.
+    Architecture is sampled from a pre-computed list of valid configurations.
+
+    Args:
+        config_path: Path to experiment config YAML
+        budget: Parameter budget
+        architectures: Pre-computed list of valid architecture dicts from arch_grid
+        training_search_space: Dict defining training parameter ranges
+        split_indices: Optional SplitIndices for train/val/test splits
+
+    Returns:
+        Objective function for study.optimize()
+    """
+    from src.models.patchtst import PatchTSTConfig
+
+    def objective(trial: optuna.Trial) -> float:
+        """Objective function that searches architecture and training params."""
+        import logging
+        logger = logging.getLogger("optuna")
+
+        # Sample architecture from pre-computed list
+        arch_idx = trial.suggest_categorical("arch_idx", list(range(len(architectures))))
+        arch = architectures[arch_idx]
+
+        # Sample training params from narrow ranges
+        sampled_params = {}
+        for param_name, param_spec in training_search_space.items():
+            sampled_params[param_name] = _sample_hyperparameter(
+                trial, param_name, param_spec
+            )
+
+        # Load experiment config for dataset/task info
+        experiment_config = load_experiment_config(config_path)
+
+        # Build PatchTSTConfig dynamically from sampled architecture
+        # Fixed params from design doc: patch_length=10, stride=5, context_length=60
+        model_config = PatchTSTConfig(
+            num_features=experiment_config.num_features,
+            context_length=experiment_config.context_length,
+            patch_length=10,  # Fixed per design doc
+            stride=5,  # Fixed per design doc
+            d_model=arch["d_model"],
+            n_heads=arch["n_heads"],
+            n_layers=arch["n_layers"],
+            d_ff=arch["d_ff"],
+            dropout=0.1,  # Default
+            head_dropout=0.0,  # Default
+            num_classes=1,  # Binary classification
+        )
+
+        # Extract training params with defaults
+        learning_rate = sampled_params.get("learning_rate", 0.001)
+        epochs = sampled_params.get("epochs", 50)
+        batch_size = sampled_params.get("batch_size", 32)
+
+        # Select best available device
+        if torch.backends.mps.is_available():
+            device = "mps"
+        elif torch.cuda.is_available():
+            device = "cuda"
+        else:
+            device = "cpu"
+
+        # Log trial start with architecture info
+        logger.info(
+            f"Trial {trial.number}: arch_idx={arch_idx}, "
+            f"d_model={arch['d_model']}, n_layers={arch['n_layers']}, "
+            f"params={arch['param_count']:,}, lr={learning_rate:.6f}, "
+            f"epochs={epochs}, batch_size={batch_size}"
+        )
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            trainer = Trainer(
+                experiment_config=experiment_config,
+                model_config=model_config,
+                batch_size=batch_size,
+                learning_rate=learning_rate,
+                epochs=epochs,
+                device=device,
+                checkpoint_dir=Path(tmp_dir),
+                thermal_callback=None,  # Thermal handled at study level
+                tracking_manager=None,  # Tracking handled at study level
+                split_indices=split_indices,
+            )
+
+            result = trainer.train()
+
+        # Return val_loss if splits provided, otherwise train_loss
+        if split_indices is not None:
+            return result["val_loss"]
+        return result["train_loss"]
+
+    return objective
 
 
 def create_objective(
@@ -211,6 +321,7 @@ def save_best_params(
     experiment_name: str,
     budget: str,
     output_dir: Path | str = Path("outputs/hpo"),
+    architectures: list[dict] | None = None,
 ) -> Path:
     """Save best hyperparameters to JSON file.
 
@@ -219,6 +330,8 @@ def save_best_params(
         experiment_name: Name of the experiment
         budget: Parameter budget
         output_dir: Directory to save results
+        architectures: Optional list of architecture dicts for architectural HPO.
+            If provided and arch_idx in best_params, includes architecture in output.
 
     Returns:
         Path to saved JSON file
@@ -230,7 +343,7 @@ def save_best_params(
     n_complete = sum(1 for t in study.trials if t.state.name == "COMPLETE")
     n_pruned = sum(1 for t in study.trials if t.state.name == "PRUNED")
 
-    result = {
+    result: dict[str, Any] = {
         "experiment": experiment_name,
         "budget": budget,
         "best_params": study.best_params,
@@ -241,6 +354,11 @@ def save_best_params(
         "study_name": study.study_name,
         "optuna_version": optuna.__version__,
     }
+
+    # Include architecture info if available
+    if architectures is not None and "arch_idx" in study.best_params:
+        arch_idx = study.best_params["arch_idx"]
+        result["architecture"] = architectures[arch_idx]
 
     output_path = output_dir / f"{experiment_name}_{budget}_best.json"
     with open(output_path, "w") as f:
