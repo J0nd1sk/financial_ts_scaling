@@ -19,6 +19,124 @@ EXPERIMENTS_DIR="${PROJECT_ROOT}/experiments/phase6a"
 LOG_DIR="${PROJECT_ROOT}/outputs/logs"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="${LOG_DIR}/phase6a_hpo_${TIMESTAMP}.log"
+HARDWARE_LOG="${LOG_DIR}/hardware_monitor_${TIMESTAMP}.log"
+MONITOR_INTERVAL=300  # 5 minutes
+
+# Background monitor PID (for cleanup)
+MONITOR_PID=""
+
+# ============================================================
+# PRE-FLIGHT CHECKS
+# ============================================================
+
+preflight_check() {
+    echo "Running pre-flight checks..."
+    local failures=0
+
+    # Check 1: MPS available
+    echo -n "  MPS (Apple Silicon GPU): "
+    if "${PYTHON}" -c "import torch; exit(0 if torch.backends.mps.is_available() else 1)" 2>/dev/null; then
+        echo "✓ available"
+    else
+        echo "✗ NOT AVAILABLE"
+        ((failures++))
+    fi
+
+    # Check 2: Temperature readable (sudo cached)
+    echo -n "  Temperature (sudo cached): "
+    if sudo -n true 2>/dev/null; then
+        TEMP=$("${PYTHON}" -c "from src.training.thermal import get_macos_temperature; print(get_macos_temperature())" 2>/dev/null)
+        if [ "$TEMP" != "-1.0" ] && [ -n "$TEMP" ]; then
+            echo "✓ readable (${TEMP}°C)"
+        else
+            echo "⚠ not readable (will continue without thermal monitoring)"
+        fi
+    else
+        echo "⚠ sudo not cached (run 'sudo -v' first for thermal monitoring)"
+    fi
+
+    # Check 3: Sufficient memory (>8GB free)
+    echo -n "  Memory (>8GB free): "
+    FREE_MEM_GB=$("${PYTHON}" -c "import psutil; print(f'{psutil.virtual_memory().available / (1024**3):.1f}')" 2>/dev/null)
+    if [ -n "$FREE_MEM_GB" ]; then
+        FREE_MEM_INT=${FREE_MEM_GB%.*}
+        if [ "$FREE_MEM_INT" -ge 8 ]; then
+            echo "✓ ${FREE_MEM_GB}GB available"
+        else
+            echo "✗ only ${FREE_MEM_GB}GB available (need 8GB+)"
+            ((failures++))
+        fi
+    else
+        echo "⚠ could not check memory"
+    fi
+
+    # Check 4: Data file exists
+    echo -n "  Data file: "
+    if [ -f "${PROJECT_ROOT}/data/processed/v1/SPY_dataset_a25.parquet" ]; then
+        echo "✓ exists"
+    else
+        echo "✗ NOT FOUND"
+        ((failures++))
+    fi
+
+    echo ""
+    if [ $failures -gt 0 ]; then
+        echo "❌ Pre-flight failed with $failures error(s)"
+        return 1
+    else
+        echo "✅ Pre-flight checks passed"
+        return 0
+    fi
+}
+
+# ============================================================
+# BACKGROUND HARDWARE MONITOR
+# ============================================================
+
+start_hardware_monitor() {
+    echo "Starting background hardware monitor (interval: ${MONITOR_INTERVAL}s)..."
+    echo "Hardware log: ${HARDWARE_LOG}"
+
+    # Create log file with header
+    mkdir -p "${LOG_DIR}"
+    echo "timestamp,cpu_percent,memory_percent,temperature" > "${HARDWARE_LOG}"
+
+    # Start background monitoring loop
+    (
+        while true; do
+            STATS=$("${PYTHON}" -c "
+import psutil
+from src.training.thermal import get_macos_temperature
+cpu = psutil.cpu_percent(interval=1)
+mem = psutil.virtual_memory().percent
+temp = get_macos_temperature()
+print(f'{cpu},{mem},{temp}')
+" 2>/dev/null)
+
+            if [ -n "$STATS" ]; then
+                echo "$(date -Iseconds),${STATS}" >> "${HARDWARE_LOG}"
+            fi
+
+            sleep ${MONITOR_INTERVAL}
+        done
+    ) &
+    MONITOR_PID=$!
+    echo "Monitor PID: ${MONITOR_PID}"
+}
+
+stop_hardware_monitor() {
+    if [ -n "$MONITOR_PID" ] && kill -0 "$MONITOR_PID" 2>/dev/null; then
+        echo "Stopping hardware monitor (PID: ${MONITOR_PID})..."
+        kill "$MONITOR_PID" 2>/dev/null
+        wait "$MONITOR_PID" 2>/dev/null
+    fi
+}
+
+# Cleanup on exit
+cleanup() {
+    stop_hardware_monitor
+}
+trap cleanup EXIT INT TERM
 
 # Experiments in order (smallest to largest)
 EXPERIMENTS=(
@@ -42,6 +160,18 @@ declare -a DURATIONS
 
 # Ensure log directory exists
 mkdir -p "${LOG_DIR}"
+
+# Run pre-flight checks
+echo ""
+if ! preflight_check; then
+    echo "Aborting due to pre-flight failures."
+    exit 1
+fi
+echo ""
+
+# Start background hardware monitoring
+start_hardware_monitor
+echo ""
 
 # Header
 echo "============================================================" | tee "${LOG_FILE}"
