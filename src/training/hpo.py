@@ -134,6 +134,7 @@ def create_architectural_objective(
     architectures: list[dict],
     training_search_space: dict,
     split_indices: SplitIndices | None = None,
+    num_features: int | None = None,
 ) -> Callable[[optuna.Trial], float]:
     """Create Optuna objective function for architectural HPO.
 
@@ -146,10 +147,13 @@ def create_architectural_objective(
         architectures: Pre-computed list of valid architecture dicts from arch_grid
         training_search_space: Dict defining training parameter ranges
         split_indices: Optional SplitIndices for train/val/test splits
+        num_features: Number of input features (required for model config)
 
     Returns:
         Objective function for study.optimize()
     """
+    if num_features is None:
+        raise ValueError("num_features is required for architectural HPO")
     from src.models.patchtst import PatchTSTConfig
 
     def objective(trial: optuna.Trial) -> float:
@@ -174,7 +178,7 @@ def create_architectural_objective(
         # Build PatchTSTConfig dynamically from sampled architecture
         # Fixed params from design doc: patch_length=10, stride=5, context_length=60
         model_config = PatchTSTConfig(
-            num_features=experiment_config.num_features,
+            num_features=num_features,
             context_length=experiment_config.context_length,
             patch_length=10,  # Fixed per design doc
             stride=5,  # Fixed per design doc

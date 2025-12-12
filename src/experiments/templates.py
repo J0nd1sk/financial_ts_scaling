@@ -72,7 +72,7 @@ def generate_hpo_script(
             create_study,
             save_best_params,
         )
-        from src.data.splitter import ChunkSplitter
+        from src.data.dataset import ChunkSplitter
         from src.experiments.runner import update_experiment_log
 
         # ============================================================
@@ -131,11 +131,13 @@ def generate_hpo_script(
         def get_split_indices(df):
             """Get train/val/test split indices."""
             splitter = ChunkSplitter(
-                val_size=252,  # 1 year validation
-                test_size=252,  # 1 year test
-                train_window=None,  # Use all available
+                total_days=len(df),
+                context_length=60,  # PatchTST context window
+                horizon=HORIZON,
+                val_ratio=0.15,
+                test_ratio=0.15,
             )
-            return splitter.split(df)
+            return splitter.split()
 
         # ============================================================
         # MAIN
@@ -147,7 +149,7 @@ def generate_hpo_script(
             # Validate data and get splits
             df = validate_data()
             split_indices = get_split_indices(df)
-            print(f"✓ Splits: train={{len(split_indices.train)}}, val={{len(split_indices.val)}}, test={{len(split_indices.test)}}")
+            print(f"✓ Splits: train={{len(split_indices.train_indices)}}, val={{len(split_indices.val_indices)}}, test={{len(split_indices.test_indices)}}")
 
             # Load training search space
             training_search_space = load_training_search_space()
@@ -167,6 +169,7 @@ def generate_hpo_script(
                 architectures=ARCHITECTURES,
                 training_search_space=training_search_space,
                 split_indices=split_indices,
+                num_features=len(FEATURE_COLUMNS),
             )
 
             # Run optimization

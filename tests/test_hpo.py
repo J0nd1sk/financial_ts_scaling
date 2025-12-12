@@ -876,6 +876,7 @@ class TestCreateArchitecturalObjectiveReturnsCallable:
             budget="2M",
             architectures=sample_architectures,
             training_search_space=sample_training_search_space,
+            num_features=20,
         )
         assert callable(objective)
 
@@ -909,6 +910,7 @@ class TestArchObjectiveSamplesArchitecture:
             budget="2M",
             architectures=sample_architectures,
             training_search_space=sample_training_search_space,
+            num_features=20,
         )
 
         objective(mock_trial)
@@ -951,6 +953,7 @@ class TestArchObjectiveSamplesTrainingParams:
             budget="2M",
             architectures=sample_architectures,
             training_search_space=sample_training_search_space,
+            num_features=20,
         )
 
         objective(mock_trial)
@@ -1003,6 +1006,7 @@ class TestArchObjectiveBuildsConfigFromArch:
             budget="2M",
             architectures=sample_architectures,
             training_search_space=sample_training_search_space,
+            num_features=20,
         )
 
         objective(mock_trial)
@@ -1058,6 +1062,7 @@ class TestArchObjectiveReturnsValLoss:
             architectures=sample_architectures,
             training_search_space=sample_training_search_space,
             split_indices=split_indices,
+            num_features=20,
         )
 
         result = objective(mock_trial)
