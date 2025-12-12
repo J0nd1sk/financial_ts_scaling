@@ -55,19 +55,44 @@ cd /Users/alexanderthomson/Documents/financial_ts_scaling
 ./venv/bin/python experiments/phase6a/hpo_2M_h1_threshold_1pct.py
 ```
 
-### Recommended: Use tmux/screen
+### Recommended: Automated Runner Script
 
-For long-running experiments, use tmux so you can detach and reattach:
+Run all 12 experiments sequentially with logging:
 
 ```bash
-# Start new tmux session
+# Start tmux session
 tmux new -s hpo
 
-# Run experiment
-./venv/bin/python experiments/phase6a/hpo_2M_h1_threshold_1pct.py
+# Run all experiments (smallest to largest)
+./scripts/run_phase6a_hpo.sh
 
 # Detach: Ctrl+B, then D
 # Reattach later: tmux attach -t hpo
+```
+
+**Features:**
+- Runs all 12 experiments in order (2M→20M→200M→2B)
+- Logs all output to `outputs/logs/phase6a_hpo_YYYYMMDD_HHMMSS.log`
+- Continues even if one experiment fails
+- Prints summary with pass/fail status and duration for each experiment
+
+**Monitoring while running:**
+```bash
+# Watch the log file
+tail -f outputs/logs/phase6a_hpo_*.log
+
+# Check current experiment progress
+tmux attach -t hpo
+```
+
+### Manual Execution (Alternative)
+
+For running individual experiments or debugging:
+
+```bash
+tmux new -s hpo
+./venv/bin/python experiments/phase6a/hpo_2M_h1_threshold_1pct.py
+# Detach: Ctrl+B, then D
 ```
 
 ### Run Order Recommendation
