@@ -1,85 +1,71 @@
-# Session Handoff - 2025-12-11 (Architectural HPO Task 1 Complete)
+# Session Handoff - 2025-12-11 (Architectural HPO Task 2 Complete)
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `352c0a1` docs: session handoff - Phase 6A HPO ready to execute
-- **Uncommitted**: 4 new files, 3 modified files (see below)
-- **Origin**: up to date with last commit
+- **Last commit**: `1edea85` feat: add architectural HPO search config (Task 2)
+- **Uncommitted**: none (clean working tree)
+- **Origin**: 1 commit ahead of origin/main
 
 ### Project Phase
-- **Phase 6A**: IN PROGRESS - Architectural HPO implementation (Task 1 of 8 complete)
+- **Phase 6A**: IN PROGRESS - Architectural HPO implementation (Tasks 1-2 of 8 complete)
 
 ### Task Status
 - **Working on**: Architectural HPO implementation
-- **Status**: Task 1 complete, Tasks 2-8 pending
+- **Status**: Tasks 1-2 complete, Tasks 3-8 pending
 
 ---
 
 ## Test Status
-- **Last `make test`**: ✅ 292 passed (just now)
+- **Last `make test`**: ✅ 303 passed
 - **Failing tests**: none
-- **New tests added**: 28 (tests/test_arch_grid.py)
+- **New tests added**: 11 (architectural search config validation in test_hpo.py)
 
 ---
 
 ## Completed This Session
 
 1. ✅ Session restore from previous handoff
-2. ✅ Planning session for Task 1 (arch_grid.py)
-3. ✅ TDD RED: Wrote 28 failing tests for arch_grid.py
-4. ✅ TDD GREEN: Implemented arch_grid.py (~180 lines)
-5. ✅ All tests pass (292 total)
+2. ✅ Planning session for Task 2 (architectural_search.yaml)
+3. ✅ TDD RED: Wrote 11 failing tests for config validation
+4. ✅ TDD GREEN: Created configs/hpo/architectural_search.yaml
+5. ✅ All tests pass (303 total)
+6. ✅ Committed Task 2
 
 ---
 
-## Task 1 Implementation Summary
+## Task 2 Implementation Summary
 
 ### Files Created
 | File | Lines | Purpose |
 |------|-------|---------|
-| `src/models/arch_grid.py` | ~180 | Architecture grid generation |
-| `tests/test_arch_grid.py` | ~390 | 28 comprehensive tests |
+| `configs/hpo/architectural_search.yaml` | ~40 | Narrow training param ranges for arch HPO |
 
-### Functions Implemented
-| Function | Purpose |
-|----------|---------|
-| `estimate_param_count()` | Matches actual model params within 0.1% |
-| `ARCH_SEARCH_SPACE` | Constant with design doc values |
-| `generate_architecture_grid()` | Enumerates all valid combos |
-| `filter_by_budget()` | Applies ±25% tolerance |
-| `get_architectures_for_budget()` | Main entry point |
+### Files Modified
+| File | Changes |
+|------|---------|
+| `tests/test_hpo.py` | +125 lines (11 tests for config validation) |
 
-### Architecture Counts Per Budget
-| Budget | Valid Architectures |
-|--------|---------------------|
-| 2M | 75 |
-| 20M | 35 |
-| 200M | 75 |
-| 2B | 60 |
-
-### Param Estimation Formula (Critical)
-```python
-# Components that contribute to parameter count:
-# 1. PatchEmbedding: (patch_len * num_features) * d_model + d_model
-# 2. PositionalEncoding: (num_patches + 10) * d_model
-# 3. Per TransformerEncoderLayer:
-#    - MHA: 4 * d_model² + 4 * d_model
-#    - LayerNorms: 4 * d_model
-#    - FFN: 2 * d_model * d_ff + d_ff + d_model
-# 4. Encoder final norm: 2 * d_model
-# 5. PredictionHead: (d_model * num_patches) * num_classes + num_classes
+### Config Contents
+```yaml
+n_trials: 50
+direction: minimize
+training_search_space:
+  learning_rate: log_uniform 1e-4 to 1e-3
+  epochs: categorical [50, 75, 100]
+  batch_size: categorical [32, 64, 128, 256]
+  weight_decay: log_uniform 1e-5 to 1e-3
+  warmup_steps: categorical [100, 200, 300, 500]
 ```
 
 ---
 
-## Remaining Tasks (2-8)
+## Remaining Tasks (3-8)
 
 | Task | File | Est. | Status |
 |------|------|------|--------|
-| 2 | NEW `configs/hpo/architectural_search.yaml` | 30 min | Pending |
-| 3 | MODIFY `src/training/hpo.py` | 2-3 hrs | Pending |
+| 3 | MODIFY `src/training/hpo.py` | 2-3 hrs | **Next** |
 | 4 | MODIFY `src/experiments/runner.py` | 1 hr | Pending |
 | 5 | MODIFY `src/experiments/templates.py` | 1 hr | Pending |
 | 6 | Regenerate 12 HPO scripts | 30 min | Pending |
@@ -88,65 +74,39 @@
 
 ---
 
-## Files Modified/Created This Session
-
-### New Files (uncommitted)
-- `src/models/arch_grid.py`: Architecture grid generation module
-- `tests/test_arch_grid.py`: 28 tests for arch_grid
-
-### Modified Files (uncommitted)
-- `.claude/context/phase_tracker.md`: Updated Task 1 completion
-- `.claude/context/session_context.md`: This file
-- `docs/experiment_results.csv`: (from previous session)
-
-### Previously Created (uncommitted from last session)
-- `docs/architectural_hpo_design.md`: Full design doc
-- `docs/architectural_hpo_implementation_plan.md`: Task breakdown
-
----
-
 ## Key Decisions
 
-### 1. Param Estimation Formula
-- **Decision**: Derive exact formula from PatchTST implementation
-- **Rationale**: Must match `model.parameters().numel()` for accurate budget filtering
-- **Validation**: Tested against 2M, 20M, 200M configs - all match within 0.1%
+### 1. Key Name: training_search_space
+- **Decision**: Use `training_search_space` instead of `search_space`
+- **Rationale**: Distinguish from default_search.yaml; architecture params come from arch_grid.py
 
-### 2. Architecture Count Flexibility
-- **Decision**: Accept 75 architectures for 2M instead of design doc's 25-35
-- **Rationale**: More architectures = better HPO exploration; design estimate was conservative
-
-### 3. Position Encoding Buffer
-- **Decision**: Include +10 buffer in position embedding count
-- **Rationale**: PatchTST uses `max_patches = num_patches + 10` as buffer
+### 2. Comprehensive Test Coverage
+- **Decision**: Added 11 tests instead of planned 4
+- **Rationale**: Validate each parameter's type and range explicitly for better safety
 
 ---
 
 ## Context for Next Session
 
 ### What to Know
-- Task 1 is complete but NOT COMMITTED - 4 new files + 3 modified files pending
-- Design docs from previous session also uncommitted
-- Total: 7 files to commit
-
-### Starting Point
-1. Review uncommitted files
-2. Consider committing Task 1 separately from design docs
-3. Start Task 2: Create `configs/hpo/architectural_search.yaml`
+- Task 2 is committed to main
+- Branch is 1 commit ahead of origin (not pushed)
+- Task 3 is the largest remaining task (2-3 hrs) - modifying hpo.py
 
 ### Key Implementation Details for Task 3
 - New function: `create_architectural_objective()` in `hpo.py`
 - Architecture list is categorical in Optuna: `trial.suggest_categorical("arch_idx", list(range(len(architectures))))`
 - Keep existing `create_objective()` for backwards compatibility
+- Need to integrate with `arch_grid.get_architectures_for_budget()`
 
 ---
 
 ## Next Session Should
 
-1. **Commit work** - Either all at once or staged (design docs, then Task 1)
-2. **Start Task 2** - Create architectural search config (~30 min)
-3. **Continue Task 3** - Modify hpo.py with `create_architectural_objective()` (2-3 hrs)
-4. **Follow TDD** - Tests first for each task
+1. **Push to origin** (optional - 1 commit ahead)
+2. **Planning session for Task 3** - largest remaining task
+3. **TDD for Task 3** - create_architectural_objective() function
+4. Continue with Tasks 4-8
 
 ---
 
@@ -160,8 +120,8 @@
 
 ## Memory Entities Updated
 
-- `Task1_ArchGrid_Plan` (created): Planning decision with scope, test strategy, risks
-- `Task1_ArchGrid_Plan` (updated): Completion status, implementation details
+- `Task2_ArchConfig_Plan` (created): Planning decision with scope, test strategy, risks
+- `Task2_ArchConfig_Plan` (updated): Completion status, 11 tests pass, 303 total
 
 ---
 
@@ -172,19 +132,7 @@ source venv/bin/activate
 make test
 git status
 make verify
-
-# To commit all uncommitted work:
-git add -A
-git commit -m "feat: implement architectural HPO Task 1 (arch_grid.py)
-
-- Add src/models/arch_grid.py with grid generation functions
-- Add 28 tests in tests/test_arch_grid.py
-- Param estimation matches actual model within 0.1%
-- Design docs for architectural HPO approach
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+git log --oneline -3
 ```
 
 ---

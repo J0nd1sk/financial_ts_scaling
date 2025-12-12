@@ -145,7 +145,11 @@
   - `tests/test_arch_grid.py`: 28 tests, all passing
   - Param estimation matches actual model within 0.1%
   - 292 total tests passing
-- 🔜 **Next: Task 2-8, then re-run experiments**
+- ✅ **Task 2 COMPLETE: Architectural Search Config (2025-12-11)**
+  - `configs/hpo/architectural_search.yaml`: narrow training param ranges
+  - 11 new tests in test_hpo.py validating config structure/values
+  - 303 total tests passing
+- 🔜 **Next: Task 3-8, then re-run experiments**
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)
