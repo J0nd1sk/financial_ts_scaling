@@ -1,131 +1,91 @@
-# Session Handoff - 2025-12-13 09:05
+# Session Handoff - 2025-12-13 11:15
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `8ae9db0` feat: add incremental HPO logging with per-trial persistence
-- **Uncommitted**: 17 modified files + 1 new file (see below)
-- **Pushed**: No (1 commit ahead of origin + uncommitted changes)
+- **Last commit**: `08579e3` feat: expand architecture grid to L=256 and remove all timeouts
+- **Uncommitted**: none (clean working tree)
+- **Pushed**: Yes
 
 ### Project Phase
 - **Phase 6A**: Parameter Scaling - IN PROGRESS
-- **HPO Experiments**: 20M_h3 currently running (~24/50 trials)
-
----
-
-## CRITICAL: Uncommitted Changes Must Be Committed
-
-### Changes Made This Session (NOT YET COMMITTED):
-
-1. **Expanded architecture grid** (`src/models/arch_grid.py`):
-   - Added n_layers: 64, 96, 128, 192, 256 to search space
-   - 2M: now has L=64 max (was 48)
-   - 20M: now has L=128 max (was 48)
-   - 200M: now has L=256 max (was 48)
-   - 2B: now has L=256 max (was 48)
-
-2. **Removed timeout from templates** (`src/experiments/templates.py`):
-   - Changed `timeout_hours: float = 4.0` to `timeout_hours: float | None = None`
-   - Script now generates `TIMEOUT_HOURS = None` (no timeout)
-
-3. **Updated tests**:
-   - `tests/test_arch_grid.py`: Updated n_layers expected values and 20M count range
-   - `tests/experiments/test_templates.py`: Updated TIMEOUT_HOURS assertion
-
-4. **Regenerated all 12 HPO scripts** (`experiments/phase6a/hpo_*.py`):
-   - All now have `TIMEOUT_HOURS = None`
-   - All use expanded architecture grid
-
-5. **New file**: `scripts/recover_trial_data.py`:
-   - Parses log file to extract trial data
-   - Used to recover 2M_h1, 2M_h3, 2M_h5 trial data from log
-
-6. **Recovered trial data** (outputs/hpo/):
-   - `phase6a_2M_h1_threshold_1pct/phase6a_2M_h1_threshold_1pct_all_trials.json` (50 trials)
-   - `phase6a_2M_h3_threshold_1pct/phase6a_2M_h3_threshold_1pct_all_trials.json` (50 trials)
-   - `phase6a_2M_h5_threshold_1pct/phase6a_2M_h5_threshold_1pct_all_trials.json` (50 trials)
-   - `phase6a_20M_h1_threshold_1pct/phase6a_20M_h1_threshold_1pct_all_trials.json` (31 trials)
+- **HPO Experiments**: 20M_h5 currently running (~19/50 trials)
 
 ---
 
 ## Test Status
-- **Last `make test`**: PASS (332 tests) at ~09:00
+- **Last `make test`**: PASS (333 tests) at ~10:45
 - **Failing**: none
+
+---
+
+## Completed This Session
+
+1. **Session restore** from previous handoff
+2. **Verified no timeouts anywhere**:
+   - Fixed `run_hpo()` default: `timeout_hours: float | None = None`
+   - Fixed `run_hpo_experiment()` default: `timeout_hours: float | None = None`
+   - Fixed arithmetic: `timeout_hours * 3600 if timeout_hours else None`
+   - Added test `test_run_hpo_default_no_timeout`
+3. **Committed and pushed** all changes (22 files):
+   - Architecture grid expansion to L=256
+   - All timeout removals
+   - 12 regenerated HPO scripts
+   - New test for None timeout
+4. **Verified 2M experiment data**:
+   - Compared logs to output files
+   - All 3 experiments (h1, h3, h5) match exactly: 50 trials each
+5. **Decided on 20M_h1/h3 re-run strategy**:
+   - User chose Option C: Re-run from scratch with new scripts
+   - Timing: AFTER all other HPO runs complete
+   - Rationale: New scripts have L=128 max (old had L=48)
 
 ---
 
 ## Experiment Status
 
-### Completed Experiments
+| Experiment | Trials | Status | Best val_loss |
+|------------|--------|--------|---------------|
+| 2M_h1 | 50/50 | ✅ Complete | 0.3369 |
+| 2M_h3 | 50/50 | ✅ Complete | 0.2623 |
+| 2M_h5 | 50/50 | ✅ Complete | 0.3285 |
+| 20M_h1 | 31/50 | ⚠️ Will re-run | 0.3631 |
+| 20M_h3 | 32/50 | ⚠️ Will re-run | 0.2738 |
+| 20M_h5 | ~19/50 | 🔄 Running | 0.3524 |
+| 200M_h1 | 0/50 | ⏸️ Queued | - |
+| 200M_h3 | 0/50 | ⏸️ Queued | - |
+| 200M_h5 | 0/50 | ⏸️ Queued | - |
+| 2B_h1 | 0/50 | ⏸️ Queued | - |
+| 2B_h3 | 0/50 | ⏸️ Queued | - |
+| 2B_h5 | 0/50 | ⏸️ Queued | - |
 
-| Experiment | Trials | Best val_loss | Best Architecture |
-|------------|--------|---------------|-------------------|
-| 2M_h1 | 50/50 | **0.337** | d=64, L=48, h=8 |
-| 2M_h3 | 50/50 | **0.262** | d=64, L=32, h=32 |
-| 2M_h5 | 50/50 | **0.329** | d=64, L=48, h=16 |
-| 20M_h1 | 31/50 | **0.363** | d=768, L=4, h=2 |
-
-### Currently Running
-- **20M_h3**: ~24/50 trials, best val_loss=0.294 (L=24, d=256)
-- Running in tmux session `hpo`
-- Using OLD script (pre-architecture-expansion, has 4hr timeout)
-
-### Key Finding
-- 2M experiments: Deep narrow (d=64, L=32-48) wins
-- 20M: Shifting to medium depth (L=24 winning for h3)
-- 20M_h1 stopped at 31 trials due to 4hr timeout (now fixed)
-
----
-
-## Issues Found and Fixed This Session
-
-### 1. TIMEOUT_HOURS Was Set to 4.0 (FIXED)
-- **Problem**: User explicitly said no timeouts, but scripts had `TIMEOUT_HOURS = 4.0`
-- **Impact**: 20M_h1 stopped early at 31 trials instead of 50
-- **Fix**: Changed template default to `None`, regenerated all 12 scripts
-
-### 2. Architecture Grid Missing Deep Layers (FIXED)
-- **Problem**: n_layers only went up to 48, missing 64/96/128/192/256
-- **Impact**: Couldn't test very deep architectures for scaling law research
-- **Fix**: Extended `ARCH_SEARCH_SPACE["n_layers"]` to include [64, 96, 128, 192, 256]
-
-### 3. 2M Trial Data Missing (FIXED)
-- **Problem**: 2M_h1, 2M_h3, 2M_h5 ran with old scripts (no incremental logging)
-- **Impact**: Only best.json files existed, no full trial data
-- **Fix**: Created `scripts/recover_trial_data.py` to parse log and generate all_trials.json
+### Key Finding from 2M Experiments
+- Deep narrow architectures win: d=64, L=32-48
+- Best: 2M_h3 with val_loss=0.2623 (d=64, L=32, h=32)
 
 ---
 
-## Next Session Should
+## In Progress
 
-1. **COMMIT THE CHANGES** - 17 files modified, all tests pass:
-   ```bash
-   git add -A
-   git commit -m "feat: expand architecture grid to L=256 and remove timeout
+- **20M_h5 HPO**: Running in terminal, ~19/50 trials complete
+  - Using NEW script with no timeout and expanded architecture grid (L=128 max)
+  - Should complete on its own
 
-   - Add n_layers 64, 96, 128, 192, 256 to architecture search space
-   - Remove TIMEOUT_HOURS from templates (experiments run to completion)
-   - Regenerate all 12 HPO scripts with expanded grid and no timeout
-   - Add recover_trial_data.py script for log parsing
-   - Update tests for new architecture ranges"
-   ```
+---
 
-2. **PUSH to origin**: `git push`
+## Pending / Next Steps
 
-3. **Monitor 20M_h3**: Let it complete (uses old script, will stop at 50 trials or timeout)
-
-4. **Plan supplemental 20M_h1 deep testing**:
-   - 20M_h1 only tested up to L=48 (31 trials, stopped due to timeout)
-   - Need to test L=64, L=96, L=128 architectures
-   - Option A: Create separate "20M_h1_deep" experiment
-   - Option B: Re-run 20M_h1 with new script after 20M_h3/h5 complete
-
-5. **Stop 20M_h3 and restart with new script?** (decision needed):
-   - Current script has 4hr timeout and old architecture grid (max L=48)
-   - New scripts have no timeout and L=128 max
-   - Could lose ~24 completed trials if restarted
-   - Recommendation: Let it complete, then re-run if deep architectures needed
+1. **Monitor 20M_h5**: Let it complete (~31 more trials)
+2. **Run 200M experiments**: After 20M_h5 completes
+   - `experiments/phase6a/hpo_200M_h1_threshold_1pct.py`
+   - `experiments/phase6a/hpo_200M_h3_threshold_1pct.py`
+   - `experiments/phase6a/hpo_200M_h5_threshold_1pct.py`
+3. **Run 2B experiments**: After 200M completes
+4. **RE-RUN 20M_h1 and 20M_h3**: AFTER all other HPO runs complete
+   - User decision: Option C (fresh runs with new scripts)
+   - New scripts have L=128 max (old had L=48 max)
+   - This tests deeper architectures at 20M scale
 
 ---
 
@@ -133,23 +93,22 @@
 
 | File | Change |
 |------|--------|
-| `src/models/arch_grid.py` | Extended n_layers to include 64, 96, 128, 192, 256 |
-| `src/experiments/templates.py` | Changed timeout_hours default to None |
-| `tests/test_arch_grid.py` | Updated expected n_layers and count ranges |
-| `tests/experiments/test_templates.py` | Updated TIMEOUT_HOURS assertion |
-| `experiments/phase6a/hpo_*.py` (12 files) | Regenerated with no timeout |
-| `scripts/recover_trial_data.py` | NEW - log parser for trial recovery |
-| `docs/experiment_results.csv` | Auto-updated by experiments |
+| `src/training/hpo.py` | Changed timeout_hours default to None, fixed arithmetic |
+| `src/experiments/runner.py` | Changed timeout_hours default to None |
+| `tests/test_hpo.py` | Added test_run_hpo_default_no_timeout |
 
 ---
 
 ## Key Decisions
 
-1. **Extended architecture depth to L=256**: User wants to explore very deep architectures since 2M showed counterintuitive "more layers = better" pattern
+1. **No timeouts ever**: All timeout defaults changed from 4.0 to None
+   - `run_hpo()`, `run_hpo_experiment()`, and all generated scripts
 
-2. **No timeout ever**: User explicitly stated experiments should run to completion, even if they take days/weeks
-
-3. **Recover rather than re-run**: Used log parsing to recover 2M trial data rather than re-running completed experiments
+2. **Re-run 20M_h1/h3 from scratch (Option C)**:
+   - Old runs used architecture grid with max L=48
+   - New scripts have L=128 max for 20M budget
+   - Important for testing if deeper architectures help at 20M scale
+   - Timing: AFTER 20M_h5, 200M, and 2B complete
 
 ---
 
@@ -161,20 +120,19 @@
 ---
 
 ## Memory Entities Updated
-- `Phase6A_Architecture_Expansion` (created): Extended n_layers to L=256 for deep architecture testing
-- `Phase6A_No_Timeout_Rule` (created): NEVER use timeouts - experiments run to completion
-- `Phase6A_Trial_Recovery` (created): Pattern for recovering trial data from logs
+- `Remove_Timeout_Defaults_Plan` (created): Plan for removing timeout defaults
+- `Phase6A_20M_Rerun_Decision` (created): Decision to re-run 20M_h1/h3 with new scripts after other HPO completes
 
 ---
 
-## Architecture Grid Summary (After Fix)
+## Architecture Grid Summary (Current)
 
-| Budget | Total Archs | Max Layers | New Deep Options |
-|--------|-------------|------------|------------------|
-| 2M | 80 | L=64 | +L=64 |
-| 20M | 65 | L=128 | +L=64, 96, 128 |
-| 200M | 115 | L=256 | +L=64, 96, 128, 192, 256 |
-| 2B | 60 | L=256 | +L=64, 96, 128, 192, 256 |
+| Budget | Total Archs | Max Layers | Notes |
+|--------|-------------|------------|-------|
+| 2M | 80 | L=64 | Complete (50 trials each) |
+| 20M | 65 | L=128 | h5 running, h1/h3 will re-run |
+| 200M | 115 | L=256 | Queued |
+| 2B | 60 | L=256 | Queued |
 
 ---
 
@@ -184,13 +142,20 @@
 source venv/bin/activate
 make test
 git status
-git diff --stat
+make verify
 
-# Commit the changes
-git add -A
-git commit -m "feat: expand architecture grid to L=256 and remove timeout"
-git push
+# Check running experiment
+ps aux | grep hpo_ | grep -v grep
 
 # Check experiment progress
-tail -20 outputs/logs/phase6a_hpo_20251212_155223.log
+python3 -c "
+import json
+from pathlib import Path
+for d in sorted(Path('outputs/hpo').iterdir()):
+    if not d.is_dir(): continue
+    for f in d.glob('*all_trials*.json'):
+        data = json.load(open(f))
+        trials = data.get('trials', [])
+        print(f'{d.name}: {len(trials)}/50')
+"
 ```
