@@ -2,7 +2,7 @@
 """
 PHASE6A Experiment: 200M parameters, threshold_1pct task
 Type: HPO (Hyperparameter Optimization) with Architectural Search
-Generated: 2025-12-12T23:37:46.572492+00:00
+Generated: 2025-12-13T06:34:07.758194+00:00
 
 This script searches both model ARCHITECTURE (d_model, n_layers, n_heads, d_ff)
 and TRAINING parameters (lr, epochs, batch_size) to find optimal configuration.
@@ -21,10 +21,14 @@ from src.training.hpo import (
     create_architectural_objective,
     create_study,
     save_best_params,
+    save_trial_result,
+    update_best_params,
+    save_all_trials,
 )
 from src.training.thermal import ThermalCallback
 from src.data.dataset import ChunkSplitter
 from src.experiments.runner import update_experiment_log
+from src.experiments.trial_logger import TrialLogger
 
 # Thermal pause duration in seconds when warning threshold exceeded
 THERMAL_PAUSE_SECONDS = 60
@@ -94,6 +98,12 @@ def get_split_indices(df):
     return splitter.split()
 
 # ============================================================
+# OUTPUT DIRECTORY (defined early for incremental logging)
+# ============================================================
+
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "hpo" / EXPERIMENT
+
+# ============================================================
 # THERMAL MONITORING
 # ============================================================
 
@@ -115,6 +125,43 @@ def thermal_check_callback(study, trial):
         print(f"\n⚠️ THERMAL WARNING: {status.message}")
         print(f"   Pausing {THERMAL_PAUSE_SECONDS}s to cool down...")
         time.sleep(THERMAL_PAUSE_SECONDS)
+
+# ============================================================
+# INCREMENTAL LOGGING CALLBACK
+# ============================================================
+
+def incremental_logging_callback(study, trial):
+    """Save trial results incrementally after each trial completes.
+
+    Saves:
+    - Individual trial JSON (trials/trial_NNNN.json)
+    - Updated best params (experiment_budget_best.json)
+    - Updated all trials summary (experiment_all_trials.json)
+    """
+    # Save individual trial result
+    save_trial_result(
+        trial=trial,
+        output_dir=OUTPUT_DIR,
+        architectures=ARCHITECTURES,
+    )
+
+    # Update best params file
+    update_best_params(
+        study=study,
+        experiment_name=EXPERIMENT,
+        budget=BUDGET,
+        output_dir=OUTPUT_DIR,
+        architectures=ARCHITECTURES,
+    )
+
+    # Update all trials summary
+    save_all_trials(
+        study=study,
+        experiment_name=EXPERIMENT,
+        budget=BUDGET,
+        output_dir=OUTPUT_DIR,
+        architectures=ARCHITECTURES,
+    )
 
 # ============================================================
 # MAIN
@@ -145,7 +192,7 @@ if __name__ == "__main__":
         direction="minimize",
     )
 
-    # Create architectural objective
+    # Create architectural objective with verbose logging
     objective = create_architectural_objective(
         config_path=str(PROJECT_ROOT / CONFIG_PATH),
         budget=BUDGET,
@@ -153,28 +200,44 @@ if __name__ == "__main__":
         training_search_space=training_search_space,
         split_indices=split_indices,
         num_features=len(FEATURE_COLUMNS),
+        verbose=True,  # Enable detailed per-trial metrics
     )
 
-    # Run optimization with thermal monitoring
+    # Run optimization with thermal monitoring and incremental logging
     print(f"\nStarting HPO: {N_TRIALS} trials, {len(ARCHITECTURES)} architectures...")
+    print(f"  Output dir: {OUTPUT_DIR}")
     study.optimize(
         objective,
         n_trials=N_TRIALS,
         timeout=TIMEOUT_HOURS * 3600 if TIMEOUT_HOURS else None,
-        callbacks=[thermal_check_callback],
+        callbacks=[thermal_check_callback, incremental_logging_callback],
     )
 
-    # Save best params (includes architecture info)
-    output_dir = PROJECT_ROOT / "outputs" / "hpo" / EXPERIMENT
+    # Save final best params (already updated incrementally, but ensure final state)
     output_path = save_best_params(
         study=study,
         experiment_name=EXPERIMENT,
         budget=BUDGET,
-        output_dir=output_dir,
+        output_dir=OUTPUT_DIR,
         architectures=ARCHITECTURES,
     )
 
     duration = time.time() - start_time
+
+    # Generate comprehensive study summary with all trials, arch analysis, etc.
+    trial_logger = TrialLogger(
+        output_dir=OUTPUT_DIR,
+        experiment_name=EXPERIMENT,
+    )
+    summary_paths = trial_logger.generate_study_summary(
+        study=study,
+        architectures=ARCHITECTURES,
+        training_search_space=training_search_space,
+        split_indices=split_indices,
+    )
+    print(f"\n✓ Study summary saved:")
+    print(f"    JSON: {summary_paths['json']}")
+    print(f"    Markdown: {summary_paths['markdown']}")
 
     # Get best architecture info
     best_arch = ARCHITECTURES[study.best_params.get("arch_idx", 0)]

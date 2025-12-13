@@ -248,5 +248,5 @@ If issues arise:
 1. `make test` passes with all new tests
 2. 3-trial validation run completes successfully
 3. Output shows different architectures per trial
-4. `best_params.json` includes architecture info
+4. `{experiment}_{budget}_best.json` includes architecture info
 5. All architectures within ±25% of budget

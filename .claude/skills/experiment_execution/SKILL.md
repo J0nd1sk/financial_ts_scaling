@@ -177,7 +177,7 @@ REPORT_PATH = PROJECT_ROOT / "docs/experiment_results.md"
 
 # Load hyperparameters from HPO results
 import json
-hpo_results_path = PROJECT_ROOT / "outputs/hpo/phase6a_2M_threshold_1pct/best_params.json"
+hpo_results_path = PROJECT_ROOT / "outputs/hpo/phase6a_2M_h1_threshold_1pct/phase6a_2M_h1_threshold_1pct_2M_best.json"
 with open(hpo_results_path) as f:
     hyperparameters = json.load(f)["params"]
 
@@ -247,9 +247,9 @@ See `thermal_management` skill for detailed protocols.
 ```
 outputs/
 ├── hpo/
-│   └── phase6a_2M_threshold_1pct/
-│       ├── study.db          # Optuna study
-│       └── best_params.json  # Best hyperparameters
+│   └── phase6a_2M_h1_threshold_1pct/
+│       ├── study.db                                    # Optuna study (if using storage)
+│       └── phase6a_2M_h1_threshold_1pct_2M_best.json   # Best architecture + hyperparameters
 ├── training/
 │   └── phase6a_2M_threshold_1pct/
 │       ├── checkpoints/      # Model checkpoints

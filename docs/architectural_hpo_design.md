@@ -190,56 +190,64 @@ learning_rate, epochs, batch_size, weight_decay, warmup_steps,
 val_loss, train_loss, duration_s, timestamp
 ```
 
-### best_params.json (DEFINITIVE structure)
+### Result JSON Format
+
+Output filename: `{experiment}_{budget}_best.json`
 
 ```json
 {
   "experiment": "<experiment_name>",
-  "architecture": {
-    "d_model": "<int>",
-    "n_layers": "<int>",
-    "n_heads": "<int>",
-    "d_ff": "<int>",
-    "patch_len": 10,
-    "stride": 5
-  },
-  "training": {
+  "budget": "<budget>",
+  "best_params": {
+    "arch_idx": "<int>",
     "learning_rate": "<float>",
     "epochs": "<int>",
     "batch_size": "<int>",
     "weight_decay": "<float>",
     "warmup_steps": "<int>"
   },
-  "param_count": "<int>",
-  "best_val_loss": "<float>",
-  "n_trials": "<int>",
-  "timestamp": "<ISO-8601>"
+  "best_value": "<float>",
+  "n_trials_completed": "<int>",
+  "n_trials_pruned": "<int>",
+  "timestamp": "<ISO-8601>",
+  "study_name": "<study_name>",
+  "optuna_version": "<version>",
+  "architecture": {
+    "d_model": "<int>",
+    "n_layers": "<int>",
+    "n_heads": "<int>",
+    "d_ff": "<int>",
+    "param_count": "<int>"
+  }
 }
 ```
 
-**Example:**
+**Example** (from actual h1 run):
 ```json
 {
   "experiment": "phase6a_2M_h1_threshold_1pct",
-  "architecture": {
-    "d_model": 128,
-    "n_layers": 8,
-    "n_heads": 4,
-    "d_ff": 512,
-    "patch_len": 10,
-    "stride": 5
-  },
-  "training": {
-    "learning_rate": 0.0003,
-    "epochs": 75,
-    "batch_size": 128,
-    "weight_decay": 0.0001,
+  "budget": "2M",
+  "best_params": {
+    "arch_idx": 57,
+    "learning_rate": 0.0001,
+    "epochs": 50,
+    "batch_size": 32,
+    "weight_decay": 0.0002,
     "warmup_steps": 200
   },
-  "param_count": 1850000,
-  "best_val_loss": 0.42,
-  "n_trials": 50,
-  "timestamp": "2025-12-11T23:45:00Z"
+  "best_value": 0.337,
+  "n_trials_completed": 50,
+  "n_trials_pruned": 0,
+  "timestamp": "2025-12-13T03:51:46.140871+00:00",
+  "study_name": "phase6a_2M_h1_threshold_1pct_2M",
+  "optuna_version": "4.6.0",
+  "architecture": {
+    "d_model": 64,
+    "n_layers": 48,
+    "n_heads": 8,
+    "d_ff": 256,
+    "param_count": 2414273
+  }
 }
 ```
 

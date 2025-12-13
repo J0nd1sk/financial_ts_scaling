@@ -181,16 +181,26 @@
   - Smoke test passed: 3 trials, ~100s/trial, val_loss=0.385
   - Runner script created: scripts/run_phase6a_hpo.sh
   - Commits: 23b0356 (bug fixes), 6e7363c (runner script)
-- 🔄 **Hardware Monitoring Enhancement (2025-12-12)**
-  - ✅ Task A COMPLETE: Hardware monitoring provider
-    - Added psutil>=7.0.0 to requirements.txt
-    - Implemented get_hardware_stats() (CPU%, memory% via psutil)
-    - Implemented get_macos_temperature() (sudo powermetrics --samplers thermal)
-    - Updated _default_temp_provider() to use get_macos_temperature()
+- ✅ **Hardware Monitoring Enhancement COMPLETE (2025-12-12)**
+  - ✅ Task A: Hardware monitoring provider (commit c39753b)
+    - psutil + powermetrics for CPU/mem/temp
     - 10 new tests, 327 total tests passing
-  - ⏳ Task B PENDING: Update HPO template to use ThermalCallback
-  - ⏳ Task C PENDING: Add pre-flight + periodic logging to runner
-- 🔜 **Next: Complete Tasks B & C, then run full HPO experiments**
+  - ✅ Task B: HPO template thermal callback (commit b1ed2bc)
+    - ThermalCallback in generated scripts
+    - Pauses on warning, stops on critical
+    - 5 new tests, 332 total tests passing
+  - ✅ Task C: Runner pre-flight + monitoring (commit 81205e5)
+    - Pre-flight checks (MPS, memory, data file)
+    - Background hardware monitor (5-min CSV logging)
+    - Trap handler for cleanup
+- 🔄 **HPO Experiments Running (2025-12-12)**
+  - First experiment (2M, h=1) in progress: 14/50 trials
+  - Best val_loss so far: 0.337 (Trial 10)
+  - Early finding: Deep narrow archs (d=64, L=48) winning
+- 📝 **Future Research Backlog**
+  - Variable-width transformer architectures (user suggestion)
+  - Funnel/hourglass/bottleneck designs
+  - Deferred to Phase 6B or 6C
 
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)

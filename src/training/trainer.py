@@ -312,8 +312,11 @@ class Trainer:
 
         raise RuntimeError("Dataloader is empty")
 
-    def train(self) -> dict[str, Any]:
+    def train(self, verbose: bool = False) -> dict[str, Any]:
         """Run training loop.
+
+        Args:
+            verbose: If True, capture per-epoch learning curves.
 
         Returns:
             Dictionary with training results:
@@ -321,6 +324,9 @@ class Trainer:
             - val_loss: Final validation loss (None if no splits provided)
             - stopped_early: Whether training stopped early
             - stop_reason: Reason for early stop (if applicable)
+            - learning_curve: List of (epoch, train_loss, val_loss) if verbose
+            - final_metrics: Detailed metrics with confusion matrix if verbose
+            - split_stats: Data split statistics if splits provided
         """
         # Log config to trackers
         if self.tracking_manager:
@@ -342,6 +348,7 @@ class Trainer:
         stop_reason = None
         epoch_loss = 0.0
         val_loss: float | None = None
+        learning_curve: list[dict[str, Any]] = []
 
         try:
             for epoch in range(self.epochs):
@@ -361,6 +368,14 @@ class Trainer:
                             "val_loss", val_loss, step=epoch
                         )
 
+                # Capture learning curve if verbose
+                if verbose:
+                    learning_curve.append({
+                        "epoch": epoch,
+                        "train_loss": epoch_loss,
+                        "val_loss": val_loss,
+                    })
+
                 # Check thermal status
                 if self.thermal_callback:
                     status = self.thermal_callback.check()
@@ -376,12 +391,36 @@ class Trainer:
             if self.tracking_manager:
                 self.tracking_manager.finish()
 
-        return {
+        result: dict[str, Any] = {
             "train_loss": epoch_loss,
             "val_loss": val_loss,
             "stopped_early": stopped_early,
             "stop_reason": stop_reason,
         }
+
+        # Add verbose outputs
+        if verbose:
+            result["learning_curve"] = learning_curve
+
+            # Compute detailed final metrics with confusion matrix
+            train_metrics = self._evaluate_detailed(self.train_dataloader)
+            result["train_accuracy"] = train_metrics.get("accuracy")
+            result["train_confusion"] = train_metrics.get("confusion_matrix")
+
+            if self.val_dataloader is not None:
+                val_metrics = self._evaluate_detailed(self.val_dataloader)
+                result["val_accuracy"] = val_metrics.get("accuracy")
+                result["val_confusion"] = val_metrics.get("confusion_matrix")
+
+            # Add split statistics
+            if self.split_indices is not None:
+                result["split_stats"] = {
+                    "n_train": len(self.split_indices.train_indices),
+                    "n_val": len(self.split_indices.val_indices),
+                    "n_test": len(self.split_indices.test_indices),
+                }
+
+        return result
 
     def _train_epoch(self, epoch: int) -> float:
         """Train for one epoch.
@@ -427,14 +466,34 @@ class Trainer:
         Returns:
             Average validation loss.
         """
-        assert self.val_dataloader is not None, "val_dataloader must be set"
+        metrics = self._evaluate_detailed(self.val_dataloader)
+        return metrics["loss"]
+
+    def _evaluate_detailed(
+        self,
+        dataloader: DataLoader | None,
+        threshold: float = 0.5,
+    ) -> dict[str, Any]:
+        """Evaluate model with detailed metrics.
+
+        Args:
+            dataloader: DataLoader to evaluate on.
+            threshold: Classification threshold for binary predictions.
+
+        Returns:
+            Dictionary with loss, accuracy, and confusion matrix components.
+        """
+        if dataloader is None:
+            return {"loss": 0.0, "accuracy": 0.0}
 
         self.model.eval()
         total_loss = 0.0
         num_batches = 0
+        all_preds = []
+        all_targets = []
 
         with torch.no_grad():
-            for batch_x, batch_y in self.val_dataloader:
+            for batch_x, batch_y in dataloader:
                 # Move to device
                 batch_x = batch_x.to(self.device)
                 batch_y = batch_y.to(self.device)
@@ -446,10 +505,45 @@ class Trainer:
                 total_loss += loss.item()
                 num_batches += 1
 
+                # Collect predictions for confusion matrix
+                all_preds.append(outputs.cpu().numpy())
+                all_targets.append(batch_y.cpu().numpy())
+
         # Switch back to training mode
         self.model.train()
 
-        return total_loss / max(num_batches, 1)
+        # Compute metrics
+        avg_loss = total_loss / max(num_batches, 1)
+
+        if all_preds:
+            preds = np.concatenate(all_preds).flatten()
+            targets = np.concatenate(all_targets).flatten()
+
+            # Binary predictions
+            pred_binary = (preds >= threshold).astype(int)
+            target_binary = targets.astype(int)
+
+            # Confusion matrix components
+            tp = int(np.sum((pred_binary == 1) & (target_binary == 1)))
+            tn = int(np.sum((pred_binary == 0) & (target_binary == 0)))
+            fp = int(np.sum((pred_binary == 1) & (target_binary == 0)))
+            fn = int(np.sum((pred_binary == 0) & (target_binary == 1)))
+
+            accuracy = (tp + tn) / max(tp + tn + fp + fn, 1)
+
+            return {
+                "loss": avg_loss,
+                "accuracy": accuracy,
+                "confusion_matrix": {
+                    "tp": tp,
+                    "tn": tn,
+                    "fp": fp,
+                    "fn": fn,
+                },
+                "n_samples": len(preds),
+            }
+
+        return {"loss": avg_loss, "accuracy": 0.0}
 
     def _save_checkpoint(self, epoch: int) -> None:
         """Save model checkpoint.

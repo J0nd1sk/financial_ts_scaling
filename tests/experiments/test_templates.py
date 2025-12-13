@@ -265,8 +265,8 @@ class TestGenerateHpoScriptThermal:
         assert "thermal_callback.check()" in script
 
     def test_hpo_script_passes_callbacks_to_optimize(self, hpo_params):
-        """Test that script passes thermal callback to study.optimize()."""
+        """Test that script passes thermal and incremental logging callbacks to study.optimize()."""
         script = generate_hpo_script(**hpo_params)
 
-        # Should pass callbacks to optimize
-        assert "callbacks=[thermal_check_callback]" in script
+        # Should pass both thermal and incremental logging callbacks to optimize
+        assert "callbacks=[thermal_check_callback, incremental_logging_callback]" in script

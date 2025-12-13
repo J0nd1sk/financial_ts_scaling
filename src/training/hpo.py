@@ -135,6 +135,7 @@ def create_architectural_objective(
     training_search_space: dict,
     split_indices: SplitIndices | None = None,
     num_features: int | None = None,
+    verbose: bool = False,
 ) -> Callable[[optuna.Trial], float]:
     """Create Optuna objective function for architectural HPO.
 
@@ -148,6 +149,7 @@ def create_architectural_objective(
         training_search_space: Dict defining training parameter ranges
         split_indices: Optional SplitIndices for train/val/test splits
         num_features: Number of input features (required for model config)
+        verbose: If True, capture and store detailed metrics per trial
 
     Returns:
         Objective function for study.optimize()
@@ -226,7 +228,22 @@ def create_architectural_objective(
                 split_indices=split_indices,
             )
 
-            result = trainer.train()
+            result = trainer.train(verbose=verbose)
+
+        # Store detailed metrics in trial user_attrs if verbose
+        if verbose:
+            trial.set_user_attr("architecture", arch)
+            trial.set_user_attr("training_params", sampled_params)
+            if result.get("learning_curve"):
+                trial.set_user_attr("learning_curve", result["learning_curve"])
+            if result.get("val_accuracy") is not None:
+                trial.set_user_attr("val_accuracy", result["val_accuracy"])
+            if result.get("val_confusion"):
+                trial.set_user_attr("val_confusion", result["val_confusion"])
+            if result.get("train_accuracy") is not None:
+                trial.set_user_attr("train_accuracy", result["train_accuracy"])
+            if result.get("split_stats"):
+                trial.set_user_attr("split_stats", result["split_stats"])
 
         # Return val_loss if splits provided, otherwise train_loss
         if split_indices is not None:
@@ -318,6 +335,189 @@ def create_objective(
         return result["train_loss"]
 
     return objective
+
+
+def save_trial_result(
+    trial: optuna.trial.FrozenTrial,
+    output_dir: Path | str,
+    architectures: list[dict] | None = None,
+) -> Path:
+    """Save individual trial result to JSON file.
+
+    Called after each trial completes for incremental logging.
+
+    Args:
+        trial: Completed Optuna trial
+        output_dir: Directory to save results
+        architectures: Optional list of architecture dicts
+
+    Returns:
+        Path to saved JSON file
+    """
+    output_dir = Path(output_dir)
+    trials_dir = output_dir / "trials"
+    trials_dir.mkdir(parents=True, exist_ok=True)
+
+    # Build trial data
+    trial_data: dict[str, Any] = {
+        "trial_number": trial.number,
+        "value": trial.value,
+        "params": trial.params,
+        "state": trial.state.name,
+        "datetime_start": trial.datetime_start.isoformat() if trial.datetime_start else None,
+        "datetime_complete": trial.datetime_complete.isoformat() if trial.datetime_complete else None,
+        "duration_seconds": trial.duration.total_seconds() if trial.duration else None,
+    }
+
+    # Include architecture if available
+    if architectures is not None and "arch_idx" in trial.params:
+        arch_idx = trial.params["arch_idx"]
+        if arch_idx < len(architectures):
+            trial_data["architecture"] = architectures[arch_idx]
+
+    # Include user_attrs (verbose data: learning_curve, confusion matrix, etc.)
+    if trial.user_attrs:
+        trial_data["user_attrs"] = trial.user_attrs
+
+    # Save to individual trial file
+    trial_path = trials_dir / f"trial_{trial.number:04d}.json"
+    with open(trial_path, "w") as f:
+        json.dump(trial_data, f, indent=2)
+
+    return trial_path
+
+
+def update_best_params(
+    study: optuna.Study,
+    experiment_name: str,
+    budget: str,
+    output_dir: Path | str,
+    architectures: list[dict] | None = None,
+) -> Path:
+    """Update best parameters file after each trial.
+
+    Called incrementally so current best is always saved to disk.
+
+    Args:
+        study: Optuna study (may still be running)
+        experiment_name: Name of the experiment
+        budget: Parameter budget
+        output_dir: Directory to save results
+        architectures: Optional list of architecture dicts
+
+    Returns:
+        Path to saved JSON file
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if not study.best_trial:
+        # No completed trials yet
+        return output_dir / f"{experiment_name}_{budget}_best.json"
+
+    # Count trial states
+    n_complete = sum(1 for t in study.trials if t.state.name == "COMPLETE")
+    n_pruned = sum(1 for t in study.trials if t.state.name == "PRUNED")
+    n_running = sum(1 for t in study.trials if t.state.name == "RUNNING")
+
+    result: dict[str, Any] = {
+        "experiment": experiment_name,
+        "budget": budget,
+        "best_params": study.best_params,
+        "best_value": study.best_value,
+        "best_trial_number": study.best_trial.number,
+        "n_trials_completed": n_complete,
+        "n_trials_pruned": n_pruned,
+        "n_trials_running": n_running,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "study_name": study.study_name,
+        "optuna_version": optuna.__version__,
+    }
+
+    # Include architecture info if available
+    if architectures is not None and "arch_idx" in study.best_params:
+        arch_idx = study.best_params["arch_idx"]
+        if arch_idx < len(architectures):
+            result["architecture"] = architectures[arch_idx]
+
+    output_path = output_dir / f"{experiment_name}_{budget}_best.json"
+    with open(output_path, "w") as f:
+        json.dump(result, f, indent=2)
+
+    return output_path
+
+
+def save_all_trials(
+    study: optuna.Study,
+    experiment_name: str,
+    budget: str,
+    output_dir: Path | str,
+    architectures: list[dict] | None = None,
+) -> Path:
+    """Save summary of all trials to a single JSON file.
+
+    Called after each trial for incremental updates.
+
+    Args:
+        study: Optuna study
+        experiment_name: Name of the experiment
+        budget: Parameter budget
+        output_dir: Directory to save results
+        architectures: Optional list of architecture dicts
+
+    Returns:
+        Path to saved JSON file
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    trials_summary = []
+    for trial in study.trials:
+        if trial.state.name != "COMPLETE":
+            continue
+
+        trial_info: dict[str, Any] = {
+            "trial_number": trial.number,
+            "value": trial.value,
+            "params": trial.params,
+            "duration_seconds": trial.duration.total_seconds() if trial.duration else None,
+        }
+
+        # Include architecture
+        if architectures is not None and "arch_idx" in trial.params:
+            arch_idx = trial.params["arch_idx"]
+            if arch_idx < len(architectures):
+                arch = architectures[arch_idx]
+                trial_info["d_model"] = arch.get("d_model")
+                trial_info["n_layers"] = arch.get("n_layers")
+                trial_info["n_heads"] = arch.get("n_heads")
+                trial_info["param_count"] = arch.get("param_count")
+
+        # Include key metrics from user_attrs
+        if trial.user_attrs:
+            if "val_accuracy" in trial.user_attrs:
+                trial_info["val_accuracy"] = trial.user_attrs["val_accuracy"]
+            if "train_accuracy" in trial.user_attrs:
+                trial_info["train_accuracy"] = trial.user_attrs["train_accuracy"]
+
+        trials_summary.append(trial_info)
+
+    # Sort by value (val_loss)
+    trials_summary.sort(key=lambda x: x["value"] if x["value"] is not None else float("inf"))
+
+    result = {
+        "experiment": experiment_name,
+        "budget": budget,
+        "n_trials": len(trials_summary),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "trials": trials_summary,
+    }
+
+    output_path = output_dir / f"{experiment_name}_all_trials.json"
+    with open(output_path, "w") as f:
+        json.dump(result, f, indent=2)
+
+    return output_path
 
 
 def save_best_params(

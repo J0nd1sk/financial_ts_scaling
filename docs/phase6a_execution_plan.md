@@ -104,11 +104,11 @@ sudo powermetrics --samplers smc -i 1000 -n 1 | grep -i temp
 cat docs/experiment_results.csv | column -t -s,
 
 # Check for completed experiments
-ls -la outputs/hpo/phase6a_*/best_params.json
+ls -la outputs/hpo/phase6a_*/*_best.json
 
 # Compare hyperparameters across horizons (after Stage 2)
-for f in outputs/hpo/phase6a_2M_threshold_1pct*/best_params.json; do
-  echo "=== $f ===" && cat "$f" | jq '.best_params'
+for f in outputs/hpo/phase6a_*/*_best.json; do
+  echo "=== $f ===" && cat "$f" | jq '{best_params, architecture}'
 done
 ```
 
@@ -116,7 +116,7 @@ done
 
 | Type | Path |
 |------|------|
-| HPO Best Params | `outputs/hpo/phase6a_{budget}_{task}_{horizon}/best_params.json` |
+| HPO Best Params | `outputs/hpo/phase6a_{budget}_h{horizon}_{task}/{experiment}_{budget}_best.json` |
 | HPO Study DB | `outputs/hpo/phase6a_{budget}_{task}_{horizon}/study.db` |
 | Training Checkpoints | `outputs/training/phase6a_{budget}_{task}_{horizon}/` |
 | Experiment Log | `docs/experiment_results.csv` |

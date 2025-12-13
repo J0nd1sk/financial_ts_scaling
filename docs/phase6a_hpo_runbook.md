@@ -146,7 +146,7 @@ Starting HPO: 50 trials, 28 architectures...
 ✓ HPO complete in 42.3 min
   Best val_loss: 0.4102
   Best arch: d_model=128, n_layers=8, params=1,847,000
-  Results saved to: outputs/hpo/phase6a_2M_h1_threshold_1pct/best_params.json
+  Results saved to: outputs/hpo/phase6a_2M_h1_threshold_1pct_2M_best.json
 ```
 
 **Key things to watch:**
@@ -196,7 +196,7 @@ grep "phase6a_2M_h1" docs/experiment_results.csv
 ls -la outputs/hpo/
 
 # View best params for specific experiment
-cat outputs/hpo/phase6a_2M_h1_threshold_1pct/best_params.json
+cat outputs/hpo/phase6a_2M_h1_threshold_1pct/phase6a_2M_h1_threshold_1pct_2M_best.json
 ```
 
 ---
@@ -226,7 +226,7 @@ results = {}
 for budget in ['2M', '20M', '200M', '2B']:
     for horizon in [1, 3, 5]:
         exp = f"phase6a_{budget}_h{horizon}_threshold_1pct"
-        path = Path(f"outputs/hpo/{exp}/best_params.json")
+        path = Path(f"outputs/hpo/{exp}/{exp}_{budget}_best.json")
         if path.exists():
             with open(path) as f:
                 results[exp] = json.load(f)
@@ -381,7 +381,7 @@ Scripts use in-memory Optuna storage, so interrupted runs lose progress. For lon
 
 ```
 outputs/hpo/{experiment}/
-└── best_params.json    # Best architecture + hyperparameters found
+└── {experiment}_{budget}_best.json    # Best architecture + hyperparameters found
 ```
 
 ### Aggregated
@@ -390,32 +390,35 @@ outputs/hpo/{experiment}/
 docs/experiment_results.csv   # All runs with metadata (includes architecture columns)
 ```
 
-### best_params.json Format
+### Result JSON Format
 
-The output now includes separate `architecture` and `training` sections:
+Output filename: `{experiment}_{budget}_best.json`
 
 ```json
 {
   "experiment": "phase6a_2M_h1_threshold_1pct",
-  "architecture": {
-    "d_model": 128,
-    "n_layers": 8,
-    "n_heads": 4,
-    "d_ff": 512,
-    "patch_len": 10,
-    "stride": 5
-  },
-  "training": {
-    "learning_rate": 0.0003,
-    "epochs": 75,
-    "batch_size": 128,
-    "weight_decay": 0.0001,
+  "budget": "2M",
+  "best_params": {
+    "arch_idx": 57,
+    "learning_rate": 0.0001,
+    "epochs": 50,
+    "batch_size": 32,
+    "weight_decay": 0.0002,
     "warmup_steps": 200
   },
-  "param_count": 1847000,
-  "best_val_loss": 0.4102,
-  "n_trials": 50,
-  "timestamp": "2025-12-12T10:57:00.000000+00:00"
+  "best_value": 0.337,
+  "n_trials_completed": 50,
+  "n_trials_pruned": 0,
+  "timestamp": "2025-12-13T03:51:46.140871+00:00",
+  "study_name": "phase6a_2M_h1_threshold_1pct_2M",
+  "optuna_version": "4.6.0",
+  "architecture": {
+    "d_model": 64,
+    "n_layers": 48,
+    "n_heads": 8,
+    "d_ff": 256,
+    "param_count": 2414273
+  }
 }
 ```
 

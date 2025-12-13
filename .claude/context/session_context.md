@@ -1,25 +1,28 @@
-# Session Handoff - 2025-12-12 16:45
+# Session Handoff - 2025-12-12 22:40
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `1a8b949` docs: session handoff - Phase 6A Task 8 complete
-- **Uncommitted**: 3 files (+180 lines) - **NEEDS COMMIT**
+- **Last commit**: `81205e5` feat: add pre-flight checks and hardware monitoring to HPO runner (Task C)
+- **Uncommitted**: Enhanced HPO logging (templates, hpo.py, trial_logger.py, test updates, regenerated scripts)
 - **Pushed**: No (uncommitted changes pending)
 
 ### Project Phase
 - **Phase 6A**: Parameter Scaling - IN PROGRESS
-- **Hardware Monitoring**: Task A COMPLETE, Tasks B & C pending
+- **Hardware Monitoring**: ALL 3 TASKS COMPLETE
 
-### Task Status
-- **Working on**: Hardware monitoring improvements (3-task plan)
-- **Status**: Task A COMPLETE, ready for Task B
+### Experiments Running
+- **Status**: HPO experiments actively running in tmux
+- **Progress**:
+  - Experiment 1 (2M_h1): COMPLETE - 50/50 trials, best val_loss=0.337
+  - Experiment 2 (2M_h3): COMPLETE - 50/50 trials, best val_loss=0.262
+  - Experiment 3 (2M_h5): IN PROGRESS - ~10/50 trials, best val_loss=0.328
 
 ---
 
 ## Test Status
-- **Last `make test`**: PASS (327 tests) at ~16:40
+- **Last `make test`**: PASS (332 tests) at ~22:35
 - **Failing**: none
 
 ---
@@ -27,123 +30,165 @@
 ## Completed This Session
 
 1. **Session restore** - Loaded context from previous handoff
-2. **Task A: Hardware monitoring provider** - COMPLETE
-   - Added `psutil>=7.0.0` to requirements.txt
-   - Implemented `get_hardware_stats()` - returns CPU%, memory% via psutil
-   - Implemented `get_macos_temperature()` - uses `sudo powermetrics --samplers thermal`
-   - Updated `_default_temp_provider()` to use `get_macos_temperature()`
-   - Added 10 new tests to test_thermal.py
-   - All 327 tests passing
+2. **Checked experiment progress** - h1 complete, h3 complete, h5 running
+3. **Cleaned up old JSON files** - Removed obsolete `best_params.json` files
+4. **Updated documentation** - Changed all references from `best_params.json` to `{experiment}_{budget}_best.json`
+5. **Enhanced HPO logging** - MAJOR FEATURE:
+   - Added `verbose=True` to trainer for detailed metrics (learning curves, confusion matrices)
+   - Created `src/experiments/trial_logger.py` with comprehensive study summary generation
+   - Added incremental per-trial logging to HPO (writes after each trial, not just at end)
+   - Regenerated all 12 HPO scripts with new logging
 
 ---
 
-## In Progress: Hardware Monitoring (3-Task Plan)
+## Enhanced HPO Logging (NEW)
 
-### Approved Plan Status
+### Incremental Logging (after each trial)
+After each trial completes, the HPO scripts now write:
 
-| Task | Description | Status |
-|------|-------------|--------|
-| **A** | Add psutil + implement real temp provider | ✅ COMPLETE |
-| **B** | Update HPO template to use ThermalCallback | PENDING |
-| **C** | Add pre-flight + periodic logging to runner | PENDING |
+1. **`trials/trial_NNNN.json`** - Individual trial file with:
+   - Trial number, value (val_loss), params
+   - Start/end timestamps, duration
+   - Architecture details (d_model, n_layers, n_heads, d_ff, param_count)
+   - User attrs (learning curve, confusion matrix, accuracy - when verbose=True)
 
-### Task A Implementation Details (COMPLETE)
-- `get_hardware_stats()` → `{"cpu_percent": float, "memory_percent": float}` via psutil
-- `get_macos_temperature()` → Uses `sudo -n powermetrics --samplers thermal -n 1`
-  - Returns highest temp found (CPU/GPU die)
-  - Returns -1.0 on any failure (graceful fallback)
-  - Uses `sudo -n` (non-interactive) - requires cached sudo credentials
+2. **`{experiment}_{budget}_best.json`** - Updated after EACH trial with:
+   - Current best params and value
+   - Best trial number
+   - Count of completed/pruned/running trials
+   - Architecture of current best
 
-### Task B Details (NEXT)
-**Objective**: Make HPO scripts use ThermalCallback
+3. **`{experiment}_all_trials.json`** - Summary of all completed trials:
+   - Sorted by val_loss
+   - Includes architecture info and key metrics
 
-**Files to modify**:
-- `src/experiments/templates.py` - add ThermalCallback to generated scripts
-- Regenerate all 12 HPO scripts
+### End-of-Study Summary
+4. **`{experiment}_study_summary.json`** + **`{experiment}_study_summary.md`**:
+   - All trials table with sortable metrics
+   - Architecture analysis (by d_model, by n_layers)
+   - Training parameter sensitivity (correlation analysis)
+   - Loss distribution (min, max, mean, std, quartiles)
+   - Best trial confusion matrix with precision/recall/F1
 
-**Key approach**:
-- Import ThermalCallback in generated script
-- Check temperature between trials
-- Pause/abort if thresholds exceeded
+### New Functions in `src/training/hpo.py`
+- `save_trial_result()` - Save individual trial JSON
+- `update_best_params()` - Update best params after each trial
+- `save_all_trials()` - Update all trials summary
 
-### Task C Details (Pending)
-**Objective**: Add pre-flight checks and periodic logging to runner
-
-**Pre-flight checks**:
-- MPS available?
-- Temperature readable (sudo cached)?
-- Sufficient memory?
-
-**Periodic logging** (every 5 min):
-- CPU usage %
-- Memory usage %
-- Temperature (if available)
-
-**Files to modify**:
-- `scripts/run_phase6a_hpo.sh` - add preflight function, background monitor
+### New File: `src/experiments/trial_logger.py`
+- Dataclasses: `SplitStats`, `EpochMetrics`, `ConfusionMatrix`, `FinalMetrics`, `TrialResult`
+- `TrialLogger` class with `generate_study_summary()` method
+- Can extract data from Optuna study's `trial.user_attrs`
 
 ---
 
-## Files Modified This Session (UNCOMMITTED)
+## HPO Results So Far
+
+### Experiment 1: 2M_h1 (horizon=1 day) - COMPLETE
+- **Best val_loss**: 0.337
+- **Best architecture**: d_model=64, n_layers=48 (deep & narrow)
+- **Trend**: Deep, narrow transformers winning
+
+### Experiment 2: 2M_h3 (horizon=3 days) - COMPLETE
+- **Best val_loss**: 0.262 (better than h1!)
+- **Best architecture**: d_model=64, n_layers=32
+- **Best trial**: #49 with lr=0.000434, epochs=50, batch_size=64
+
+### Experiment 3: 2M_h5 (horizon=5 days) - IN PROGRESS
+- **Progress**: ~10/50 trials
+- **Best so far**: Trial 7 with val_loss=0.328
+- **NOTE**: Running with OLD script (no incremental logging)
+
+---
+
+## Files Modified This Session
 
 | File | Change |
 |------|--------|
-| `requirements.txt` | +3 lines: added psutil>=7.0.0 |
-| `src/training/thermal.py` | +63 lines: get_hardware_stats(), get_macos_temperature(), updated default provider |
-| `tests/test_thermal.py` | +114 lines: 10 new tests for hardware monitoring functions |
-
-**Total**: +180 lines across 3 files
+| `src/training/hpo.py` | +180 lines: save_trial_result, update_best_params, save_all_trials |
+| `src/training/trainer.py` | +50 lines: _evaluate_detailed, verbose mode |
+| `src/experiments/trial_logger.py` | NEW: 590 lines - comprehensive trial logging |
+| `src/experiments/templates.py` | +50 lines: incremental logging callback, OUTPUT_DIR |
+| `tests/experiments/test_templates.py` | Updated callback test |
+| `experiments/phase6a/hpo_*.py` | 12 scripts regenerated with incremental logging |
+| `docs/phase6a_hpo_runbook.md` | Updated JSON filename references |
+| `docs/phase6a_execution_plan.md` | Updated JSON filename references |
+| `docs/architectural_hpo_design.md` | Updated JSON filename references |
 
 ---
 
 ## Key Decisions
 
-1. **Temperature method**: `sudo powermetrics --samplers thermal` - requires sudo but works on M4 Mac
-2. **Graceful fallback**: Temperature returns -1.0 on failure, doesn't block training
-3. **psutil for CPU/memory**: Works without sudo, provides reliable utilization metrics
-4. **TDD approach**: Tests written first, all 10 new tests passing
+1. **Incremental logging**: Write trial data after EACH trial, not just at end (prevents data loss on crash)
+2. **Verbose training**: When `verbose=True`, trainer returns learning curves, confusion matrices, split stats
+3. **Old experiments**: h1 and h3 used old scripts (no detailed logging), h5 started before template update
+4. **Future experiments**: Starting with 20M_h1, all experiments will have full incremental logging
 
 ---
 
 ## Context for Next Session
 
-### Critical Understanding
+### Currently Running (h5)
+- Using OLD script (no incremental logging)
+- Will likely fail at the end when trying to generate study summary (wrong TrialLogger constructor)
+- BUT: All trial training data is still captured (val_loss, params saved by Optuna)
 
-**Task A is COMPLETE - ready to commit and proceed to Task B**
+### Experiments to Run Next
+After h5 completes, need to run:
+- 20M_h1, 20M_h3, 20M_h5
+- 200M_h1, 200M_h3, 200M_h5
+- 2B_h1, 2B_h3, 2B_h5
 
-The implementation provides:
-- `get_hardware_stats()` - always works (no sudo needed)
-- `get_macos_temperature()` - works if sudo cached, returns -1.0 otherwise
-- Default ThermalCallback now uses real temperature (or fails gracefully)
+All future experiments will use the new scripts with incremental logging.
 
-**To use temperature monitoring**, user should run `sudo -v` before starting experiments to cache sudo credentials.
+### Commands to Check Progress
+```bash
+# Check which experiment is running
+ps aux | grep hpo | grep -v grep
 
-### What Remains for Full Hardware Monitoring
-1. **Task B**: Update HPO template to create ThermalCallback and check temps between trials
-2. **Task C**: Add pre-flight checks and background monitoring to runner script
+# Check log tail
+tail -50 outputs/logs/phase6a_hpo_*.log
+
+# Check output directories
+ls -la outputs/hpo/
+
+# Check trial files (for experiments with new scripts)
+ls outputs/hpo/phase6a_*/trials/
+```
+
+---
+
+## Uncommitted Changes
+
+The following changes should be committed:
+```bash
+git add -A
+git commit -m "feat: add incremental HPO logging with per-trial persistence
+
+- Add save_trial_result(), update_best_params(), save_all_trials() to hpo.py
+- Add verbose mode to Trainer for learning curves and confusion matrices
+- Create trial_logger.py with comprehensive study summary generation
+- Update HPO template with incremental_logging_callback
+- Regenerate all 12 HPO scripts with incremental logging
+- Update documentation references to new JSON filename format"
+```
 
 ---
 
 ## Next Session Should
 
-1. **Commit Task A changes** (3 files, +180 lines)
-2. **Plan and implement Task B** - HPO template with ThermalCallback
-3. **Plan and implement Task C** - Runner pre-flight and periodic logging
-4. **Run experiments** once hardware monitoring is complete
+1. **Commit the changes** - Enhanced logging code is ready
+2. **Check h5 experiment** - May have completed or failed at summary step
+3. **Review h5 trial data** - Even if summary failed, trial data should be in Optuna
+4. **Start next batch** - 20M experiments with full incremental logging
+5. **Analyze early results** - Deep narrow architectures consistently winning
 
 ---
 
 ## Data Versions
-- **Raw manifest**: SPY, DIA, QQQ, DJI, IXIC, VIX OHLCV data (2025-12-10)
+- **Raw manifest**: SPY, DIA, QQQ, ^DJI, ^IXIC, ^VIX OHLCV data (2025-12-10)
 - **Processed manifest**: SPY_dataset_a25.parquet, DIA, QQQ, VIX features
 - **Pending registrations**: none
-
----
-
-## Memory Entities Updated This Session
-
-- `Task_A_Hardware_Monitoring_Plan` (created + updated): Planning and completion of hardware monitoring provider
-- `Hardware_Monitoring_Plan` (from previous session): Original 3-task plan
 
 ---
 
@@ -153,40 +198,11 @@ The implementation provides:
 source venv/bin/activate
 make test
 git status
-make verify
+git diff --stat
 
-# To commit Task A:
-git add -A
-git commit -m "feat: add hardware monitoring provider (psutil + powermetrics)"
-git push
+# Check experiment progress
+tail -20 outputs/logs/phase6a_hpo_*.log
+
+# View output files
+ls -la outputs/hpo/phase6a_*/
 ```
-
----
-
-## Quick Reference
-
-### Temperature Reading (requires sudo)
-```bash
-# Cache sudo credentials first
-sudo -v
-
-# Test temperature reading
-./venv/bin/python3 -c "from src.training.thermal import get_macos_temperature; print(get_macos_temperature())"
-
-# Test hardware stats (no sudo needed)
-./venv/bin/python3 -c "from src.training.thermal import get_hardware_stats; print(get_hardware_stats())"
-```
-
-### Run All Experiments (current state)
-```bash
-tmux new -s hpo
-./scripts/run_phase6a_hpo.sh
-# Ctrl+B, D to detach
-```
-
-### Estimated Runtime
-- 2M: ~2.5 hrs
-- 20M: ~8 hrs
-- 200M: ~30 hrs
-- 2B: ~100+ hrs
-- **Total: ~150-200 hours**
