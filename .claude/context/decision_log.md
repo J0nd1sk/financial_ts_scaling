@@ -480,3 +480,37 @@ Task 3 expanded into 3 sub-tasks:
 - Discards 63 trials of partial work
 - Gains access to deeper architectures (L=64, 96, 128) for 20M budget
 - Total HPO queue: 20M_h5 → 200M (3) → 2B (3) → 20M_h1 → 20M_h3
+
+## 2025-12-13 HPO Architecture Search Fixes
+
+**Context**: Audit of past HPO runs revealed several issues:
+1. n_heads not in log message (can't recover from logs)
+2. n_layers grid gap: L=128 → L=192 misses valid 20M architectures (max L=188)
+3. No forced extreme testing (random sampling misses extremes)
+4. 2M_h5 had script error (TrialLogger bug)
+
+**Decision**: Implement 6-task fix plan before running 200M/2B experiments.
+
+**Changes Planned**:
+1. Add n_layers [160, 180] to arch_grid.py (covers 20M gap)
+2. Add n_heads to trial log message in templates.py
+3. Add forced extreme testing (first 6 trials test min/max of d_model, n_layers, n_heads)
+4. Update recover_trial_data.py regex for n_heads
+5. Regenerate 9 HPO scripts (200M×3, 2B×3, 20M×3)
+6. Document supplemental test plan for gaps
+
+**Key Design - Extreme Testing**:
+- When testing d_model extremes: use middle n_heads (h=8), middle n_layers
+- When testing n_layers extremes: use middle n_heads (h=8), middle d_model
+- When testing n_heads extremes: use middle d_model, middle n_layers
+
+**h=64 Analysis**: NOT reasonable - d_head would be 1-4 for most d_model values (BERT/GPT use d_head=64)
+
+**Supplemental Tests**: ~20-25 targeted trials to fill gaps in completed experiments, not full 50-trial re-runs
+
+**Plan Document**: `docs/hpo_fixes_plan.md`
+
+**Implications**:
+- Future HPO scripts will force-test extremes first
+- 20M grid will include L=160, 180 (in addition to 128)
+- Supplemental tests needed for 2M (L=64 gap) and 20M_h5 (new L values)

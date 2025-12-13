@@ -15,7 +15,15 @@ from datetime import datetime
 from collections import defaultdict
 
 # Regex patterns for parsing log lines
-TRIAL_START_PATTERN = re.compile(
+# New format (with n_heads): Trial N: arch_idx=X, d_model=X, n_layers=X, n_heads=X, params=X, ...
+TRIAL_START_PATTERN_NEW = re.compile(
+    r'\[I (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d+)\] '
+    r'Trial (\d+): arch_idx=(\d+), d_model=(\d+), n_layers=(\d+), n_heads=(\d+), params=([\d,]+), '
+    r'lr=([\d.e-]+), epochs=(\d+), batch_size=(\d+)'
+)
+
+# Old format (without n_heads): Trial N: arch_idx=X, d_model=X, n_layers=X, params=X, ...
+TRIAL_START_PATTERN_OLD = re.compile(
     r'\[I (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d+)\] '
     r'Trial (\d+): arch_idx=(\d+), d_model=(\d+), n_layers=(\d+), params=([\d,]+), '
     r'lr=([\d.e-]+), epochs=(\d+), batch_size=(\d+)'
@@ -81,8 +89,8 @@ def parse_log_file(log_path: Path) -> dict:
             if not current_experiment:
                 continue
 
-            # Check for trial start
-            trial_start = TRIAL_START_PATTERN.search(line)
+            # Check for trial start (try new format first, then old)
+            trial_start = TRIAL_START_PATTERN_NEW.search(line)
             if trial_start:
                 timestamp = trial_start.group(1)
                 trial_num = int(trial_start.group(2))
@@ -91,6 +99,25 @@ def parse_log_file(log_path: Path) -> dict:
                     'arch_idx': int(trial_start.group(3)),
                     'd_model': int(trial_start.group(4)),
                     'n_layers': int(trial_start.group(5)),
+                    'n_heads': int(trial_start.group(6)),
+                    'param_count': int(trial_start.group(7).replace(',', '')),
+                    'lr': float(trial_start.group(8)),
+                    'epochs': int(trial_start.group(9)),
+                    'batch_size': int(trial_start.group(10)),
+                }
+                continue
+
+            # Fallback to old format (without n_heads)
+            trial_start = TRIAL_START_PATTERN_OLD.search(line)
+            if trial_start:
+                timestamp = trial_start.group(1)
+                trial_num = int(trial_start.group(2))
+                pending_trials[trial_num] = {
+                    'start_time': timestamp,
+                    'arch_idx': int(trial_start.group(3)),
+                    'd_model': int(trial_start.group(4)),
+                    'n_layers': int(trial_start.group(5)),
+                    'n_heads': None,  # Not available in old format
                     'param_count': int(trial_start.group(6).replace(',', '')),
                     'lr': float(trial_start.group(7)),
                     'epochs': int(trial_start.group(8)),

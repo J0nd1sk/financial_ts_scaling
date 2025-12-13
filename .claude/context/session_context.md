@@ -1,21 +1,20 @@
-# Session Handoff - 2025-12-13 11:15
+# Session Handoff - 2025-12-13 14:30
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `08579e3` feat: expand architecture grid to L=256 and remove all timeouts
-- **Uncommitted**: none (clean working tree)
-- **Pushed**: Yes
+- **Last commit**: `0d3747e` docs: add timeout and 20M re-run decisions to decision log
+- **Uncommitted**: `docs/hpo_fixes_plan.md` (new file)
 
 ### Project Phase
 - **Phase 6A**: Parameter Scaling - IN PROGRESS
-- **HPO Experiments**: 20M_h5 currently running (~19/50 trials)
+- **HPO Experiments**: 20M_h5 at 48/50 trials (almost complete)
 
 ---
 
 ## Test Status
-- **Last `make test`**: PASS (333 tests) at ~10:45
+- **Last `make test`**: PASS (333 tests) at session start
 - **Failing**: none
 
 ---
@@ -23,69 +22,57 @@
 ## Completed This Session
 
 1. **Session restore** from previous handoff
-2. **Verified no timeouts anywhere**:
-   - Fixed `run_hpo()` default: `timeout_hours: float | None = None`
-   - Fixed `run_hpo_experiment()` default: `timeout_hours: float | None = None`
-   - Fixed arithmetic: `timeout_hours * 3600 if timeout_hours else None`
-   - Added test `test_run_hpo_default_no_timeout`
-3. **Committed and pushed** all changes (22 files):
-   - Architecture grid expansion to L=256
-   - All timeout removals
-   - 12 regenerated HPO scripts
-   - New test for None timeout
-4. **Verified 2M experiment data**:
-   - Compared logs to output files
-   - All 3 experiments (h1, h3, h5) match exactly: 50 trials each
-5. **Decided on 20M_h1/h3 re-run strategy**:
-   - User chose Option C: Re-run from scratch with new scripts
-   - Timing: AFTER all other HPO runs complete
-   - Rationale: New scripts have L=128 max (old had L=48)
+2. **Investigated n_heads logging bug**:
+   - Root cause: `recover_trial_data.py` parses logs that don't include n_heads
+   - Log message format doesn't include n_heads field
+   - Affects all 2M experiments and 20M_h1
+3. **Identified 2M_h5 error**: `TrialLogger.__init__() got an unexpected keyword argument 'budget'`
+4. **Analyzed h=64 feasibility**: NOT reasonable (d_head too small for most architectures)
+5. **Comprehensive HPO audit**:
+   - All 2M: n_heads missing, L=64 not tested
+   - 20M_h1/h3: incomplete (31/32 trials), extremes not tested
+   - 20M_h5: good coverage, almost complete
+6. **Identified n_layers gap**: Grid has L=128, 192 but 20M supports up to L=188
+7. **Created detailed fix plan**: `docs/hpo_fixes_plan.md`
 
 ---
 
 ## Experiment Status
 
-| Experiment | Trials | Status | Best val_loss |
-|------------|--------|--------|---------------|
-| 2M_h1 | 50/50 | ✅ Complete | 0.3369 |
-| 2M_h3 | 50/50 | ✅ Complete | 0.2623 |
-| 2M_h5 | 50/50 | ✅ Complete | 0.3285 |
-| 20M_h1 | 31/50 | ⚠️ Will re-run | 0.3631 |
-| 20M_h3 | 32/50 | ⚠️ Will re-run | 0.2738 |
-| 20M_h5 | ~19/50 | 🔄 Running | 0.3524 |
-| 200M_h1 | 0/50 | ⏸️ Queued | - |
-| 200M_h3 | 0/50 | ⏸️ Queued | - |
-| 200M_h5 | 0/50 | ⏸️ Queued | - |
-| 2B_h1 | 0/50 | ⏸️ Queued | - |
-| 2B_h3 | 0/50 | ⏸️ Queued | - |
-| 2B_h5 | 0/50 | ⏸️ Queued | - |
-
-### Key Finding from 2M Experiments
-- Deep narrow architectures win: d=64, L=32-48
-- Best: 2M_h3 with val_loss=0.2623 (d=64, L=32, h=32)
+| Experiment | Trials | Status | Issues |
+|------------|--------|--------|--------|
+| 2M_h1 | 50/50 | Complete | n_heads missing, L=64 gap |
+| 2M_h3 | 50/50 | Complete | n_heads missing, L=64 gap |
+| 2M_h5 | 50/50 | Complete | n_heads missing, L=64 gap, script error |
+| 20M_h1 | 31/50 | Incomplete | timeout, will re-run |
+| 20M_h3 | 32/50 | Incomplete | timeout, will re-run |
+| 20M_h5 | 48/50 | Running | L=160,180 not in grid |
+| 200M_* | 0/50 | Queued | - |
+| 2B_* | 0/50 | Queued | - |
 
 ---
 
 ## In Progress
 
-- **20M_h5 HPO**: Running in terminal, ~19/50 trials complete
-  - Using NEW script with no timeout and expanded architecture grid (L=128 max)
-  - Should complete on its own
+- **20M_h5 HPO**: Running in terminal, 48/50 trials complete (~2 more to go)
+- **HPO fixes plan**: Documented, awaiting execution
 
 ---
 
-## Pending / Next Steps
+## Pending - HPO Fixes (6 Tasks)
 
-1. **Monitor 20M_h5**: Let it complete (~31 more trials)
-2. **Run 200M experiments**: After 20M_h5 completes
-   - `experiments/phase6a/hpo_200M_h1_threshold_1pct.py`
-   - `experiments/phase6a/hpo_200M_h3_threshold_1pct.py`
-   - `experiments/phase6a/hpo_200M_h5_threshold_1pct.py`
-3. **Run 2B experiments**: After 200M completes
-4. **RE-RUN 20M_h1 and 20M_h3**: AFTER all other HPO runs complete
-   - User decision: Option C (fresh runs with new scripts)
-   - New scripts have L=128 max (old had L=48 max)
-   - This tests deeper architectures at 20M scale
+**Plan Document**: `docs/hpo_fixes_plan.md`
+
+| Task | Description | Est. Time |
+|------|-------------|-----------|
+| 1 | Expand n_layers: add [160, 180] to arch_grid.py | 5 min |
+| 2 | Add n_heads to log message in templates.py | 5 min |
+| 3 | Add forced extreme testing (first 6 trials) | 20 min |
+| 4 | Update recover_trial_data.py regex | 10 min |
+| 5 | Regenerate 9 HPO scripts (200M, 2B, 20M re-runs) | 5 min |
+| 6 | Document supplemental test plan | 10 min |
+
+**Execution order**: 1 → 2 → 3 → 4 → `make test` → 5 → 6 → commit
 
 ---
 
@@ -93,22 +80,50 @@
 
 | File | Change |
 |------|--------|
-| `src/training/hpo.py` | Changed timeout_hours default to None, fixed arithmetic |
-| `src/experiments/runner.py` | Changed timeout_hours default to None |
-| `tests/test_hpo.py` | Added test_run_hpo_default_no_timeout |
+| `docs/hpo_fixes_plan.md` | Created - detailed fix plan |
 
 ---
 
 ## Key Decisions
 
-1. **No timeouts ever**: All timeout defaults changed from 4.0 to None
-   - `run_hpo()`, `run_hpo_experiment()`, and all generated scripts
+1. **h=64 not reasonable**: d_head would be 1-4 for most d_model values (too small)
+2. **Add L=160, 180 to grid**: Covers 20M gap (max L=188 with d=128)
+3. **Force extreme testing**: First 6 trials test min/max of d_model, n_layers, n_heads
+4. **Supplemental tests not full re-runs**: ~20-25 targeted trials to fill gaps
 
-2. **Re-run 20M_h1/h3 from scratch (Option C)**:
-   - Old runs used architecture grid with max L=48
-   - New scripts have L=128 max for 20M budget
-   - Important for testing if deeper architectures help at 20M scale
-   - Timing: AFTER 20M_h5, 200M, and 2B complete
+---
+
+## Context for Next Session
+
+### Key Finding: Forced Extreme Testing Strategy
+When testing extremes, keep OTHER params at middle values:
+- Test min/max d_model → use h=8, middle n_layers
+- Test min/max n_layers → use h=8, middle d_model
+- Test min/max n_heads → use middle d_model, middle n_layers
+
+### Architecture Limits by Budget
+| Budget | Max L | Min L | d_model range |
+|--------|-------|-------|---------------|
+| 2M | L=74 (d=64) | L=2 | 64-384 |
+| 20M | L=188 (d=128) | L=2 | 128-1024 |
+| 200M | L=841 (d=192) | L=3 | varies |
+| 2B | varies | L=30+ | varies |
+
+### Files to Edit
+1. `src/models/arch_grid.py` - Line 29, add 160, 180 to n_layers
+2. `src/experiments/templates.py` - Add n_heads to log, add extreme forcing
+3. `scripts/recover_trial_data.py` - Update regex for n_heads
+
+---
+
+## Next Session Should
+
+1. **Wait for 20M_h5 to complete** (~2 trials remaining)
+2. **Execute HPO fixes** (Tasks 1-6 from plan)
+3. **Run `make test`** to verify fixes
+4. **Regenerate 9 HPO scripts**
+5. **Commit all changes**
+6. **Start 200M_h1 HPO** with fixed scripts
 
 ---
 
@@ -120,19 +135,8 @@
 ---
 
 ## Memory Entities Updated
-- `Remove_Timeout_Defaults_Plan` (created): Plan for removing timeout defaults
-- `Phase6A_20M_Rerun_Decision` (created): Decision to re-run 20M_h1/h3 with new scripts after other HPO completes
-
----
-
-## Architecture Grid Summary (Current)
-
-| Budget | Total Archs | Max Layers | Notes |
-|--------|-------------|------------|-------|
-| 2M | 80 | L=64 | Complete (50 trials each) |
-| 20M | 65 | L=128 | h5 running, h1/h3 will re-run |
-| 200M | 115 | L=256 | Queued |
-| 2B | 60 | L=256 | Queued |
+- `HPO_Fixes_Plan` (created): Detailed plan for fixing n_heads logging, extreme testing, n_layers expansion
+- `Architecture_Extremes_Analysis` (created): Max/min layers per budget, h=64 analysis
 
 ---
 
@@ -148,14 +152,10 @@ make verify
 ps aux | grep hpo_ | grep -v grep
 
 # Check experiment progress
-python3 -c "
+./venv/bin/python3 -c "
 import json
-from pathlib import Path
-for d in sorted(Path('outputs/hpo').iterdir()):
-    if not d.is_dir(): continue
-    for f in d.glob('*all_trials*.json'):
-        data = json.load(open(f))
-        trials = data.get('trials', [])
-        print(f'{d.name}: {len(trials)}/50')
+with open('outputs/hpo/phase6a_20M_h5_threshold_1pct/phase6a_20M_h5_threshold_1pct_all_trials.json') as f:
+    data = json.load(f)
+print(f'20M_h5: {len(data.get(\"trials\", []))}/50 trials')
 "
 ```

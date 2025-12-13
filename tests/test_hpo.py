@@ -936,6 +936,7 @@ class TestArchObjectiveSamplesArchitecture:
 
         # Create mock trial
         mock_trial = MagicMock()
+        mock_trial.number = 10  # Set trial number > 6 to bypass forced extremes
         mock_trial.suggest_categorical.return_value = 1  # Select second architecture
         mock_trial.suggest_float.return_value = 0.0005
 
@@ -945,6 +946,7 @@ class TestArchObjectiveSamplesArchitecture:
             architectures=sample_architectures,
             training_search_space=sample_training_search_space,
             num_features=20,
+            force_extreme_trials=False,  # Disable for this test
         )
 
         objective(mock_trial)
@@ -979,6 +981,7 @@ class TestArchObjectiveSamplesTrainingParams:
         mock_trainer_cls.return_value = mock_trainer
 
         mock_trial = MagicMock()
+        mock_trial.number = 10  # Set trial number > 6 to bypass forced extremes
         mock_trial.suggest_categorical.side_effect = lambda name, choices: choices[0]
         mock_trial.suggest_float.return_value = 0.0005
 
@@ -988,6 +991,7 @@ class TestArchObjectiveSamplesTrainingParams:
             architectures=sample_architectures,
             training_search_space=sample_training_search_space,
             num_features=20,
+            force_extreme_trials=False,  # Disable for this test
         )
 
         objective(mock_trial)
@@ -1029,6 +1033,7 @@ class TestArchObjectiveBuildsConfigFromArch:
         mock_trainer_cls.return_value = mock_trainer
 
         mock_trial = MagicMock()
+        mock_trial.number = 10  # Set trial number > 6 to bypass forced extremes
         # Select architecture index 1 (d_model=128, n_layers=8)
         mock_trial.suggest_categorical.side_effect = lambda name, choices: (
             1 if name == "arch_idx" else choices[0]
@@ -1041,6 +1046,7 @@ class TestArchObjectiveBuildsConfigFromArch:
             architectures=sample_architectures,
             training_search_space=sample_training_search_space,
             num_features=20,
+            force_extreme_trials=False,  # Disable for this test
         )
 
         objective(mock_trial)
@@ -1080,6 +1086,7 @@ class TestArchObjectiveReturnsValLoss:
         mock_trainer_cls.return_value = mock_trainer
 
         mock_trial = MagicMock()
+        mock_trial.number = 10  # Set trial number > 6 to bypass forced extremes
         mock_trial.suggest_categorical.side_effect = lambda name, choices: choices[0]
         mock_trial.suggest_float.return_value = 0.0005
 
@@ -1097,6 +1104,7 @@ class TestArchObjectiveReturnsValLoss:
             training_search_space=sample_training_search_space,
             split_indices=split_indices,
             num_features=20,
+            force_extreme_trials=False,  # Disable for this test
         )
 
         result = objective(mock_trial)

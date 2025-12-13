@@ -184,9 +184,10 @@ class TestArchSearchSpace:
         """n_layers values should include deep architectures for scaling experiments."""
         from src.models.arch_grid import ARCH_SEARCH_SPACE
 
-        # Extended to include very deep architectures (64, 96, 128, 192, 256)
+        # Extended to include very deep architectures (64, 96, 128, 160, 180, 192, 256)
         # for exploring scaling laws with larger parameter budgets
-        expected = [2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256]
+        # Added 160, 180 to fill gap for 20M budget (max L=188 with d=128)
+        expected = [2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 160, 180, 192, 256]
         assert ARCH_SEARCH_SPACE["n_layers"] == expected
 
     def test_n_heads_values_match_design(self):

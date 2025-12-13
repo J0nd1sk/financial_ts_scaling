@@ -128,6 +128,79 @@ def _sample_hyperparameter(
         return trial.suggest_float(name, low, high)
 
 
+def get_extreme_architecture_indices(architectures: list[dict]) -> list[int]:
+    """Get indices of extreme architectures to force-test first.
+
+    Returns up to 6 indices testing extremes of d_model, n_layers, n_heads
+    while keeping other dimensions at middle values.
+
+    Args:
+        architectures: List of architecture dicts with d_model, n_layers, n_heads
+
+    Returns:
+        List of architecture indices (may be fewer than 6 if some extremes
+        don't exist in the grid)
+    """
+    if not architectures:
+        return []
+
+    # Find unique values and middle points
+    d_models = sorted(set(a['d_model'] for a in architectures))
+    n_layers_vals = sorted(set(a['n_layers'] for a in architectures))
+    n_heads_vals = sorted(set(a['n_heads'] for a in architectures))
+
+    middle_d = d_models[len(d_models) // 2]
+    middle_L = n_layers_vals[len(n_layers_vals) // 2]
+    middle_h = 8 if 8 in n_heads_vals else n_heads_vals[len(n_heads_vals) // 2]
+
+    extreme_indices: list[int] = []
+
+    def find_arch(d_model: int | None = None, n_layers: int | None = None,
+                  n_heads: int | None = None) -> int | None:
+        """Find first architecture matching criteria."""
+        for i, a in enumerate(architectures):
+            if d_model is not None and a['d_model'] != d_model:
+                continue
+            if n_layers is not None and a['n_layers'] != n_layers:
+                continue
+            if n_heads is not None and a['n_heads'] != n_heads:
+                continue
+            return i
+        return None
+
+    # 1. Min d_model (with middle h, any L)
+    idx = find_arch(d_model=min(d_models), n_heads=middle_h)
+    if idx is not None and idx not in extreme_indices:
+        extreme_indices.append(idx)
+
+    # 2. Max d_model (with middle h, any L)
+    idx = find_arch(d_model=max(d_models), n_heads=middle_h)
+    if idx is not None and idx not in extreme_indices:
+        extreme_indices.append(idx)
+
+    # 3. Min n_layers (with middle d, middle h)
+    idx = find_arch(n_layers=min(n_layers_vals), d_model=middle_d, n_heads=middle_h)
+    if idx is not None and idx not in extreme_indices:
+        extreme_indices.append(idx)
+
+    # 4. Max n_layers (with middle d, middle h)
+    idx = find_arch(n_layers=max(n_layers_vals), d_model=middle_d, n_heads=middle_h)
+    if idx is not None and idx not in extreme_indices:
+        extreme_indices.append(idx)
+
+    # 5. Min n_heads (h=2 with middle d, any L)
+    idx = find_arch(n_heads=min(n_heads_vals), d_model=middle_d)
+    if idx is not None and idx not in extreme_indices:
+        extreme_indices.append(idx)
+
+    # 6. Max n_heads (h=32 with middle d, any L)
+    idx = find_arch(n_heads=max(n_heads_vals), d_model=middle_d)
+    if idx is not None and idx not in extreme_indices:
+        extreme_indices.append(idx)
+
+    return extreme_indices
+
+
 def create_architectural_objective(
     config_path: str,
     budget: str,
@@ -136,6 +209,7 @@ def create_architectural_objective(
     split_indices: SplitIndices | None = None,
     num_features: int | None = None,
     verbose: bool = False,
+    force_extreme_trials: bool = True,
 ) -> Callable[[optuna.Trial], float]:
     """Create Optuna objective function for architectural HPO.
 
@@ -150,6 +224,7 @@ def create_architectural_objective(
         split_indices: Optional SplitIndices for train/val/test splits
         num_features: Number of input features (required for model config)
         verbose: If True, capture and store detailed metrics per trial
+        force_extreme_trials: If True, first 6 trials test architecture extremes
 
     Returns:
         Objective function for study.optimize()
@@ -158,13 +233,22 @@ def create_architectural_objective(
         raise ValueError("num_features is required for architectural HPO")
     from src.models.patchtst import PatchTSTConfig
 
+    # Pre-compute extreme indices if forcing extremes
+    extreme_indices = get_extreme_architecture_indices(architectures) if force_extreme_trials else []
+
     def objective(trial: optuna.Trial) -> float:
         """Objective function that searches architecture and training params."""
         import logging
         logger = logging.getLogger("optuna")
 
-        # Sample architecture from pre-computed list
-        arch_idx = trial.suggest_categorical("arch_idx", list(range(len(architectures))))
+        # Force extreme architectures for first N trials
+        if trial.number < len(extreme_indices):
+            arch_idx = extreme_indices[trial.number]
+            # Still need to "suggest" for Optuna tracking, but override the value
+            trial.suggest_categorical("arch_idx", [arch_idx])
+        else:
+            # Random sampling for remaining trials
+            arch_idx = trial.suggest_categorical("arch_idx", list(range(len(architectures))))
         arch = architectures[arch_idx]
 
         # Sample training params from narrow ranges
@@ -206,12 +290,12 @@ def create_architectural_objective(
         else:
             device = "cpu"
 
-        # Log trial start with architecture info
+        # Log trial start with architecture info (including n_heads for recovery)
         logger.info(
             f"Trial {trial.number}: arch_idx={arch_idx}, "
             f"d_model={arch['d_model']}, n_layers={arch['n_layers']}, "
-            f"params={arch['param_count']:,}, lr={learning_rate:.6f}, "
-            f"epochs={epochs}, batch_size={batch_size}"
+            f"n_heads={arch['n_heads']}, params={arch['param_count']:,}, "
+            f"lr={learning_rate:.6f}, epochs={epochs}, batch_size={batch_size}"
         )
 
         with tempfile.TemporaryDirectory() as tmp_dir:
