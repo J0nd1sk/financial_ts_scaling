@@ -442,3 +442,41 @@ Task 3 expanded into 3 sub-tasks:
 - Execution plan updated in `docs/phase6a_execution_plan.md`
 - Config files default to horizon=1 (varies by script)
 - Need to generate 3-day and 5-day variant scripts after Stage 1 validates
+
+## 2025-12-13 No Timeout Policy
+
+**Context**: HPO experiments were stopping early due to `timeout_hours=4.0` default. 20M_h1 stopped at 31/50 trials.
+
+**Decision**: Remove ALL timeout defaults - experiments run to completion, even if they take days/weeks.
+
+**Changes Made**:
+- `run_hpo()`: `timeout_hours: float | None = None`
+- `run_hpo_experiment()`: `timeout_hours: float | None = None`
+- All 12 generated HPO scripts: `TIMEOUT_HOURS = None`
+- Fixed arithmetic: `timeout_hours * 3600 if timeout_hours else None`
+
+**Rationale**: User explicitly stated experiments should run to completion. Scaling law research needs complete datasets, not truncated ones.
+
+**Implications**: HPO runs may take extended periods. Monitor via `ps aux | grep hpo_`.
+
+## 2025-12-13 Re-run 20M_h1/h3 from Scratch (Option C)
+
+**Context**: 20M_h1 (31/50) and 20M_h3 (32/50) stopped early due to old 4-hour timeout. Options considered:
+- Option A: Resume existing Optuna study
+- Option B: Run supplemental trials only (19 + 18)
+- Option C: Re-run from scratch with new scripts
+
+**Decision**: Re-run both from scratch AFTER all other HPO runs complete (20M_h5, 200M, 2B).
+
+**Rationale**:
+1. Old runs used architecture grid with max L=48
+2. New scripts have L=128 max for 20M budget (added L=64, 96, 128)
+3. For scaling law research, need to test if deeper architectures help at 20M scale
+4. Would need to re-run anyway to test expanded architecture space
+
+**Timing**: After 20M_h5, 200M_h1/h3/h5, and 2B_h1/h3/h5 complete.
+
+**Implications**:
+- Discards 63 trials of partial work
+- Gains access to deeper architectures (L=64, 96, 128) for 20M budget
+- Total HPO queue: 20M_h5 → 200M (3) → 2B (3) → 20M_h1 → 20M_h3
