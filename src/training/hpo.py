@@ -575,7 +575,7 @@ def run_hpo(
     config_path: str,
     budget: str,
     n_trials: int = 50,
-    timeout_hours: float = 4.0,
+    timeout_hours: float | None = None,
     search_space_path: str = "configs/hpo/default_search.yaml",
     thermal_callback: ThermalCallback | None = None,
 ) -> dict[str, Any]:
@@ -590,7 +590,7 @@ def run_hpo(
         config_path: Experiment config path
         budget: Parameter budget
         n_trials: Max trials to run
-        timeout_hours: Max time in hours
+        timeout_hours: Max time in hours (None = no timeout, default)
         search_space_path: Path to search space YAML
         thermal_callback: Optional thermal monitoring callback
 
@@ -673,7 +673,7 @@ def run_hpo(
         study.optimize(
             objective,
             n_trials=n_trials,
-            timeout=timeout_hours * 3600,  # Convert to seconds
+            timeout=timeout_hours * 3600 if timeout_hours else None,
             callbacks=[thermal_check_callback] if thermal_callback else None,
         )
     except optuna.exceptions.OptunaError:

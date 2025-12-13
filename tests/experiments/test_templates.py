@@ -118,7 +118,7 @@ class TestGenerateHpoScriptContent:
         script = generate_hpo_script(**hpo_params)
 
         assert "N_TRIALS = 50" in script
-        assert "TIMEOUT_HOURS = 4.0" in script
+        assert "TIMEOUT_HOURS = None" in script  # No timeout - experiments run to completion
 
 
 # =============================================================================

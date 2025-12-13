@@ -23,9 +23,10 @@ class ArchitectureConfig(TypedDict):
 
 
 # Definitive search space from design doc
+# Extended n_layers to explore very deep architectures (especially for larger budgets)
 ARCH_SEARCH_SPACE: dict[str, list[int]] = {
     "d_model": [64, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048],
-    "n_layers": [2, 3, 4, 6, 8, 12, 16, 24, 32, 48],
+    "n_layers": [2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256],
     "n_heads": [2, 4, 8, 16, 32],
     "d_ff_ratio": [2, 4],
 }

@@ -412,6 +412,40 @@ class TestRunHpoRespectsTimeout:
         # 2.5 hours = 9000 seconds
         assert call_kwargs.get("timeout") == 2.5 * 3600
 
+    @patch("src.training.hpo.create_study")
+    @patch("src.training.hpo.create_objective")
+    @patch("src.training.hpo.save_best_params")
+    @patch("src.training.hpo.load_search_space")
+    def test_run_hpo_default_no_timeout(
+        self,
+        mock_load_ss: MagicMock,
+        mock_save: MagicMock,
+        mock_create_obj: MagicMock,
+        mock_create_study: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """Test that run_hpo defaults to no timeout (None)."""
+        mock_study = MagicMock()
+        mock_create_study.return_value = mock_study
+        mock_create_obj.return_value = lambda trial: 0.5
+        mock_load_ss.return_value = {
+            "n_trials": 10,
+            "direction": "minimize",
+            "search_space": {},
+        }
+        mock_save.return_value = tmp_path / "result.json"
+
+        # Call without timeout_hours - should default to None
+        run_hpo(
+            config_path="configs/test.yaml",
+            budget="2M",
+            n_trials=10,
+            search_space_path="configs/hpo/default_search.yaml",
+        )
+
+        call_kwargs = mock_study.optimize.call_args.kwargs
+        assert call_kwargs.get("timeout") is None, "Default should be no timeout"
+
 
 # --- Tests for thermal integration ---
 

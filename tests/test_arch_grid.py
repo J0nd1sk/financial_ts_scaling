@@ -181,10 +181,12 @@ class TestArchSearchSpace:
         assert ARCH_SEARCH_SPACE["d_model"] == expected
 
     def test_n_layers_values_match_design(self):
-        """n_layers values should match design doc exactly."""
+        """n_layers values should include deep architectures for scaling experiments."""
         from src.models.arch_grid import ARCH_SEARCH_SPACE
 
-        expected = [2, 3, 4, 6, 8, 12, 16, 24, 32, 48]
+        # Extended to include very deep architectures (64, 96, 128, 192, 256)
+        # for exploring scaling laws with larger parameter budgets
+        expected = [2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256]
         assert ARCH_SEARCH_SPACE["n_layers"] == expected
 
     def test_n_heads_values_match_design(self):
@@ -310,8 +312,9 @@ class TestFilterByBudget:
         grid = generate_architecture_grid(num_features=25)
         filtered = filter_by_budget(grid, 20_000_000)
 
-        assert 15 <= len(filtered) <= 50, (
-            f"Expected 15-50 architectures for 20M, got {len(filtered)}"
+        # With extended n_layers (up to 256), more architectures fit in 20M budget
+        assert 15 <= len(filtered) <= 100, (
+            f"Expected 15-100 architectures for 20M, got {len(filtered)}"
         )
 
     def test_filter_200m_returns_reasonable_count(self):

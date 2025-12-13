@@ -1,103 +1,131 @@
-# Session Handoff - 2025-12-12 22:40
+# Session Handoff - 2025-12-13 09:05
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `81205e5` feat: add pre-flight checks and hardware monitoring to HPO runner (Task C)
-- **Uncommitted**: Enhanced HPO logging (templates, hpo.py, trial_logger.py, test updates, regenerated scripts)
-- **Pushed**: No (uncommitted changes pending)
+- **Last commit**: `8ae9db0` feat: add incremental HPO logging with per-trial persistence
+- **Uncommitted**: 17 modified files + 1 new file (see below)
+- **Pushed**: No (1 commit ahead of origin + uncommitted changes)
 
 ### Project Phase
 - **Phase 6A**: Parameter Scaling - IN PROGRESS
-- **Hardware Monitoring**: ALL 3 TASKS COMPLETE
+- **HPO Experiments**: 20M_h3 currently running (~24/50 trials)
 
-### Experiments Running
-- **Status**: HPO experiments actively running in tmux
-- **Progress**:
-  - Experiment 1 (2M_h1): COMPLETE - 50/50 trials, best val_loss=0.337
-  - Experiment 2 (2M_h3): COMPLETE - 50/50 trials, best val_loss=0.262
-  - Experiment 3 (2M_h5): IN PROGRESS - ~10/50 trials, best val_loss=0.328
+---
+
+## CRITICAL: Uncommitted Changes Must Be Committed
+
+### Changes Made This Session (NOT YET COMMITTED):
+
+1. **Expanded architecture grid** (`src/models/arch_grid.py`):
+   - Added n_layers: 64, 96, 128, 192, 256 to search space
+   - 2M: now has L=64 max (was 48)
+   - 20M: now has L=128 max (was 48)
+   - 200M: now has L=256 max (was 48)
+   - 2B: now has L=256 max (was 48)
+
+2. **Removed timeout from templates** (`src/experiments/templates.py`):
+   - Changed `timeout_hours: float = 4.0` to `timeout_hours: float | None = None`
+   - Script now generates `TIMEOUT_HOURS = None` (no timeout)
+
+3. **Updated tests**:
+   - `tests/test_arch_grid.py`: Updated n_layers expected values and 20M count range
+   - `tests/experiments/test_templates.py`: Updated TIMEOUT_HOURS assertion
+
+4. **Regenerated all 12 HPO scripts** (`experiments/phase6a/hpo_*.py`):
+   - All now have `TIMEOUT_HOURS = None`
+   - All use expanded architecture grid
+
+5. **New file**: `scripts/recover_trial_data.py`:
+   - Parses log file to extract trial data
+   - Used to recover 2M_h1, 2M_h3, 2M_h5 trial data from log
+
+6. **Recovered trial data** (outputs/hpo/):
+   - `phase6a_2M_h1_threshold_1pct/phase6a_2M_h1_threshold_1pct_all_trials.json` (50 trials)
+   - `phase6a_2M_h3_threshold_1pct/phase6a_2M_h3_threshold_1pct_all_trials.json` (50 trials)
+   - `phase6a_2M_h5_threshold_1pct/phase6a_2M_h5_threshold_1pct_all_trials.json` (50 trials)
+   - `phase6a_20M_h1_threshold_1pct/phase6a_20M_h1_threshold_1pct_all_trials.json` (31 trials)
 
 ---
 
 ## Test Status
-- **Last `make test`**: PASS (332 tests) at ~22:35
+- **Last `make test`**: PASS (332 tests) at ~09:00
 - **Failing**: none
 
 ---
 
-## Completed This Session
+## Experiment Status
 
-1. **Session restore** - Loaded context from previous handoff
-2. **Checked experiment progress** - h1 complete, h3 complete, h5 running
-3. **Cleaned up old JSON files** - Removed obsolete `best_params.json` files
-4. **Updated documentation** - Changed all references from `best_params.json` to `{experiment}_{budget}_best.json`
-5. **Enhanced HPO logging** - MAJOR FEATURE:
-   - Added `verbose=True` to trainer for detailed metrics (learning curves, confusion matrices)
-   - Created `src/experiments/trial_logger.py` with comprehensive study summary generation
-   - Added incremental per-trial logging to HPO (writes after each trial, not just at end)
-   - Regenerated all 12 HPO scripts with new logging
+### Completed Experiments
 
----
+| Experiment | Trials | Best val_loss | Best Architecture |
+|------------|--------|---------------|-------------------|
+| 2M_h1 | 50/50 | **0.337** | d=64, L=48, h=8 |
+| 2M_h3 | 50/50 | **0.262** | d=64, L=32, h=32 |
+| 2M_h5 | 50/50 | **0.329** | d=64, L=48, h=16 |
+| 20M_h1 | 31/50 | **0.363** | d=768, L=4, h=2 |
 
-## Enhanced HPO Logging (NEW)
+### Currently Running
+- **20M_h3**: ~24/50 trials, best val_loss=0.294 (L=24, d=256)
+- Running in tmux session `hpo`
+- Using OLD script (pre-architecture-expansion, has 4hr timeout)
 
-### Incremental Logging (after each trial)
-After each trial completes, the HPO scripts now write:
-
-1. **`trials/trial_NNNN.json`** - Individual trial file with:
-   - Trial number, value (val_loss), params
-   - Start/end timestamps, duration
-   - Architecture details (d_model, n_layers, n_heads, d_ff, param_count)
-   - User attrs (learning curve, confusion matrix, accuracy - when verbose=True)
-
-2. **`{experiment}_{budget}_best.json`** - Updated after EACH trial with:
-   - Current best params and value
-   - Best trial number
-   - Count of completed/pruned/running trials
-   - Architecture of current best
-
-3. **`{experiment}_all_trials.json`** - Summary of all completed trials:
-   - Sorted by val_loss
-   - Includes architecture info and key metrics
-
-### End-of-Study Summary
-4. **`{experiment}_study_summary.json`** + **`{experiment}_study_summary.md`**:
-   - All trials table with sortable metrics
-   - Architecture analysis (by d_model, by n_layers)
-   - Training parameter sensitivity (correlation analysis)
-   - Loss distribution (min, max, mean, std, quartiles)
-   - Best trial confusion matrix with precision/recall/F1
-
-### New Functions in `src/training/hpo.py`
-- `save_trial_result()` - Save individual trial JSON
-- `update_best_params()` - Update best params after each trial
-- `save_all_trials()` - Update all trials summary
-
-### New File: `src/experiments/trial_logger.py`
-- Dataclasses: `SplitStats`, `EpochMetrics`, `ConfusionMatrix`, `FinalMetrics`, `TrialResult`
-- `TrialLogger` class with `generate_study_summary()` method
-- Can extract data from Optuna study's `trial.user_attrs`
+### Key Finding
+- 2M experiments: Deep narrow (d=64, L=32-48) wins
+- 20M: Shifting to medium depth (L=24 winning for h3)
+- 20M_h1 stopped at 31 trials due to 4hr timeout (now fixed)
 
 ---
 
-## HPO Results So Far
+## Issues Found and Fixed This Session
 
-### Experiment 1: 2M_h1 (horizon=1 day) - COMPLETE
-- **Best val_loss**: 0.337
-- **Best architecture**: d_model=64, n_layers=48 (deep & narrow)
-- **Trend**: Deep, narrow transformers winning
+### 1. TIMEOUT_HOURS Was Set to 4.0 (FIXED)
+- **Problem**: User explicitly said no timeouts, but scripts had `TIMEOUT_HOURS = 4.0`
+- **Impact**: 20M_h1 stopped early at 31 trials instead of 50
+- **Fix**: Changed template default to `None`, regenerated all 12 scripts
 
-### Experiment 2: 2M_h3 (horizon=3 days) - COMPLETE
-- **Best val_loss**: 0.262 (better than h1!)
-- **Best architecture**: d_model=64, n_layers=32
-- **Best trial**: #49 with lr=0.000434, epochs=50, batch_size=64
+### 2. Architecture Grid Missing Deep Layers (FIXED)
+- **Problem**: n_layers only went up to 48, missing 64/96/128/192/256
+- **Impact**: Couldn't test very deep architectures for scaling law research
+- **Fix**: Extended `ARCH_SEARCH_SPACE["n_layers"]` to include [64, 96, 128, 192, 256]
 
-### Experiment 3: 2M_h5 (horizon=5 days) - IN PROGRESS
-- **Progress**: ~10/50 trials
-- **Best so far**: Trial 7 with val_loss=0.328
-- **NOTE**: Running with OLD script (no incremental logging)
+### 3. 2M Trial Data Missing (FIXED)
+- **Problem**: 2M_h1, 2M_h3, 2M_h5 ran with old scripts (no incremental logging)
+- **Impact**: Only best.json files existed, no full trial data
+- **Fix**: Created `scripts/recover_trial_data.py` to parse log and generate all_trials.json
+
+---
+
+## Next Session Should
+
+1. **COMMIT THE CHANGES** - 17 files modified, all tests pass:
+   ```bash
+   git add -A
+   git commit -m "feat: expand architecture grid to L=256 and remove timeout
+
+   - Add n_layers 64, 96, 128, 192, 256 to architecture search space
+   - Remove TIMEOUT_HOURS from templates (experiments run to completion)
+   - Regenerate all 12 HPO scripts with expanded grid and no timeout
+   - Add recover_trial_data.py script for log parsing
+   - Update tests for new architecture ranges"
+   ```
+
+2. **PUSH to origin**: `git push`
+
+3. **Monitor 20M_h3**: Let it complete (uses old script, will stop at 50 trials or timeout)
+
+4. **Plan supplemental 20M_h1 deep testing**:
+   - 20M_h1 only tested up to L=48 (31 trials, stopped due to timeout)
+   - Need to test L=64, L=96, L=128 architectures
+   - Option A: Create separate "20M_h1_deep" experiment
+   - Option B: Re-run 20M_h1 with new script after 20M_h3/h5 complete
+
+5. **Stop 20M_h3 and restart with new script?** (decision needed):
+   - Current script has 4hr timeout and old architecture grid (max L=48)
+   - New scripts have no timeout and L=128 max
+   - Could lose ~24 completed trials if restarted
+   - Recommendation: Let it complete, then re-run if deep architectures needed
 
 ---
 
@@ -105,90 +133,48 @@ After each trial completes, the HPO scripts now write:
 
 | File | Change |
 |------|--------|
-| `src/training/hpo.py` | +180 lines: save_trial_result, update_best_params, save_all_trials |
-| `src/training/trainer.py` | +50 lines: _evaluate_detailed, verbose mode |
-| `src/experiments/trial_logger.py` | NEW: 590 lines - comprehensive trial logging |
-| `src/experiments/templates.py` | +50 lines: incremental logging callback, OUTPUT_DIR |
-| `tests/experiments/test_templates.py` | Updated callback test |
-| `experiments/phase6a/hpo_*.py` | 12 scripts regenerated with incremental logging |
-| `docs/phase6a_hpo_runbook.md` | Updated JSON filename references |
-| `docs/phase6a_execution_plan.md` | Updated JSON filename references |
-| `docs/architectural_hpo_design.md` | Updated JSON filename references |
+| `src/models/arch_grid.py` | Extended n_layers to include 64, 96, 128, 192, 256 |
+| `src/experiments/templates.py` | Changed timeout_hours default to None |
+| `tests/test_arch_grid.py` | Updated expected n_layers and count ranges |
+| `tests/experiments/test_templates.py` | Updated TIMEOUT_HOURS assertion |
+| `experiments/phase6a/hpo_*.py` (12 files) | Regenerated with no timeout |
+| `scripts/recover_trial_data.py` | NEW - log parser for trial recovery |
+| `docs/experiment_results.csv` | Auto-updated by experiments |
 
 ---
 
 ## Key Decisions
 
-1. **Incremental logging**: Write trial data after EACH trial, not just at end (prevents data loss on crash)
-2. **Verbose training**: When `verbose=True`, trainer returns learning curves, confusion matrices, split stats
-3. **Old experiments**: h1 and h3 used old scripts (no detailed logging), h5 started before template update
-4. **Future experiments**: Starting with 20M_h1, all experiments will have full incremental logging
+1. **Extended architecture depth to L=256**: User wants to explore very deep architectures since 2M showed counterintuitive "more layers = better" pattern
 
----
+2. **No timeout ever**: User explicitly stated experiments should run to completion, even if they take days/weeks
 
-## Context for Next Session
-
-### Currently Running (h5)
-- Using OLD script (no incremental logging)
-- Will likely fail at the end when trying to generate study summary (wrong TrialLogger constructor)
-- BUT: All trial training data is still captured (val_loss, params saved by Optuna)
-
-### Experiments to Run Next
-After h5 completes, need to run:
-- 20M_h1, 20M_h3, 20M_h5
-- 200M_h1, 200M_h3, 200M_h5
-- 2B_h1, 2B_h3, 2B_h5
-
-All future experiments will use the new scripts with incremental logging.
-
-### Commands to Check Progress
-```bash
-# Check which experiment is running
-ps aux | grep hpo | grep -v grep
-
-# Check log tail
-tail -50 outputs/logs/phase6a_hpo_*.log
-
-# Check output directories
-ls -la outputs/hpo/
-
-# Check trial files (for experiments with new scripts)
-ls outputs/hpo/phase6a_*/trials/
-```
-
----
-
-## Uncommitted Changes
-
-The following changes should be committed:
-```bash
-git add -A
-git commit -m "feat: add incremental HPO logging with per-trial persistence
-
-- Add save_trial_result(), update_best_params(), save_all_trials() to hpo.py
-- Add verbose mode to Trainer for learning curves and confusion matrices
-- Create trial_logger.py with comprehensive study summary generation
-- Update HPO template with incremental_logging_callback
-- Regenerate all 12 HPO scripts with incremental logging
-- Update documentation references to new JSON filename format"
-```
-
----
-
-## Next Session Should
-
-1. **Commit the changes** - Enhanced logging code is ready
-2. **Check h5 experiment** - May have completed or failed at summary step
-3. **Review h5 trial data** - Even if summary failed, trial data should be in Optuna
-4. **Start next batch** - 20M experiments with full incremental logging
-5. **Analyze early results** - Deep narrow architectures consistently winning
+3. **Recover rather than re-run**: Used log parsing to recover 2M trial data rather than re-running completed experiments
 
 ---
 
 ## Data Versions
-- **Raw manifest**: SPY, DIA, QQQ, ^DJI, ^IXIC, ^VIX OHLCV data (2025-12-10)
-- **Processed manifest**: SPY_dataset_a25.parquet, DIA, QQQ, VIX features
+- **Raw manifest**: SPY, DIA, QQQ, ^DJI, ^IXIC, ^VIX OHLCV (2025-12-10)
+- **Processed manifest**: SPY_dataset_a25.parquet (25 features)
 - **Pending registrations**: none
+
+---
+
+## Memory Entities Updated
+- `Phase6A_Architecture_Expansion` (created): Extended n_layers to L=256 for deep architecture testing
+- `Phase6A_No_Timeout_Rule` (created): NEVER use timeouts - experiments run to completion
+- `Phase6A_Trial_Recovery` (created): Pattern for recovering trial data from logs
+
+---
+
+## Architecture Grid Summary (After Fix)
+
+| Budget | Total Archs | Max Layers | New Deep Options |
+|--------|-------------|------------|------------------|
+| 2M | 80 | L=64 | +L=64 |
+| 20M | 65 | L=128 | +L=64, 96, 128 |
+| 200M | 115 | L=256 | +L=64, 96, 128, 192, 256 |
+| 2B | 60 | L=256 | +L=64, 96, 128, 192, 256 |
 
 ---
 
@@ -200,9 +186,11 @@ make test
 git status
 git diff --stat
 
-# Check experiment progress
-tail -20 outputs/logs/phase6a_hpo_*.log
+# Commit the changes
+git add -A
+git commit -m "feat: expand architecture grid to L=256 and remove timeout"
+git push
 
-# View output files
-ls -la outputs/hpo/phase6a_*/
+# Check experiment progress
+tail -20 outputs/logs/phase6a_hpo_20251212_155223.log
 ```

@@ -157,7 +157,7 @@ def run_hpo_experiment(
     data_path: Path | str,
     output_dir: Path | str,
     n_trials: int = 50,
-    timeout_hours: float = 4.0,
+    timeout_hours: float | None = None,
     search_space_path: str = "configs/hpo/default_search.yaml",
     config_path: str | None = None,
 ) -> dict[str, Any]:
@@ -173,7 +173,7 @@ def run_hpo_experiment(
         data_path: Path to data parquet file
         output_dir: Directory for outputs
         n_trials: Number of HPO trials
-        timeout_hours: Timeout in hours
+        timeout_hours: Timeout in hours (None = no timeout, default)
         search_space_path: Path to search space YAML
         config_path: Optional experiment config path
 

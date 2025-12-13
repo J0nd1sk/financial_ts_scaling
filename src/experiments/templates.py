@@ -21,7 +21,7 @@ def generate_hpo_script(
     data_path: str,
     feature_columns: list[str],
     n_trials: int = 50,
-    timeout_hours: float = 4.0,
+    timeout_hours: float | None = None,
 ) -> str:
     """Generate HPO experiment script from template.
 
@@ -39,7 +39,7 @@ def generate_hpo_script(
         data_path: Path to data parquet file
         feature_columns: List of feature column names
         n_trials: Number of HPO trials
-        timeout_hours: HPO timeout in hours
+        timeout_hours: HPO timeout in hours (None = no timeout)
 
     Returns:
         Complete Python script as string.
@@ -98,7 +98,7 @@ def generate_hpo_script(
 
         # HPO settings
         N_TRIALS = {n_trials}
-        TIMEOUT_HOURS = {timeout_hours}
+        TIMEOUT_HOURS = None  # No timeout - experiments run to completion
         SEARCH_SPACE_PATH = "configs/hpo/architectural_search.yaml"
         CONFIG_PATH = f"configs/experiments/{{TASK}}.yaml"
 

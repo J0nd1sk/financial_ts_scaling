@@ -2,7 +2,7 @@
 """
 PHASE6A Experiment: 20M parameters, threshold_1pct task
 Type: HPO (Hyperparameter Optimization) with Architectural Search
-Generated: 2025-12-13T06:34:07.756880+00:00
+Generated: 2025-12-13T17:38:17.716558+00:00
 
 This script searches both model ARCHITECTURE (d_model, n_layers, n_heads, d_ff)
 and TRAINING parameters (lr, epochs, batch_size) to find optimal configuration.
@@ -48,7 +48,7 @@ FEATURE_COLUMNS = ['dema_9', 'dema_10', 'sma_12', 'dema_20', 'dema_25', 'sma_50'
 
 # HPO settings
 N_TRIALS = 50
-TIMEOUT_HOURS = 4.0
+TIMEOUT_HOURS = None  # No timeout - experiments run to completion
 SEARCH_SPACE_PATH = "configs/hpo/architectural_search.yaml"
 CONFIG_PATH = f"configs/experiments/{TASK}.yaml"
 
