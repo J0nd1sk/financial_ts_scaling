@@ -26,6 +26,8 @@ from src.training.hpo import (
     create_objective,
     create_architectural_objective,
     save_best_params,
+    save_trial_result,
+    save_all_trials,
     run_hpo,
 )
 
@@ -1244,3 +1246,171 @@ class TestForcedExtremesIntegration:
             if call[0][0] == "arch_idx"
         ]
         assert len(suggest_int_calls) == 1, "Non-forced trial should use suggest_int"
+
+
+class TestSaveBestParamsIncludesArchitectureForForcedTrials:
+    """Test that save_best_params includes architecture for forced extreme trials.
+
+    Forced extreme trials store arch_idx via set_user_attr(), not suggest_int(),
+    so architecture must be retrieved from user_attrs, not best_params.
+    """
+
+    def test_save_best_params_includes_architecture_from_user_attrs(
+        self,
+        tmp_path: Path,
+        sample_architectures: list[dict],
+    ) -> None:
+        """Test that JSON includes architecture when arch in user_attrs (forced trial)."""
+        # Create mock best_trial that simulates a forced extreme trial
+        mock_best_trial = MagicMock()
+        mock_best_trial.number = 0  # Forced extreme trial
+        mock_best_trial.user_attrs = {
+            "arch_idx": 1,
+            "architecture": {
+                "d_model": 128,
+                "n_layers": 8,
+                "n_heads": 4,
+                "d_ff": 256,
+                "param_count": 2_000_000,
+            },
+        }
+
+        mock_study = MagicMock()
+        # KEY: arch_idx is NOT in best_params (forced trial used set_user_attr)
+        mock_study.best_params = {
+            "learning_rate": 0.0005,
+            "epochs": 75,
+            "batch_size": 128,
+        }
+        mock_study.best_value = 0.42
+        mock_study.best_trial = mock_best_trial
+        mock_study.study_name = "test_2M"
+        mock_study.trials = [mock_best_trial]
+        mock_best_trial.state.name = "COMPLETE"
+
+        output_dir = tmp_path / "hpo"
+        result_path = save_best_params(
+            study=mock_study,
+            experiment_name="test_exp",
+            budget="2M",
+            output_dir=output_dir,
+            architectures=sample_architectures,
+        )
+
+        with open(result_path) as f:
+            data = json.load(f)
+
+        # Should include architecture from user_attrs
+        assert "architecture" in data, "Architecture missing for forced extreme trial"
+        assert data["architecture"]["d_model"] == 128
+        assert data["architecture"]["n_layers"] == 8
+        assert data["architecture"]["n_heads"] == 4
+        assert data["architecture"]["d_ff"] == 256
+        assert data["architecture"]["param_count"] == 2_000_000
+
+
+class TestSaveTrialResultIncludesArchitectureForForcedTrials:
+    """Test that save_trial_result includes architecture for forced extreme trials."""
+
+    def test_save_trial_result_includes_architecture_from_user_attrs(
+        self,
+        tmp_path: Path,
+        sample_architectures: list[dict],
+    ) -> None:
+        """Test that trial JSON includes architecture from user_attrs (forced trial)."""
+        # Create mock trial that simulates a forced extreme trial
+        mock_trial = MagicMock()
+        mock_trial.number = 0  # Forced extreme trial
+        mock_trial.value = 0.42
+        mock_trial.state.name = "COMPLETE"
+        mock_trial.datetime_start = None
+        mock_trial.datetime_complete = None
+        mock_trial.duration = None
+        # KEY: arch_idx is NOT in params (forced trial used set_user_attr)
+        mock_trial.params = {
+            "learning_rate": 0.0005,
+            "epochs": 75,
+            "batch_size": 128,
+        }
+        mock_trial.user_attrs = {
+            "arch_idx": 1,
+            "architecture": {
+                "d_model": 128,
+                "n_layers": 8,
+                "n_heads": 4,
+                "d_ff": 256,
+                "param_count": 2_000_000,
+            },
+        }
+
+        output_dir = tmp_path / "hpo"
+        result_path = save_trial_result(
+            trial=mock_trial,
+            output_dir=output_dir,
+            architectures=sample_architectures,
+        )
+
+        with open(result_path) as f:
+            data = json.load(f)
+
+        # Should include architecture from user_attrs
+        assert "architecture" in data, "Architecture missing for forced extreme trial"
+        assert data["architecture"]["d_model"] == 128
+        assert data["architecture"]["n_layers"] == 8
+
+
+class TestSaveAllTrialsIncludesArchitectureForForcedTrials:
+    """Test that save_all_trials includes architecture for forced extreme trials."""
+
+    def test_save_all_trials_includes_architecture_from_user_attrs(
+        self,
+        tmp_path: Path,
+        sample_architectures: list[dict],
+    ) -> None:
+        """Test that all_trials JSON includes architecture for forced trials."""
+        # Create mock trial that simulates a forced extreme trial (best trial)
+        mock_trial = MagicMock()
+        mock_trial.number = 0
+        mock_trial.value = 0.42
+        mock_trial.state.name = "COMPLETE"
+        mock_trial.duration.total_seconds.return_value = 100.0
+        # KEY: arch_idx is NOT in params (forced trial used set_user_attr)
+        mock_trial.params = {
+            "learning_rate": 0.0005,
+            "epochs": 75,
+            "batch_size": 128,
+        }
+        mock_trial.user_attrs = {
+            "arch_idx": 1,
+            "architecture": {
+                "d_model": 128,
+                "n_layers": 8,
+                "n_heads": 4,
+                "d_ff": 256,
+                "param_count": 2_000_000,
+            },
+        }
+
+        mock_study = MagicMock()
+        mock_study.trials = [mock_trial]
+
+        output_dir = tmp_path / "hpo"
+        result_path = save_all_trials(
+            study=mock_study,
+            experiment_name="test_exp",
+            budget="2M",
+            output_dir=output_dir,
+            architectures=sample_architectures,
+        )
+
+        with open(result_path) as f:
+            data = json.load(f)
+
+        # Should include architecture fields for forced trial
+        assert len(data["trials"]) == 1
+        trial_data = data["trials"][0]
+        assert "d_model" in trial_data, "d_model missing for forced extreme trial"
+        assert trial_data["d_model"] == 128
+        assert trial_data["n_layers"] == 8
+        assert trial_data["n_heads"] == 4
+        assert trial_data["param_count"] == 2_000_000

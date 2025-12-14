@@ -454,7 +454,11 @@ def save_trial_result(
     }
 
     # Include architecture if available
-    if architectures is not None and "arch_idx" in trial.params:
+    # Check user_attrs first (forced extreme trials store arch there)
+    # Then fall back to architectures list lookup via arch_idx in params
+    if "architecture" in trial.user_attrs:
+        trial_data["architecture"] = trial.user_attrs["architecture"]
+    elif architectures is not None and "arch_idx" in trial.params:
         arch_idx = trial.params["arch_idx"]
         if arch_idx < len(architectures):
             trial_data["architecture"] = architectures[arch_idx]
@@ -519,7 +523,12 @@ def update_best_params(
     }
 
     # Include architecture info if available
-    if architectures is not None and "arch_idx" in study.best_params:
+    # Check user_attrs first (forced extreme trials store arch there)
+    # Then fall back to architectures list lookup via arch_idx in params
+    best_trial = study.best_trial
+    if best_trial and "architecture" in best_trial.user_attrs:
+        result["architecture"] = best_trial.user_attrs["architecture"]
+    elif architectures is not None and "arch_idx" in study.best_params:
         arch_idx = study.best_params["arch_idx"]
         if arch_idx < len(architectures):
             result["architecture"] = architectures[arch_idx]
@@ -568,14 +577,21 @@ def save_all_trials(
         }
 
         # Include architecture
-        if architectures is not None and "arch_idx" in trial.params:
+        # Check user_attrs first (forced extreme trials store arch there)
+        # Then fall back to architectures list lookup via arch_idx in params
+        arch = None
+        if "architecture" in trial.user_attrs:
+            arch = trial.user_attrs["architecture"]
+        elif architectures is not None and "arch_idx" in trial.params:
             arch_idx = trial.params["arch_idx"]
             if arch_idx < len(architectures):
                 arch = architectures[arch_idx]
-                trial_info["d_model"] = arch.get("d_model")
-                trial_info["n_layers"] = arch.get("n_layers")
-                trial_info["n_heads"] = arch.get("n_heads")
-                trial_info["param_count"] = arch.get("param_count")
+
+        if arch is not None:
+            trial_info["d_model"] = arch.get("d_model")
+            trial_info["n_layers"] = arch.get("n_layers")
+            trial_info["n_heads"] = arch.get("n_heads")
+            trial_info["param_count"] = arch.get("param_count")
 
         # Include key metrics from user_attrs
         if trial.user_attrs:
@@ -644,7 +660,12 @@ def save_best_params(
     }
 
     # Include architecture info if available
-    if architectures is not None and "arch_idx" in study.best_params:
+    # Check user_attrs first (forced extreme trials store arch there)
+    # Then fall back to architectures list lookup via arch_idx in params
+    best_trial = study.best_trial
+    if best_trial and "architecture" in best_trial.user_attrs:
+        result["architecture"] = best_trial.user_attrs["architecture"]
+    elif architectures is not None and "arch_idx" in study.best_params:
         arch_idx = study.best_params["arch_idx"]
         result["architecture"] = architectures[arch_idx]
 

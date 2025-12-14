@@ -612,3 +612,95 @@ Task 3 expanded into 3 sub-tasks:
 - HPO samples all options and selects by val_loss, so impact is self-correcting
 
 **Impact**: Experiment 1 (200M_h1) uses old config; experiments 2-12 use new config.
+
+## 2025-12-14 CRITICAL: Architecture Parameter Logging Gap
+
+**Context**: During HPO progress review, discovered that `_best.json` and `all_trials.json` files were missing architecture parameters (d_model, n_layers, n_heads, d_ff, param_count) for most trials, despite these being the PRIMARY parameters of interest for scaling law research.
+
+**Problem Identified**:
+1. **`_best.json`** contained ONLY training params (learning_rate, epochs, batch_size, weight_decay, warmup_steps)
+2. **Architecture params completely absent** from best params output
+3. **Individual trial files** (`trial_XXXX.json`) DID have architecture in `user_attrs.architecture`
+4. **Aggregation logic failed** to extract from `user_attrs`
+
+**Root Cause Analysis**:
+```python
+# In save_best_params() at hpo.py:647-649
+if architectures is not None and "arch_idx" in study.best_params:
+    arch_idx = study.best_params["arch_idx"]
+    result["architecture"] = architectures[arch_idx]
+```
+
+**The Bug**: For forced extreme trials (0-9), `arch_idx` is stored via `set_user_attr()`, NOT `trial.suggest_*()`. This means:
+- `arch_idx` is in `trial.user_attrs`, NOT in `trial.params`
+- The condition `"arch_idx" in study.best_params` is FALSE for forced trials
+- Architecture info never gets included in output files
+
+**Why This Matters**:
+- **Scaling law research depends on architecture params** - they determine parameter count
+- Training params (lr, epochs) are secondary - they optimize within an architecture
+- A "best params" file without architecture is scientifically useless
+- We know Trial 0 won (val_loss=0.3756) but `_best.json` doesn't tell us WHY (d=256, L=192)
+
+**Evidence from HPO Output**:
+```json
+// _best.json (WRONG - missing architecture)
+{
+  "best_params": {
+    "learning_rate": 0.000158,
+    "epochs": 75,
+    "batch_size": 64,
+    "weight_decay": 5.23e-05,
+    "warmup_steps": 300
+  }
+}
+
+// trial_0000.json (CORRECT - has architecture in user_attrs)
+{
+  "user_attrs": {
+    "architecture": {
+      "d_model": 256,
+      "n_layers": 192,
+      "n_heads": 8,
+      "d_ff": 1024,
+      "param_count": 151706881
+    }
+  }
+}
+```
+
+**Required Fix**:
+```python
+# Check user_attrs first (where we store it), then fall back to architectures list
+best_trial = study.best_trial
+if "architecture" in best_trial.user_attrs:
+    result["architecture"] = best_trial.user_attrs["architecture"]
+elif architectures is not None and "arch_idx" in study.best_params:
+    arch_idx = study.best_params["arch_idx"]
+    result["architecture"] = architectures[arch_idx]
+```
+
+**Files Requiring Updates**:
+1. `src/training/hpo.py` - `save_best_params()` function
+2. `src/training/hpo.py` - all_trials export logic (same issue)
+3. `experiments/phase6a/*.py` - regenerate after fix
+
+**Preventive Measures**:
+1. **Test requirement**: Add test verifying `_best.json` contains architecture for forced extreme trials
+2. **Code review checklist item**: "Do output files contain ALL scientifically relevant parameters?"
+3. **Template review**: When generating scripts, verify logging captures primary research variables
+4. **Hierarchy rule**: Architecture params > Training params in importance for scaling research
+
+**Lessons Learned**:
+1. **Verify outputs, not just execution**: Code ran successfully but outputs were incomplete
+2. **Test the full pipeline**: Unit tests passed but integration output was wrong
+3. **Primary vs secondary params**: Always log PRIMARY research variables first, verify they're captured
+4. **user_attrs vs params**: Optuna stores `set_user_attr` differently from `suggest_*` - must handle both
+
+**Impact Assessment**:
+- Individual trial files ARE complete (architecture in user_attrs)
+- Best/summary files are INCOMPLETE (missing architecture)
+- Data is recoverable from trial files
+- Fix required before any publication or formal analysis
+
+**Status**: Fix identified, awaiting implementation in next session.
