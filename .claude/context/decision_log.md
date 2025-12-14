@@ -514,3 +514,57 @@ Task 3 expanded into 3 sub-tasks:
 - Future HPO scripts will force-test extremes first
 - 20M grid will include L=160, 180 (in addition to 128)
 - Supplemental tests needed for 2M (L=64 gap) and 20M_h5 (new L values)
+
+## 2025-12-13 HPO DATA_PATH Fix
+
+**Context**: HPO batch run failed - 7 of 12 experiments failed due to bugs introduced when scripts were regenerated mid-run.
+
+**Root Causes Identified**:
+1. **200M/2B instant failures**: `DATA_PATH` missing `v1/` subdirectory (FileNotFoundError)
+2. **2M_h5 runtime failure**: Old TrialLogger bug (since fixed in regenerated scripts)
+
+**Fix Applied**: Added `v1/` to DATA_PATH in 9 scripts (20M×3, 200M×3, 2B×3).
+
+**Commit**: `70cce96` - fix: correct DATA_PATH in HPO scripts
+
+**Lesson Learned**: When regenerating scripts, always verify `data_path` parameter matches actual file location (`data/processed/v1/...`).
+
+## 2025-12-13 Full Re-run Strategy (Option A)
+
+**Context**: Completed 2M experiments (h1, h3, h5) have gaps:
+- L=64 architectures not tested (original grid max was L=48 for small d_model)
+- No forced extreme testing (first 6 trials testing min/max of d_model, n_layers, n_heads)
+- n_heads not logged in original format (recoverable via arch_idx lookup)
+
+**Options Considered**:
+- **Option A**: Full re-runs of all 2M experiments with new scripts
+- **Option B**: Targeted supplemental tests for missing configurations only
+
+**Decision**: Option A - Full re-runs for all experiments lacking forced extremes and complete grid coverage.
+
+**Rationale**:
+1. 2M experiments are fast (~2-4 hours each)
+2. Clean, consistent methodology across all experiments
+3. Simpler data aggregation for publication
+4. New scripts have all improvements: forced extremes, expanded grid, n_heads logging, no timeout
+
+**Experiments Requiring Re-run**:
+
+| Experiment | Reason | Priority |
+|------------|--------|----------|
+| 2M_h1 | No forced extremes, L=64 gap | After 200M/2B |
+| 2M_h3 | No forced extremes, L=64 gap | After 200M/2B |
+| 2M_h5 | No forced extremes, L=64 gap, TrialLogger bug | After 200M/2B |
+| 20M_h1 | Stopped at 31/50, no forced extremes | After 200M/2B |
+| 20M_h3 | Stopped at 32/50, no forced extremes | After 200M/2B |
+
+**Total HPO Queue** (in order):
+1. 200M_h1, 200M_h3, 200M_h5 (new runs)
+2. 2B_h1, 2B_h3, 2B_h5 (new runs)
+3. 2M_h1, 2M_h3, 2M_h5 (re-runs)
+4. 20M_h1, 20M_h3 (re-runs)
+
+**Implications**:
+- 20M_h5 does NOT need re-run (completed 50/50, will get L=160/180 coverage via forced extremes if re-run desired later)
+- Discard partial 2M results; fresh runs will have complete coverage
+- Supplemental scripts (supplemental_2M_L64.py) NOT needed
