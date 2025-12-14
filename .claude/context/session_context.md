@@ -1,20 +1,20 @@
-# Session Handoff - 2025-12-14 ~07:45
+# Session Handoff - 2025-12-14 ~09:15
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `4b75e2a` feat: increase HPO batch_size range for better hardware utilization
-- **Uncommitted**: 1 file (`.claude/context/decision_log.md` - architecture logging bug documentation)
+- **Last commit**: `27831c0` fix: architecture logging for forced extreme trials in HPO output
+- **Uncommitted**: none
 
 ### Project Phase
 - **Phase 6A**: Parameter Scaling - IN PROGRESS
-- **Status**: HPO experiment 1/12 running (Trial 9/50)
+- **Status**: HPO experiment 1/12 running (Trial 11/50)
 
 ---
 
 ## Test Status
-- **Last `make test`**: PASS (335 tests) - verified this session
+- **Last `make test`**: PASS (338 tests) - verified after bug fix
 - **Failing**: none
 
 ---
@@ -22,47 +22,30 @@
 ## Completed This Session
 
 1. **Session restore** from previous handoff
-2. **Fixed failing test** (`test_batch_size_choices_match_design`) - updated assertion to match new config
-3. **Committed batch_size config change** (`4b75e2a`)
-4. **Monitored HPO progress** - 9/50 trials complete
-5. **DISCOVERED CRITICAL BUG**: Architecture params missing from `_best.json` output
-6. **Documented bug thoroughly** in `decision_log.md` with:
-   - Root cause analysis (user_attrs vs params)
-   - Code location (hpo.py:647-649)
-   - Required fix with code snippet
-   - Preventive measures and lessons learned
-7. **Created Memory entities** for bug and lessons learned
+2. **Planning session** for architecture logging bug fix
+3. **TDD implementation** of bug fix:
+   - RED: Added 3 test classes for forced trial architecture logging
+   - GREEN: Fixed 4 functions in hpo.py
+4. **Bug fix committed**: `27831c0`
 
 ---
 
-## CRITICAL: Architecture Logging Bug
+## Bug Fix Summary
 
-**Problem**: `save_best_params()` in `hpo.py` fails to include architecture parameters in `_best.json`.
+### Problem
+Architecture parameters missing from `_best.json` and `all_trials.json` for forced extreme trials (0-9) because they use `set_user_attr()` instead of `trial.suggest_*()`.
 
-**Root Cause**:
-- For forced extreme trials (0-9), `arch_idx` is stored via `set_user_attr()`, NOT `trial.suggest_*()`
-- Condition `"arch_idx" in study.best_params` is FALSE for these trials
-- Architecture info never gets included in output files
+### Solution
+All 4 output functions now check `user_attrs["architecture"]` first, then fall back to `params["arch_idx"]` lookup:
+- `save_best_params()` - line 649-654
+- `update_best_params()` - line 528-534
+- `save_trial_result()` - line 459-464
+- `save_all_trials()` - line 577-589
 
-**Impact**:
-- `_best.json` contains ONLY training params (lr, epochs, batch_size)
-- Architecture params (d_model, n_layers, n_heads, d_ff, param_count) are MISSING
-- This is the PRIMARY data for scaling law research!
-
-**Data Recovery**:
-- Individual `trial_XXXX.json` files DO have architecture in `user_attrs.architecture`
-- Current experiment data is NOT lost, just poorly aggregated
-
-**Fix Required** (next session):
-```python
-# In save_best_params() - check user_attrs first
-best_trial = study.best_trial
-if "architecture" in best_trial.user_attrs:
-    result["architecture"] = best_trial.user_attrs["architecture"]
-elif architectures is not None and "arch_idx" in study.best_params:
-    arch_idx = study.best_params["arch_idx"]
-    result["architecture"] = architectures[arch_idx]
-```
+### Tests Added
+- `TestSaveBestParamsIncludesArchitectureForForcedTrials`
+- `TestSaveTrialResultIncludesArchitectureForForcedTrials`
+- `TestSaveAllTrialsIncludesArchitectureForForcedTrials`
 
 ---
 
@@ -71,9 +54,8 @@ elif architectures is not None and "arch_idx" in study.best_params:
 - **HPO Queue**: Running in tmux session `hpo`
   - Script: `./scripts/run_phase6a_remaining.sh`
   - Experiment 1/12: `hpo_200M_h1_threshold_1pct.py`
-  - Progress: 9/50 trials complete
+  - Progress: 11/50 trials complete
   - Best so far: Trial 0 val_loss=0.3756 (d=256, L=192, n_heads=8)
-  - Trial 7 took ~7.5 hours (unclear why - possible system issue overnight)
 
 ---
 
@@ -89,26 +71,26 @@ elif architectures is not None and "arch_idx" in study.best_params:
 | 5 | 512 | 96 | 32 | 32 | 0.4186 | slow (small batch) |
 | 6 | 384 | 180 | 32 | 128 | 0.3798 | 2nd best - very deep |
 | 7 | 384 | 128 | 32 | 64 | 0.4067 | took 7.5 hrs |
-| 8 | 512 | 48 | 4 | 128 | ? | completed |
+| 8 | 512 | 48 | 4 | 128 | 0.3978 | |
+| 9 | 1024 | 24 | 2 | 256 | 0.3816 | wide shallow |
+| 10 | 384 | 192 | 2 | 64 | 0.3968 | very deep |
+| 11 | 384 | 128 | 8 | 64 | _running_ | |
 
-**Pattern**: Deep narrow architectures (L=180-192) outperforming shallower ones.
+**Pattern**: Deep narrow architectures (L=180-192, d=256-384) outperforming wider/shallower ones.
 
 ---
 
 ## Pending / Next Session Priority
 
-### PRIORITY 1: Fix Architecture Logging Bug
-1. Update `save_best_params()` in `src/training/hpo.py`
-2. Update all_trials export logic (same issue)
-3. Add test verifying `_best.json` contains architecture for forced extreme trials
-4. Regenerate 12 HPO scripts after fix
-
-### PRIORITY 2: Continue Monitoring HPO
+### PRIORITY 1: Continue Monitoring HPO
 1. Check HPO progress: `tmux attach -t hpo`
-2. Analyze results as experiments complete
+2. Monitor for experiment completion
+3. Analyze results as experiments complete
 
-### PRIORITY 3: Commit decision_log update
-1. `git add -A && git commit -m "docs: document architecture logging bug"`
+### PRIORITY 2: Post-Experiment Analysis
+1. When experiment 1 completes, analyze `_best.json` to verify fix works
+2. Review architectural patterns emerging from results
+3. Document findings
 
 ---
 
@@ -116,8 +98,8 @@ elif architectures is not None and "arch_idx" in study.best_params:
 
 | File | Change |
 |------|--------|
-| `tests/test_hpo.py` | Updated batch_size assertion [32,64,128,256] → [64,128,256,512] |
-| `.claude/context/decision_log.md` | Added architecture logging bug documentation |
+| `src/training/hpo.py` | Fixed 4 functions to check user_attrs for architecture |
+| `tests/test_hpo.py` | Added 3 test classes, imported save_trial_result and save_all_trials |
 
 ---
 
@@ -125,10 +107,8 @@ elif architectures is not None and "arch_idx" in study.best_params:
 
 | Metric | Value |
 |--------|-------|
-| Memory Used | ~75 GB (59%) |
-| Memory Free | ~41% |
-| CPU | ~16% |
-| Temperature | -1.0 (needs sudo) |
+| HPO Session | tmux `hpo` - Trial 11/50 running |
+| Experiment | 200M_h1_threshold_1pct (1/12) |
 
 ---
 
@@ -143,20 +123,17 @@ elif architectures is not None and "arch_idx" in study.best_params:
 
 | Entity | Type | Description |
 |--------|------|-------------|
-| `Phase6A_Architecture_Logging_Bug` | critical_bug | Root cause and fix for missing architecture in _best.json |
-| `Phase6A_Optuna_UserAttrs_Lesson` | lesson_learned | user_attrs vs params distinction in Optuna |
-| `Phase6A_Output_Verification_Lesson` | lesson_learned | Verify outputs contain expected data, not just execution |
-| `Phase6A_HPO_Logging_Fix_Plan` | fix_plan | 4-task plan to fix logging and add tests |
+| `Phase6A_Architecture_Logging_Fix_Approved_Plan` | planning_decision | Approved plan for 4-function fix |
+| `Phase6A_Architecture_Logging_Bug` | critical_bug | Updated with fix confirmation |
 
 ---
 
 ## Context for Next Session
 
 - **HPO is running** in tmux session `hpo` - check with `tmux attach -t hpo`
-- **CRITICAL BUG** identified - architecture params missing from `_best.json`
-- **Data is NOT lost** - individual trial files have architecture in user_attrs
-- **Fix documented** in decision_log with code snippet
-- **One uncommitted file**: decision_log.md (architecture bug documentation)
+- **Bug fix committed** - architecture params now properly logged for forced trials
+- **Trial 0 still winning** with val_loss=0.3756 (deep narrow: d=256, L=192)
+- **Pattern emerging**: Deep narrow > wide shallow for 200M budget
 
 ---
 
@@ -170,7 +147,4 @@ make verify
 
 # Check HPO progress
 tmux capture-pane -t hpo -p | tail -30
-
-# Commit decision_log update
-git add -A && git commit -m "docs: document architecture logging bug"
 ```
