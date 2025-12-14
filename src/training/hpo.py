@@ -244,11 +244,11 @@ def create_architectural_objective(
         # Force extreme architectures for first N trials
         if trial.number < len(extreme_indices):
             arch_idx = extreme_indices[trial.number]
-            # Still need to "suggest" for Optuna tracking, but override the value
-            trial.suggest_categorical("arch_idx", [arch_idx])
+            # Record forced arch_idx without suggesting (avoids CategoricalDistribution error)
+            trial.set_user_attr("arch_idx", arch_idx)
         else:
             # Random sampling for remaining trials
-            arch_idx = trial.suggest_categorical("arch_idx", list(range(len(architectures))))
+            arch_idx = trial.suggest_int("arch_idx", 0, len(architectures) - 1)
         arch = architectures[arch_idx]
 
         # Sample training params from narrow ranges

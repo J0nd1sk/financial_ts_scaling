@@ -928,7 +928,7 @@ class TestArchObjectiveSamplesArchitecture:
         sample_architectures: list[dict],
         sample_training_search_space: dict,
     ) -> None:
-        """Test that objective calls trial.suggest_categorical with 'arch_idx'."""
+        """Test that objective calls trial.suggest_int with 'arch_idx'."""
         mock_load_exp.return_value = mock_experiment_config
         mock_trainer = MagicMock()
         mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.55}
@@ -937,7 +937,7 @@ class TestArchObjectiveSamplesArchitecture:
         # Create mock trial
         mock_trial = MagicMock()
         mock_trial.number = 10  # Set trial number > 6 to bypass forced extremes
-        mock_trial.suggest_categorical.return_value = 1  # Select second architecture
+        mock_trial.suggest_int.return_value = 1  # Select second architecture
         mock_trial.suggest_float.return_value = 0.0005
 
         objective = create_architectural_objective(
@@ -951,14 +951,15 @@ class TestArchObjectiveSamplesArchitecture:
 
         objective(mock_trial)
 
-        # Verify suggest_categorical was called with arch_idx
+        # Verify suggest_int was called with arch_idx
         arch_idx_calls = [
-            call for call in mock_trial.suggest_categorical.call_args_list
+            call for call in mock_trial.suggest_int.call_args_list
             if call[0][0] == "arch_idx"
         ]
         assert len(arch_idx_calls) == 1
-        # Verify it was called with indices [0, 1, 2]
-        assert arch_idx_calls[0][0][1] == [0, 1, 2]
+        # Verify it was called with range 0 to len(architectures)-1
+        assert arch_idx_calls[0][0][1] == 0  # low
+        assert arch_idx_calls[0][0][2] == len(sample_architectures) - 1  # high
 
 
 class TestArchObjectiveSamplesTrainingParams:
@@ -1153,3 +1154,93 @@ class TestSaveBestParamsIncludesArchitecture:
         assert data["architecture"]["n_heads"] == 4
         assert data["architecture"]["d_ff"] == 256
         assert data["architecture"]["param_count"] == 2_000_000
+
+
+class TestForcedExtremesIntegration:
+    """Test that forced extremes work correctly without CategoricalDistribution errors."""
+
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    def test_forced_extremes_uses_set_user_attr(
+        self,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_experiment_config: MagicMock,
+        sample_architectures: list[dict],
+        sample_training_search_space: dict,
+    ) -> None:
+        """Test that forced extreme trials use set_user_attr, not suggest."""
+        mock_load_exp.return_value = mock_experiment_config
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.55}
+        mock_trainer_cls.return_value = mock_trainer
+
+        # Create mock trial for forced extreme (trial 0)
+        mock_trial = MagicMock()
+        mock_trial.number = 0  # First trial - should be forced extreme
+        mock_trial.suggest_float.return_value = 0.0005
+
+        objective = create_architectural_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            architectures=sample_architectures,
+            training_search_space=sample_training_search_space,
+            num_features=20,
+            force_extreme_trials=True,  # Enable forced extremes
+        )
+
+        objective(mock_trial)
+
+        # Verify set_user_attr was called with arch_idx (not suggest_int)
+        user_attr_calls = [
+            call for call in mock_trial.set_user_attr.call_args_list
+            if call[0][0] == "arch_idx"
+        ]
+        assert len(user_attr_calls) == 1, "Forced extreme should use set_user_attr"
+
+        # Verify suggest_int was NOT called for arch_idx
+        suggest_int_calls = [
+            call for call in mock_trial.suggest_int.call_args_list
+            if call[0][0] == "arch_idx"
+        ]
+        assert len(suggest_int_calls) == 0, "Forced extreme should not call suggest_int"
+
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    def test_non_forced_trial_uses_suggest_int(
+        self,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_experiment_config: MagicMock,
+        sample_architectures: list[dict],
+        sample_training_search_space: dict,
+    ) -> None:
+        """Test that non-forced trials use suggest_int for arch_idx."""
+        mock_load_exp.return_value = mock_experiment_config
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.55}
+        mock_trainer_cls.return_value = mock_trainer
+
+        # Create mock trial beyond forced extremes (trial 10)
+        mock_trial = MagicMock()
+        mock_trial.number = 10  # Beyond forced extremes
+        mock_trial.suggest_int.return_value = 1
+        mock_trial.suggest_float.return_value = 0.0005
+
+        objective = create_architectural_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            architectures=sample_architectures,
+            training_search_space=sample_training_search_space,
+            num_features=20,
+            force_extreme_trials=True,  # Enable forced extremes
+        )
+
+        objective(mock_trial)
+
+        # Verify suggest_int was called for arch_idx
+        suggest_int_calls = [
+            call for call in mock_trial.suggest_int.call_args_list
+            if call[0][0] == "arch_idx"
+        ]
+        assert len(suggest_int_calls) == 1, "Non-forced trial should use suggest_int"

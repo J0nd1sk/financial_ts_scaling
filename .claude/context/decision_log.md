@@ -568,3 +568,25 @@ Task 3 expanded into 3 sub-tasks:
 - 20M_h5 does NOT need re-run (completed 50/50, will get L=160/180 coverage via forced extremes if re-run desired later)
 - Discard partial 2M results; fresh runs will have complete coverage
 - Supplemental scripts (supplemental_2M_L64.py) NOT needed
+
+## 2025-12-13 20M_h5 Must Also Re-run (Verification Finding)
+
+**Context**: Pre-run verification discovered that 20M_h5 (marked as "complete" with 50 trials) actually ran BEFORE forced extremes was implemented.
+
+**Evidence**:
+- 20M_h5 trial 0 started: `2025-12-13 09:44:32`
+- Forced extremes commit (`7163c7d`): `2025-12-13 14:45:53`
+- Trial 0 used `arch_idx=56` (random) instead of expected extreme `idx=12`
+- Expected extreme for trial 0: d=128, L=128, h=8 (deep narrow architecture)
+
+**Decision**: Add 20M_h5 to re-run list. All 12 HPO experiments will now run.
+
+**Rationale**: Without forced extreme testing, we cannot guarantee the scaling law analysis tested boundary conditions. Consistent methodology across all experiments is essential for publication.
+
+**Updated Queue** (12 total):
+1. 200M_h1, 200M_h3, 200M_h5 (new)
+2. 2B_h1, 2B_h3, 2B_h5 (new)
+3. 2M_h1, 2M_h3, 2M_h5 (re-run)
+4. 20M_h1, 20M_h3, 20M_h5 (re-run)
+
+**Lesson Learned**: Always verify experiment outputs used current code features before marking complete. Check trial 0 architecture against expected forced extreme.
