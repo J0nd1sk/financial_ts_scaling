@@ -28,7 +28,7 @@ training_search_space:
 
   batch_size:
     type: categorical
-    choices: [32, 64, 128, 256]
+    choices: [64, 128, 256, 512]
 
   weight_decay:
     type: log_uniform

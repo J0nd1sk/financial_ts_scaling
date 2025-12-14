@@ -590,3 +590,25 @@ Task 3 expanded into 3 sub-tasks:
 4. 20M_h1, 20M_h3, 20M_h5 (re-run)
 
 **Lesson Learned**: Always verify experiment outputs used current code features before marking complete. Check trial 0 architecture against expected forced extreme.
+
+## 2025-12-13 Batch Size Config Increase
+
+**Context**: HPO queue running on M4 MacBook Pro (128GB unified memory). Hardware severely underutilized - 90% memory free, fans not spinning.
+
+**Decision**: Update batch_size choices from `[32, 64, 128, 256]` to `[64, 128, 256, 512]`.
+
+**Rationale**:
+- Hardware underutilized (90% free memory) suggested larger batches could improve throughput
+- Dropped 32 (too small for modern hardware), added 512 (pushes utilization higher)
+- Kept 64 as minimum for generalization safety (user preference)
+
+**Alternatives Considered**:
+- `[128, 256, 512, 768]` — rejected; user preferred safer option keeping 64 for generalization
+- `[128, 256, 512, 1024]` — rejected; too aggressive, risk of generalization degradation
+
+**Trade-offs**:
+- Larger batches: faster epochs, better GPU utilization
+- Smaller batches: better generalization (gradient noise helps escape sharp minima)
+- HPO samples all options and selects by val_loss, so impact is self-correcting
+
+**Impact**: Experiment 1 (200M_h1) uses old config; experiments 2-12 use new config.

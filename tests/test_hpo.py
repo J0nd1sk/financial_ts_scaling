@@ -817,14 +817,14 @@ class TestArchitecturalSearchConfigValueRanges:
         assert epochs["choices"] == [50, 75, 100]
 
     def test_batch_size_choices_match_design(self) -> None:
-        """Test batch_size is categorical [32, 64, 128, 256]."""
+        """Test batch_size is categorical [64, 128, 256, 512]."""
         config_path = Path("configs/hpo/architectural_search.yaml")
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
         batch_size = config["training_search_space"]["batch_size"]
         assert batch_size["type"] == "categorical"
-        assert batch_size["choices"] == [32, 64, 128, 256]
+        assert batch_size["choices"] == [64, 128, 256, 512]
 
     def test_weight_decay_range_matches_design(self) -> None:
         """Test weight_decay is log_uniform 1e-5 to 1e-3."""
