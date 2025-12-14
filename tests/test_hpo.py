@@ -1414,3 +1414,166 @@ class TestSaveAllTrialsIncludesArchitectureForForcedTrials:
         assert trial_data["n_layers"] == 8
         assert trial_data["n_heads"] == 4
         assert trial_data["param_count"] == 2_000_000
+
+
+# --- Tests for postprocess_hpo_output ---
+
+
+class TestPostprocessHpoOutput:
+    """Test post-processing HPO output to add architecture info."""
+
+    @pytest.fixture
+    def hpo_output_dir(self, tmp_path: Path) -> Path:
+        """Create a mock HPO output directory with trial files."""
+        output_dir = tmp_path / "phase6a_test_exp"
+        output_dir.mkdir()
+        trials_dir = output_dir / "trials"
+        trials_dir.mkdir()
+
+        # Create trial JSON files with architecture in user_attrs
+        for i in range(3):
+            trial_data = {
+                "trial_number": i,
+                "value": 0.4 - i * 0.01,  # Trial 0 is best
+                "params": {
+                    "learning_rate": 0.0005,
+                    "epochs": 75,
+                    "batch_size": 64,
+                },
+                "state": "COMPLETE",
+                "user_attrs": {
+                    "arch_idx": i,
+                    "architecture": {
+                        "d_model": 128 + i * 64,
+                        "n_layers": 8 + i * 2,
+                        "n_heads": 4,
+                        "d_ff": 256 + i * 128,
+                        "param_count": 2_000_000 + i * 500_000,
+                    },
+                },
+            }
+            trial_path = trials_dir / f"trial_{i:04d}.json"
+            with open(trial_path, "w") as f:
+                json.dump(trial_data, f)
+
+        # Create existing _best.json WITHOUT architecture (simulates bug)
+        best_data = {
+            "experiment": "test_exp",
+            "budget": "200M",
+            "best_params": {
+                "learning_rate": 0.0005,
+                "epochs": 75,
+                "batch_size": 64,
+            },
+            "best_value": 0.4,
+            "best_trial_number": 0,
+        }
+        best_path = output_dir / "test_exp_200M_best.json"
+        with open(best_path, "w") as f:
+            json.dump(best_data, f)
+
+        # Create existing all_trials.json WITHOUT architecture
+        all_trials_data = {
+            "experiment": "test_exp",
+            "budget": "200M",
+            "trials": [
+                {
+                    "trial_number": i,
+                    "value": 0.4 - i * 0.01,
+                    "params": {"learning_rate": 0.0005},
+                }
+                for i in range(3)
+            ],
+        }
+        all_trials_path = output_dir / "test_exp_all_trials.json"
+        with open(all_trials_path, "w") as f:
+            json.dump(all_trials_data, f)
+
+        return output_dir
+
+    def test_postprocess_creates_backup(self, hpo_output_dir: Path) -> None:
+        """Test that postprocess creates backup of original files."""
+        from scripts.postprocess_hpo_output import postprocess_hpo_output
+
+        postprocess_hpo_output(hpo_output_dir)
+
+        # Check backups exist
+        best_files = list(hpo_output_dir.glob("*_best.json.bak"))
+        all_trials_files = list(hpo_output_dir.glob("*_all_trials.json.bak"))
+
+        assert len(best_files) >= 1, "No backup created for _best.json"
+        assert len(all_trials_files) >= 1, "No backup created for all_trials.json"
+
+    def test_postprocess_includes_architecture_in_best(
+        self, hpo_output_dir: Path
+    ) -> None:
+        """Test that regenerated _best.json includes architecture."""
+        from scripts.postprocess_hpo_output import postprocess_hpo_output
+
+        postprocess_hpo_output(hpo_output_dir)
+
+        # Find and read the best.json file
+        best_files = list(hpo_output_dir.glob("*_best.json"))
+        best_files = [f for f in best_files if not f.name.endswith(".bak")]
+        assert len(best_files) == 1
+
+        with open(best_files[0]) as f:
+            data = json.load(f)
+
+        assert "architecture" in data, "_best.json missing architecture"
+        assert data["architecture"]["d_model"] == 128  # Trial 0
+        assert data["architecture"]["n_layers"] == 8
+        assert data["architecture"]["n_heads"] == 4
+        assert data["architecture"]["param_count"] == 2_000_000
+
+    def test_postprocess_includes_architecture_in_all_trials(
+        self, hpo_output_dir: Path
+    ) -> None:
+        """Test that regenerated all_trials.json includes architecture for each trial."""
+        from scripts.postprocess_hpo_output import postprocess_hpo_output
+
+        postprocess_hpo_output(hpo_output_dir)
+
+        # Find and read the all_trials.json file
+        all_trials_files = list(hpo_output_dir.glob("*_all_trials.json"))
+        all_trials_files = [f for f in all_trials_files if not f.name.endswith(".bak")]
+        assert len(all_trials_files) == 1
+
+        with open(all_trials_files[0]) as f:
+            data = json.load(f)
+
+        assert len(data["trials"]) == 3
+        for i, trial in enumerate(data["trials"]):
+            assert "d_model" in trial, f"Trial {i} missing d_model"
+            assert "n_layers" in trial, f"Trial {i} missing n_layers"
+            assert trial["d_model"] == 128 + i * 64
+
+    def test_postprocess_handles_missing_architecture(self, tmp_path: Path) -> None:
+        """Test that postprocess warns but doesn't crash on missing architecture."""
+        from scripts.postprocess_hpo_output import postprocess_hpo_output
+
+        # Create minimal HPO output with a trial missing architecture
+        output_dir = tmp_path / "incomplete_hpo"
+        output_dir.mkdir()
+        trials_dir = output_dir / "trials"
+        trials_dir.mkdir()
+
+        # Trial WITHOUT architecture in user_attrs
+        trial_data = {
+            "trial_number": 0,
+            "value": 0.4,
+            "params": {"learning_rate": 0.0005},
+            "state": "COMPLETE",
+            "user_attrs": {},  # No architecture!
+        }
+        trial_path = trials_dir / "trial_0000.json"
+        with open(trial_path, "w") as f:
+            json.dump(trial_data, f)
+
+        # Create minimal _best.json
+        best_data = {"experiment": "test", "best_trial_number": 0, "best_value": 0.4}
+        with open(output_dir / "test_best.json", "w") as f:
+            json.dump(best_data, f)
+
+        # Should not raise, just warn
+        postprocess_hpo_output(output_dir)  # No exception = pass
