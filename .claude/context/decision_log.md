@@ -704,3 +704,190 @@ elif architectures is not None and "arch_idx" in study.best_params:
 - Fix required before any publication or formal analysis
 
 **Status**: Fix identified, awaiting implementation in next session.
+
+## 2025-12-14 HPO Output Postprocessor Script
+
+**Context**: Running HPO process has old code in memory before architecture logging bug fix. Output files (_best.json, all_trials.json) missing architecture info.
+
+**Decision**: Create postprocessor script rather than restart HPO or modify running process.
+
+**Rationale**: 
+- Individual trial files DO have architecture in user_attrs
+- Restarting HPO would lose 12+ trials of compute
+- Postprocessor is safe, idempotent, and reusable
+
+**Implementation**: `scripts/postprocess_hpo_output.py` (~180 lines)
+- Reads architecture from trial JSON files
+- Regenerates _best.json and all_trials.json with architecture
+- Creates backups before overwriting
+
+**Tests Added**: 4 tests in `TestPostprocessHpoOutput` class
+
+## 2025-12-14 n_heads Parameter Finding
+
+**Context**: Question about whether n_heads affects parameter count or training time.
+
+**Finding**: n_heads does NOT affect parameter count.
+
+**Evidence**: Architecture grid shows identical param counts for same d_model/n_layers:
+```
+d=384, L=192, h=2,  params=227,412,865
+d=384, L=192, h=8,  params=227,412,865
+d=384, L=192, h=32, params=227,412,865
+```
+
+**Explanation**: In multi-head attention, each head has dimension d_k = d_model/n_heads, but total Q,K,V projections remain (d_model × d_model) matrices. Heads partition dimensions, don't add new parameters.
+
+**Training impact**: Minimal - similar FLOPs, slightly different parallelization patterns.
+
+**Implication**: n_heads is purely an architectural design choice for attention pattern learning, not a scaling parameter.
+
+## 2025-12-14 HPO Trial 13 New Best Result
+
+**Context**: During HPO monitoring, Trial 13 surpassed Trial 0 as best architecture.
+
+**Finding**: Mid-depth architecture (d=768, L=32, h=2) achieving val_loss=0.3673, beating deep narrow (d=256, L=192, h=8) at 0.3756.
+
+**Implication**: Initial hypothesis that "deeper is better" may be wrong. Need more trials to confirm pattern.
+
+**Action**: Continue monitoring; record as potential pattern shift in scaling behavior.
+
+## 2025-12-14 Trial 22 New Best - Deep Narrow Validated
+
+**Context**: Trial 22 surpassed Trial 13 as best architecture, reversing the earlier pattern shift.
+
+**Finding**: Deep narrow (d=384, L=192, h=32, batch=128) at val_loss=0.3670 beats mid-depth (d=768, L=32, h=2) at 0.3673.
+
+**Key Insights**:
+1. **Batch size is dominant factor**: batch=128 avg=0.3808 vs batch=32 avg=0.4089
+2. **Deep architectures win** when paired with proper batch size
+3. **High heads (h=32) work well** with batch=128 (Trial 17 failure was batch=32, not h=32)
+
+**Implication**: Deep narrow + high heads + batch=128 is currently winning formula for 200M budget.
+
+## 2025-12-14 200M Architecture Optimization Study Plan
+
+**Context**: User wants systematic exploration of head count across two architecture families.
+
+**Decision**: Test h ∈ {8, 12, 16, 24, 32} for both architecture families with batch=128.
+
+**Architecture Families**:
+1. **Mid-depth wide**: d=768, L=32 (~227M params)
+2. **Deep narrow**: d=384, L=192 (~227M params)
+
+**HPO Grid Coverage**:
+- In grid (may get tested): h=8, h=16, h=32
+- Manual tests required: h=12, h=24 (not powers of 2)
+
+**Manual Tests Queued** (4 total):
+1. d=768, L=32, h=12, batch=128
+2. d=768, L=32, h=24, batch=128
+3. d=384, L=192, h=12, batch=128
+4. d=384, L=192, h=24, batch=128
+
+**Research Question**: Does optimal head count differ between deep-narrow vs mid-wide architectures?
+
+**Memory Entities**: Phase6A_User_Hypothesis_d768_L32_h12, Phase6A_User_Hypothesis_d384_L192_heads, Phase6A_200M_Optimization_Study
+
+## 2025-12-16 d_ff Ratio Discovery - Two Architecture Variants
+
+**Context**: User proposed d=768, L=36, h=32 expecting 151M params. Investigation revealed mismatch in understanding.
+
+**Finding**: The HPO grid includes TWO d_ff ratios for d=768:
+- d_ff = 3072 (4x d_model): d=768, L=32 → 227M params
+- d_ff = 1536 (2x d_model): d=768, L=32 → **151M params**
+
+**Implication for User's Hypothesis**: With d_ff=1536 (2x ratio), the 200M budget allows:
+- L=40 → 189M ✅
+- **L=44 → 208M ✅ (optimal)**
+- L=48 → 227M ❌
+
+**Optimal config for user's intent**: `d=768, L=44, h=32, d_ff=1536, batch=512` (~208M params)
+
+**Note**: User also mentioned batch=512 which is outside current HPO range [64, 128, 256, 512]. This would require manual testing.
+
+## 2025-12-16 Parallel HPO Strategy - Separate 2M Runner
+
+**Context**: Hardware severely underutilized (83% CPU idle, ~8GB RAM free). Current runner script queues all 12 experiments sequentially including 2M which could run in parallel with larger models.
+
+**Decision**: Create separate `run_phase6a_2M.sh` runner for 2M experiments to enable parallel execution.
+
+**Rationale**:
+1. 2M models use ~50x less GPU memory than 200M
+2. Can run alongside 200M/2B HPO without significant contention
+3. Better hardware utilization
+4. Reduces total experiment time
+
+**Implementation**:
+- Created `scripts/run_phase6a_2M.sh` - runs only 2M_h{1,3,5}
+- User will cancel main runner, regenerate without 2M experiments
+- 2M runner can execute in separate tmux window
+
+**Trade-offs**:
+- Some GPU memory contention possible (monitor required)
+- Slightly more complex orchestration
+- But: significant time savings from parallelization
+
+**Memory Entity**: Phase6A_Parallel_HPO_Strategy
+
+## 2025-12-17 NEW BEST: Wide-Shallow Architecture (d=1024, L=12)
+
+**Context**: HPO h=3 experiment Trial 23 achieved val_loss=0.3120, significantly beating all previous results.
+
+**Winning Architecture**:
+| Parameter | Value |
+|-----------|-------|
+| d_model | 1024 |
+| n_layers | **12** (shallow!) |
+| n_heads | 16 |
+| d_ff | 4096 (4x ratio) |
+| param_count | 151,446,529 |
+| **batch_size** | **512** |
+| val_loss | **0.3120** |
+
+**Paradigm Shift**: Previous hypothesis favored deep-narrow architectures (d=384, L=192 or d=256, L=256). This result shows **wide-shallow (d=1024, L=12) with batch_size=512** dramatically outperforms deep architectures.
+
+**Comparison**:
+| Architecture Style | d_model | L | Best val_loss |
+|-------------------|---------|---|---------------|
+| **Wide-Shallow (NEW)** | **1024** | **12** | **0.3120** |
+| Deep-Narrow | 256 | 256 | 0.3644 |
+| Mid-Wide | 768 | 32 | 0.3673 |
+
+**Implications**:
+1. batch_size=512 validated as effective (user hypothesis correct)
+2. Shallow models (L=12) may be optimal for financial time series
+3. Wide d_model (1024) with standard 4x d_ff ratio preferred
+4. Previous deep-narrow investigation may have been wrong direction
+5. Should test d=1024, L=12, h=16, batch=512 on h=1 and h=5 tasks
+
+**Memory Entity**: Phase6A_Wide_Shallow_Discovery
+
+## 2025-12-17 User Hypothesis: d=1024, L=16 Optimal
+
+**Context**: Based on Trial 23's success with d=1024, L=12, user hypothesizes that slightly more layers (L=16-18) and different head count (h≈18) might be optimal.
+
+**Analysis**:
+
+| Config | Params | Budget Status |
+|--------|--------|---------------|
+| d=1024, L=12 | 151M | ⚠️ Under |
+| d=1024, L=14 | 176M | ⚠️ Under |
+| **d=1024, L=16** | **201M** | **✅ Perfect fit** |
+| d=1024, L=18 | 227M | ❌ Over |
+
+**Head Count Constraint**: h=18 is invalid for d=1024 (must divide evenly). Valid options: h=8, 16, 32, 64.
+
+**Recommended Test Config**: `d=1024, L=16, h=16, d_ff=4096, batch=512` (~201M params)
+
+**Rationale**:
+1. L=16 maximizes layers within 200M budget for d=1024
+2. h=16 matches current best (Trial 23)
+3. batch=512 validated by Trial 23's success
+4. Tests whether additional 4 layers (L=12→L=16) improve performance
+
+**Alternative**: Test h=32 variant to explore higher head counts
+
+**Status**: Queued for manual testing after HPO completes
+
+**Memory Entity**: Phase6A_User_Hypothesis_d1024_L16

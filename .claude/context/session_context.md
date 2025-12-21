@@ -1,139 +1,121 @@
-# Session Handoff - 2025-12-14 ~09:15
+# Session Handoff - 2025-12-19 ~11:00
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `27831c0` fix: architecture logging for forced extreme trials in HPO output
-- **Uncommitted**: none
+- **Last commit**: `08ce7dd` feat: add postprocess_hpo_output.py to fix missing architecture in HPO logs
+- **Uncommitted changes**:
+  - `.claude/context/decision_log.md` - updated
+  - `.claude/context/session_context.md` - this handoff
+  - `docs/experiment_results.csv` - updated
+  - `scripts/run_phase6a_2M.sh` - NEW (untracked)
+  - `scripts/run_phase6a_20M.sh` - NEW (untracked)
+  - `scripts/run_phase6a_large.sh` - NEW (untracked)
+- **Remote**: up to date with origin
 
 ### Project Phase
 - **Phase 6A**: Parameter Scaling - IN PROGRESS
-- **Status**: HPO experiment 1/12 running (Trial 11/50)
+- **Status**: HPO experiments running
 
 ---
 
 ## Test Status
-- **Last `make test`**: PASS (338 tests) - verified after bug fix
+- **Last `make test`**: PASS (342 tests) - this session
 - **Failing**: none
 
 ---
 
+## HPO Progress (as of handoff)
+
+| Experiment | Trials | Best val_loss | Best Architecture |
+|------------|--------|---------------|-------------------|
+| 200M_h1 | 46/50 | 0.3633 | d=1024, L=12, h=16 |
+| **200M_h3** | **50/50 COMPLETE** | **0.3081** | **d=768, L=24, h=16** |
+| 200M_h5 | 19/50 | 0.3571 | d=384, L=96, h=8 |
+
+### Key Result: 200M_h3 Complete
+Best architecture: d=768, L=24, h=16, d_ff=3072, params=170M, val_loss=0.3081
+
+### Pattern Analysis (200M_h3, 50 trials)
+- **By d_model**: d=768 and d=1024 are clear winners
+  - d=768: best=0.3081, avg=0.409
+  - d=1024: best=0.3120, avg=0.384
+- **By depth**: Medium depth (12-24 layers) optimal
+  - Shallow (L<=12): best=0.3120
+  - Medium (12<L<=24): best=0.3081 (WINNER)
+  - Deep (L>48): best=0.3296
+- **By n_heads**: h=16 optimal (best=0.3081, avg=0.342)
+
+---
+
+## Manual Test Queue (9 tests)
+
+Queued for after HPO completes:
+
+| # | Config | d_ff | Params | Task | Notes |
+|---|--------|------|--------|------|-------|
+| 1 | d=768, L=28, h=12 | 3072 | 199M | h3 | Push depth beyond L=24 |
+| 2 | d=768, L=28, h=16 | 3072 | 199M | h3 | Push depth beyond L=24 |
+| 3 | d=768, L=28, h=24 | 3072 | 199M | h3 | Push depth beyond L=24 |
+| 4 | d=768, L=30, h=12 | 3072 | 213M | h3 | Test depth limit |
+| 5 | d=768, L=30, h=16 | 3072 | 213M | h3 | Test depth limit |
+| 6 | d=768, L=30, h=24 | 3072 | 213M | h3 | Test depth limit |
+| 7 | d=768, L=24, h=16 | 3072 | 170M | **h1** | h3 winner, not tried on h1 |
+| 8 | d=1024, L=20, h=16 | 2048 | 168M | **h1** | Interpolate L=16/24 |
+| 9 | d=1024, L=20, h=16 | 2048 | 168M | **h3** | Interpolate L=16/24 |
+
+**Rationale:**
+- L=28/L=30 tests: Winner was L=24, test if more depth helps
+- d=1024, L=20: Grid has L=12 and L=24, test interpolation
+- Note: d=1024, L=20 requires d_ff=2048 (2x ratio) to fit 200M budget
+
+---
+
 ## Completed This Session
-
-1. **Session restore** from previous handoff
-2. **Planning session** for architecture logging bug fix
-3. **TDD implementation** of bug fix:
-   - RED: Added 3 test classes for forced trial architecture logging
-   - GREEN: Fixed 4 functions in hpo.py
-4. **Bug fix committed**: `27831c0`
+1. Session restore from previous handoff
+2. HPO progress monitoring
+3. 200M_h3 analysis (50 trials complete)
+4. Manual test queue defined (9 tests)
+5. Architecture constraint research (valid head counts, param budgets)
 
 ---
 
-## Bug Fix Summary
+## Key Decisions Made This Session
 
-### Problem
-Architecture parameters missing from `_best.json` and `all_trials.json` for forced extreme trials (0-9) because they use `set_user_attr()` instead of `trial.suggest_*()`.
-
-### Solution
-All 4 output functions now check `user_attrs["architecture"]` first, then fall back to `params["arch_idx"]` lookup:
-- `save_best_params()` - line 649-654
-- `update_best_params()` - line 528-534
-- `save_trial_result()` - line 459-464
-- `save_all_trials()` - line 577-589
-
-### Tests Added
-- `TestSaveBestParamsIncludesArchitectureForForcedTrials`
-- `TestSaveTrialResultIncludesArchitectureForForcedTrials`
-- `TestSaveAllTrialsIncludesArchitectureForForcedTrials`
-
----
-
-## In Progress
-
-- **HPO Queue**: Running in tmux session `hpo`
-  - Script: `./scripts/run_phase6a_remaining.sh`
-  - Experiment 1/12: `hpo_200M_h1_threshold_1pct.py`
-  - Progress: 11/50 trials complete
-  - Best so far: Trial 0 val_loss=0.3756 (d=256, L=192, n_heads=8)
-
----
-
-## HPO Results So Far (Experiment 1: 200M, h=1)
-
-| Trial | d_model | L | n_heads | batch | val_loss | Notes |
-|-------|---------|-----|---------|-------|----------|-------|
-| 0 | 256 | 192 | 8 | 64 | **0.3756** | BEST - deep narrow |
-| 1 | 2048 | 3 | 8 | 256 | 0.4047 | shallow wide |
-| 2 | 768 | 32 | 2 | 128 | 0.3825 | |
-| 3 | 768 | 32 | 32 | 128 | 0.3858 | |
-| 4 | 384 | 128 | 32 | 256 | 0.3888 | |
-| 5 | 512 | 96 | 32 | 32 | 0.4186 | slow (small batch) |
-| 6 | 384 | 180 | 32 | 128 | 0.3798 | 2nd best - very deep |
-| 7 | 384 | 128 | 32 | 64 | 0.4067 | took 7.5 hrs |
-| 8 | 512 | 48 | 4 | 128 | 0.3978 | |
-| 9 | 1024 | 24 | 2 | 256 | 0.3816 | wide shallow |
-| 10 | 384 | 192 | 2 | 64 | 0.3968 | very deep |
-| 11 | 384 | 128 | 8 | 64 | _running_ | |
-
-**Pattern**: Deep narrow architectures (L=180-192, d=256-384) outperforming wider/shallower ones.
-
----
-
-## Pending / Next Session Priority
-
-### PRIORITY 1: Continue Monitoring HPO
-1. Check HPO progress: `tmux attach -t hpo`
-2. Monitor for experiment completion
-3. Analyze results as experiments complete
-
-### PRIORITY 2: Post-Experiment Analysis
-1. When experiment 1 completes, analyze `_best.json` to verify fix works
-2. Review architectural patterns emerging from results
-3. Document findings
+1. **Manual test queue expanded**: Added d=1024, L=20 tests for h1 and h3
+2. **d_ff ratio clarification**: d=1024, L=20 requires d_ff=2048 (not 4096) to fit budget
+3. **Head count constraints**: For d=768, valid h values are 1,2,3,4,6,8,12,16,24,32,48,64
 
 ---
 
 ## Files Modified This Session
-
-| File | Change |
-|------|--------|
-| `src/training/hpo.py` | Fixed 4 functions to check user_attrs for architecture |
-| `tests/test_hpo.py` | Added 3 test classes, imported save_trial_result and save_all_trials |
-
----
-
-## Hardware Status at Handoff
-
-| Metric | Value |
-|--------|-------|
-| HPO Session | tmux `hpo` - Trial 11/50 running |
-| Experiment | 200M_h1_threshold_1pct (1/12) |
-
----
-
-## Data Versions
-- **Raw manifest**: SPY, DIA, QQQ, ^DJI, ^IXIC, ^VIX OHLCV (2025-12-10)
-- **Processed manifest**: SPY_dataset_a25.parquet (v1, tier a25, 25 features)
-- **Pending registrations**: none
+- None (monitoring session)
 
 ---
 
 ## Memory Entities Updated This Session
 
-| Entity | Type | Description |
-|--------|------|-------------|
-| `Phase6A_Architecture_Logging_Fix_Approved_Plan` | planning_decision | Approved plan for 4-function fix |
-| `Phase6A_Architecture_Logging_Bug` | critical_bug | Updated with fix confirmation |
+| Entity | Status | Description |
+|--------|--------|-------------|
+| `Phase6A_Manual_Tests_L28_L30` | Updated | Added 3 more tests (total 9), corrected d_ff for d=1024 |
 
 ---
 
-## Context for Next Session
+## Data Versions
+- Raw manifest: 2 entries (SPY, VIX OHLCV data)
+- Processed manifest: 2 entries
+- Pending registrations: none
 
-- **HPO is running** in tmux session `hpo` - check with `tmux attach -t hpo`
-- **Bug fix committed** - architecture params now properly logged for forced trials
-- **Trial 0 still winning** with val_loss=0.3756 (deep narrow: d=256, L=192)
-- **Pattern emerging**: Deep narrow > wide shallow for 200M budget
+---
+
+## Next Session Should
+
+1. **Monitor HPO completion**: 200M_h1 (4 remaining), 200M_h5 (31 remaining)
+2. **Run manual tests** after HPO completes (9 tests queued)
+3. **Start 2M/20M HPO** in parallel if hardware permits
+4. **Commit runner scripts** (run_phase6a_*.sh)
+5. **Analyze cross-horizon patterns** when all 200M experiments complete
 
 ---
 
@@ -146,5 +128,19 @@ git status
 make verify
 
 # Check HPO progress
-tmux capture-pane -t hpo -p | tail -30
+tmux capture-pane -t hpo -p | tail -20
+
+# Get current best results
+./venv/bin/python -c "
+import json
+from pathlib import Path
+for exp in ['200M_h1', '200M_h3', '200M_h5']:
+    f = Path(f'outputs/hpo/phase6a_{exp}_threshold_1pct/phase6a_{exp}_threshold_1pct_all_trials.json')
+    if f.exists():
+        data = json.load(open(f))
+        trials = [t for t in data['trials'] if 'd_model' in t]
+        if trials:
+            best = min(trials, key=lambda t: t['value'])
+            print(f'{exp}: {len(trials)}/50 - best={best[\"value\"]:.4f} (d={best[\"d_model\"]}, L={best[\"n_layers\"]})')
+"
 ```

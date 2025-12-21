@@ -193,10 +193,12 @@
     - Pre-flight checks (MPS, memory, data file)
     - Background hardware monitor (5-min CSV logging)
     - Trap handler for cleanup
-- 🔄 **HPO Experiments Running (2025-12-12)**
-  - First experiment (2M, h=1) in progress: 14/50 trials
-  - Best val_loss so far: 0.337 (Trial 10)
-  - Early finding: Deep narrow archs (d=64, L=48) winning
+- 🔄 **HPO Experiments Running (2025-12-19)**
+  - 200M_h1: 46/50 trials, best=0.3633 (d=1024, L=12, h=16)
+  - **200M_h3: COMPLETE** 50/50 trials, best=0.3081 (d=768, L=24, h=16)
+  - 200M_h5: 19/50 trials, best=0.3571 (d=384, L=96, h=8)
+  - Key finding: Wide-shallow (d=768/1024, L=12-24) beats deep-narrow
+  - 9 manual tests queued (L=28/30 variants, d=1024 L=20 interpolation)
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)
   - Funnel/hourglass/bottleneck designs
