@@ -783,12 +783,13 @@ class TestArchitecturalSearchConfigHasRequiredKeys:
             config = yaml.safe_load(f)
 
         training_space = config["training_search_space"]
+        # Note: batch_size removed (now dynamic), dropout added
         required_params = [
             "learning_rate",
             "epochs",
-            "batch_size",
             "weight_decay",
             "warmup_steps",
+            "dropout",
         ]
         for param in required_params:
             assert param in training_space, f"Missing required param: {param}"
@@ -818,26 +819,16 @@ class TestArchitecturalSearchConfigValueRanges:
         assert epochs["type"] == "categorical"
         assert epochs["choices"] == [50, 75, 100]
 
-    def test_batch_size_choices_match_design(self) -> None:
-        """Test batch_size is categorical [64, 128, 256, 512]."""
-        config_path = Path("configs/hpo/architectural_search.yaml")
-        with open(config_path) as f:
-            config = yaml.safe_load(f)
-
-        batch_size = config["training_search_space"]["batch_size"]
-        assert batch_size["type"] == "categorical"
-        assert batch_size["choices"] == [64, 128, 256, 512]
-
     def test_weight_decay_range_matches_design(self) -> None:
-        """Test weight_decay is log_uniform 1e-5 to 1e-3."""
+        """Test weight_decay is log_uniform 1e-4 to 5e-3 (increased for regularization)."""
         config_path = Path("configs/hpo/architectural_search.yaml")
         with open(config_path) as f:
             config = yaml.safe_load(f)
 
         wd = config["training_search_space"]["weight_decay"]
         assert wd["type"] == "log_uniform"
-        assert wd["low"] == 1.0e-5
-        assert wd["high"] == 1.0e-3
+        assert wd["low"] == 1.0e-4
+        assert wd["high"] == 5.0e-3
 
     def test_warmup_steps_choices_match_design(self) -> None:
         """Test warmup_steps is categorical [100, 200, 300, 500]."""
@@ -866,6 +857,50 @@ class TestArchitecturalSearchConfigValueRanges:
         assert config["direction"] == "minimize"
 
 
+class TestArchitecturalSearchConfigHasDropout:
+    """Test that config has dropout in training_search_space."""
+
+    def test_architectural_search_config_has_dropout(self) -> None:
+        """Test that training_search_space includes dropout."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        training_space = config["training_search_space"]
+        assert "dropout" in training_space, "dropout missing from training_search_space"
+        assert training_space["dropout"]["type"] == "uniform"
+        assert training_space["dropout"]["low"] == 0.1
+        assert training_space["dropout"]["high"] == 0.3
+
+
+class TestArchitecturalSearchConfigNoBatchSize:
+    """Test that batch_size was removed from config."""
+
+    def test_architectural_search_config_no_batch_size(self) -> None:
+        """Test that batch_size was removed from training_search_space."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        training_space = config["training_search_space"]
+        assert "batch_size" not in training_space, "batch_size should be removed"
+
+
+class TestArchitecturalSearchConfigHasEarlyStopping:
+    """Test that config has early_stopping section."""
+
+    def test_architectural_search_config_has_early_stopping(self) -> None:
+        """Test that config has early_stopping section with patience and min_delta."""
+        config_path = Path("configs/hpo/architectural_search.yaml")
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+
+        assert "early_stopping" in config, "early_stopping section missing"
+        es = config["early_stopping"]
+        assert es["patience"] == 10
+        assert es["min_delta"] == 0.001
+
+
 # --- Tests for create_architectural_objective ---
 
 
@@ -885,8 +920,8 @@ def sample_training_search_space() -> dict:
     return {
         "learning_rate": {"type": "log_uniform", "low": 1e-4, "high": 1e-3},
         "epochs": {"type": "categorical", "choices": [50, 75, 100]},
-        "batch_size": {"type": "categorical", "choices": [32, 64, 128, 256]},
-        "weight_decay": {"type": "log_uniform", "low": 1e-5, "high": 1e-3},
+        "weight_decay": {"type": "log_uniform", "low": 1e-4, "high": 5e-3},
+        "dropout": {"type": "uniform", "low": 0.1, "high": 0.3},
         "warmup_steps": {"type": "categorical", "choices": [100, 200, 300, 500]},
     }
 
@@ -1006,8 +1041,8 @@ class TestArchObjectiveSamplesTrainingParams:
         ]
         assert len(lr_calls) == 1
 
-        # Verify categorical params were sampled
-        categorical_params = ["epochs", "batch_size", "warmup_steps"]
+        # Verify categorical params were sampled (batch_size removed, now dynamic)
+        categorical_params = ["epochs", "warmup_steps"]
         for param in categorical_params:
             param_calls = [
                 call for call in mock_trial.suggest_categorical.call_args_list
@@ -1577,3 +1612,182 @@ class TestPostprocessHpoOutput:
 
         # Should not raise, just warn
         postprocess_hpo_output(output_dir)  # No exception = pass
+
+
+# --- Tests for new training features in architectural objective ---
+
+
+class TestArchObjectiveUsesNewFeatures:
+    """Test that architectural objective uses new training features."""
+
+    @patch("src.training.hpo.get_memory_safe_batch_config")
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    def test_architectural_objective_samples_dropout(
+        self,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_get_batch_config: MagicMock,
+        mock_experiment_config: MagicMock,
+        sample_architectures: list[dict],
+    ) -> None:
+        """Test that objective samples dropout from training_search_space."""
+        mock_load_exp.return_value = mock_experiment_config
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.55}
+        mock_trainer_cls.return_value = mock_trainer
+        mock_get_batch_config.return_value = {
+            "micro_batch": 128,
+            "accumulation_steps": 2,
+            "effective_batch": 256,
+        }
+
+        # Training search space with dropout
+        training_search_space = {
+            "learning_rate": {"type": "log_uniform", "low": 1e-4, "high": 1e-3},
+            "epochs": {"type": "categorical", "choices": [50]},
+            "weight_decay": {"type": "log_uniform", "low": 1e-4, "high": 5e-3},
+            "warmup_steps": {"type": "categorical", "choices": [100]},
+            "dropout": {"type": "uniform", "low": 0.1, "high": 0.3},
+        }
+
+        mock_trial = MagicMock()
+        mock_trial.number = 10
+        mock_trial.suggest_float.return_value = 0.2  # dropout value
+        mock_trial.suggest_categorical.side_effect = lambda name, choices: choices[0]
+        mock_trial.suggest_int.return_value = 0
+
+        objective = create_architectural_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            architectures=sample_architectures,
+            training_search_space=training_search_space,
+            num_features=20,
+            force_extreme_trials=False,
+        )
+
+        objective(mock_trial)
+
+        # Verify dropout was sampled
+        dropout_calls = [
+            call for call in mock_trial.suggest_float.call_args_list
+            if call[0][0] == "dropout"
+        ]
+        assert len(dropout_calls) == 1, "dropout should be sampled via suggest_float"
+
+        # Verify PatchTSTConfig received sampled dropout
+        model_config = mock_trainer_cls.call_args.kwargs["model_config"]
+        assert model_config.dropout == 0.2
+
+    @patch("src.training.hpo.get_memory_safe_batch_config")
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    def test_architectural_objective_uses_dynamic_batch(
+        self,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_get_batch_config: MagicMock,
+        mock_experiment_config: MagicMock,
+        sample_architectures: list[dict],
+    ) -> None:
+        """Test that objective calls get_memory_safe_batch_config."""
+        mock_load_exp.return_value = mock_experiment_config
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.55}
+        mock_trainer_cls.return_value = mock_trainer
+        mock_get_batch_config.return_value = {
+            "micro_batch": 64,
+            "accumulation_steps": 4,
+            "effective_batch": 256,
+        }
+
+        training_search_space = {
+            "learning_rate": {"type": "log_uniform", "low": 1e-4, "high": 1e-3},
+            "epochs": {"type": "categorical", "choices": [50]},
+            "weight_decay": {"type": "log_uniform", "low": 1e-4, "high": 5e-3},
+            "warmup_steps": {"type": "categorical", "choices": [100]},
+            "dropout": {"type": "uniform", "low": 0.1, "high": 0.3},
+        }
+
+        mock_trial = MagicMock()
+        mock_trial.number = 10
+        mock_trial.suggest_float.return_value = 0.15
+        mock_trial.suggest_categorical.side_effect = lambda name, choices: choices[0]
+        mock_trial.suggest_int.return_value = 0
+
+        objective = create_architectural_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            architectures=sample_architectures,
+            training_search_space=training_search_space,
+            num_features=20,
+            force_extreme_trials=False,
+        )
+
+        objective(mock_trial)
+
+        # Verify get_memory_safe_batch_config was called
+        mock_get_batch_config.assert_called_once()
+        # Verify it was called with arch d_model and n_layers
+        call_kwargs = mock_get_batch_config.call_args.kwargs
+        assert "d_model" in call_kwargs
+        assert "n_layers" in call_kwargs
+
+        # Verify Trainer received micro_batch from batch config
+        trainer_kwargs = mock_trainer_cls.call_args.kwargs
+        assert trainer_kwargs["batch_size"] == 64
+
+    @patch("src.training.hpo.get_memory_safe_batch_config")
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    def test_architectural_objective_passes_early_stopping(
+        self,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_get_batch_config: MagicMock,
+        mock_experiment_config: MagicMock,
+        sample_architectures: list[dict],
+    ) -> None:
+        """Test that objective passes early stopping params to Trainer."""
+        mock_load_exp.return_value = mock_experiment_config
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.55}
+        mock_trainer_cls.return_value = mock_trainer
+        mock_get_batch_config.return_value = {
+            "micro_batch": 128,
+            "accumulation_steps": 2,
+            "effective_batch": 256,
+        }
+
+        training_search_space = {
+            "learning_rate": {"type": "log_uniform", "low": 1e-4, "high": 1e-3},
+            "epochs": {"type": "categorical", "choices": [50]},
+            "weight_decay": {"type": "log_uniform", "low": 1e-4, "high": 5e-3},
+            "warmup_steps": {"type": "categorical", "choices": [100]},
+            "dropout": {"type": "uniform", "low": 0.1, "high": 0.3},
+        }
+
+        mock_trial = MagicMock()
+        mock_trial.number = 10
+        mock_trial.suggest_float.return_value = 0.15
+        mock_trial.suggest_categorical.side_effect = lambda name, choices: choices[0]
+        mock_trial.suggest_int.return_value = 0
+
+        objective = create_architectural_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            architectures=sample_architectures,
+            training_search_space=training_search_space,
+            num_features=20,
+            force_extreme_trials=False,
+        )
+
+        objective(mock_trial)
+
+        # Verify Trainer received early stopping params
+        trainer_kwargs = mock_trainer_cls.call_args.kwargs
+        assert "early_stopping_patience" in trainer_kwargs
+        assert trainer_kwargs["early_stopping_patience"] == 10
+        assert "early_stopping_min_delta" in trainer_kwargs
+        assert trainer_kwargs["early_stopping_min_delta"] == 0.001
+        assert "accumulation_steps" in trainer_kwargs

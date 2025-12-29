@@ -1,0 +1,26 @@
+feature_name,feature_long_name,description,calculation_method,library,parameters,category,data_source,tier
+Open,Opening Price,First traded price of the trading day,Raw OHLCV data,yfinance,N/A,price,Yahoo Finance,base
+High,High Price,Highest traded price of the trading day,Raw OHLCV data,yfinance,N/A,price,Yahoo Finance,base
+Low,Low Price,Lowest traded price of the trading day,Raw OHLCV data,yfinance,N/A,price,Yahoo Finance,base
+Close,Closing Price,Last traded price of the trading day,Raw OHLCV data,yfinance,N/A,price,Yahoo Finance,base
+Volume,Trading Volume,Total shares traded during the trading day,Raw OHLCV data,yfinance,N/A,volume,Yahoo Finance,base
+dema_9,Double Exponential Moving Average (9),Trend indicator with reduced lag vs simple MA,talib.DEMA(close),TA-Lib,timeperiod=9,trend,Calculated from Close,20
+dema_10,Double Exponential Moving Average (10),Trend indicator with reduced lag vs simple MA,talib.DEMA(close),TA-Lib,timeperiod=10,trend,Calculated from Close,20
+sma_12,Simple Moving Average (12),Average closing price over 12 periods,talib.SMA(close),TA-Lib,timeperiod=12,trend,Calculated from Close,20
+dema_20,Double Exponential Moving Average (20),Medium-term trend with reduced lag,talib.DEMA(close),TA-Lib,timeperiod=20,trend,Calculated from Close,20
+dema_25,Double Exponential Moving Average (25),Medium-term trend with reduced lag,talib.DEMA(close),TA-Lib,timeperiod=25,trend,Calculated from Close,20
+sma_50,Simple Moving Average (50),Medium-term trend indicator,talib.SMA(close),TA-Lib,timeperiod=50,trend,Calculated from Close,20
+dema_90,Double Exponential Moving Average (90),Long-term trend with reduced lag,talib.DEMA(close),TA-Lib,timeperiod=90,trend,Calculated from Close,20
+sma_100,Simple Moving Average (100),Long-term trend indicator,talib.SMA(close),TA-Lib,timeperiod=100,trend,Calculated from Close,20
+sma_200,Simple Moving Average (200),Long-term trend indicator (institutional benchmark),talib.SMA(close),TA-Lib,timeperiod=200,trend,Calculated from Close,20
+rsi_daily,Relative Strength Index (Daily),Momentum oscillator measuring speed/magnitude of price changes (0-100),talib.RSI(close),TA-Lib,timeperiod=14,momentum,Calculated from Close,20
+rsi_weekly,Relative Strength Index (Weekly),Weekly RSI forward-filled to daily frequency,talib.RSI(weekly_close) then ffill to daily,TA-Lib,timeperiod=14,momentum,Calculated from weekly Close,20
+stochrsi_daily,Stochastic RSI (Daily),RSI applied to itself - more sensitive momentum indicator (0-100),"talib.STOCHRSI(close), returns fastk",TA-Lib,"timeperiod=14, fastk_period=5, fastd_period=3",momentum,Calculated from Close,20
+stochrsi_weekly,Stochastic RSI (Weekly),Weekly StochRSI forward-filled to daily frequency,"talib.STOCHRSI(weekly_close), ffill to daily",TA-Lib,"timeperiod=14, fastk_period=5, fastd_period=3",momentum,Calculated from weekly Close,20
+macd_line,MACD Line,Trend-following momentum indicator (fast EMA - slow EMA),"talib.MACD(close), returns macd_line only",TA-Lib,"fastperiod=12, slowperiod=26, signalperiod=9",momentum,Calculated from Close,20
+obv,On-Balance Volume,Cumulative volume indicator relating volume to price changes,"talib.OBV(close, volume)",TA-Lib,N/A,volume,Calculated from Close and Volume,20
+adosc,Accumulation/Distribution Oscillator,Chaikin A/D Oscillator measuring money flow momentum,"talib.ADOSC(high, low, close, volume)",TA-Lib,"fastperiod=3, slowperiod=10",volume,Calculated from OHLCV,20
+atr_14,Average True Range (14),Volatility indicator measuring price range expansion/contraction,"talib.ATR(high, low, close)",TA-Lib,timeperiod=14,volatility,Calculated from HLC,20
+adx_14,Average Directional Index (14),Trend strength indicator (0-100) regardless of direction,"talib.ADX(high, low, close)",TA-Lib,timeperiod=14,trend,Calculated from HLC,20
+bb_percent_b,Bollinger Bands %B,Position of price relative to Bollinger Bands (0-1 typical),(close - lower_band) / (upper_band - lower_band),TA-Lib + custom,"timeperiod=20, nbdevup=2, nbdevdn=2",volatility,Calculated from Close,20
+vwap_20,Volume Weighted Average Price (20),Average price weighted by volume over rolling window,sum(close * volume) / sum(volume) over window,custom,window=20,price,Calculated from Close and Volume,20

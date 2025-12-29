@@ -16,6 +16,7 @@ direction: minimize  # Minimize validation loss
 
 # Training parameter search space (narrower ranges for architectural HPO)
 # Architecture params are sampled separately from arch_grid.py
+# Note: batch_size removed - now determined dynamically by get_memory_safe_batch_config()
 training_search_space:
   learning_rate:
     type: log_uniform
@@ -26,15 +27,21 @@ training_search_space:
     type: categorical
     choices: [50, 75, 100]
 
-  batch_size:
-    type: categorical
-    choices: [64, 128, 256, 512]
-
   weight_decay:
     type: log_uniform
-    low: 1.0e-5
-    high: 1.0e-3
+    low: 1.0e-4
+    high: 5.0e-3
 
   warmup_steps:
     type: categorical
     choices: [100, 200, 300, 500]
+
+  dropout:
+    type: uniform
+    low: 0.1
+    high: 0.3
+
+# Early stopping configuration
+early_stopping:
+  patience: 10
+  min_delta: 0.001

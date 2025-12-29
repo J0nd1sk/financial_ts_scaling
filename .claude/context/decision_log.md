@@ -891,3 +891,123 @@ d=384, L=192, h=32, params=227,412,865
 **Status**: Queued for manual testing after HPO completes
 
 **Memory Entity**: Phase6A_User_Hypothesis_d1024_L16
+
+## 2025-12-22 Batch Size Minimum for GPU Utilization
+
+**Context**: During 2B HPO, discovered GPU was only 14% utilized despite running large models. Benchmarking revealed MPS only outperforms CPU for matrix operations >= 4000x4000.
+
+**Decision**: Set minimum batch_size to 256 (128 acceptable) for all HPO and training runs.
+
+**Rationale**: With batch_size=64 and seq_len=60, effective matrix size is ~3840x768, below the MPS crossover point. GPU was doing almost no work (130mW power vs expected 20-40W).
+
+**Alternatives Considered**:
+- Keep small batches for regularization — rejected; overfitting is dominated by params>>data ratio, not batch size
+- Mixed batch strategy — rejected; simplicity of fixed minimum is preferred
+
+**Implications**: HPO search space must be updated; may need to increase dropout/weight_decay to compensate for reduced gradient noise.
+
+**Memory Entity**: MPS_GPU_Utilization_Finding
+
+## 2025-12-22 Research Paper Documentation Structure
+
+**Context**: Need to compile evidence and notes for eventual research paper as experiments progress.
+
+**Decision**: Create `docs/research_paper/` subdirectory with appendices/, notes/, figures/ structure. Use Markdown with LaTeX math, convert via pandoc for final submission.
+
+**Rationale**: Captures learnings in real-time rather than reconstructing later. Markdown is easy to write and version control.
+
+**Alternatives Considered**:
+- Direct LaTeX — rejected; too heavyweight for iterative note-taking
+- Flat docs/ structure — rejected; research paper materials are distinct from project documentation
+
+**Implications**: CLAUDE.md updated with exception to no-subfolders rule. Feature dictionaries (CSV) and notes accumulated as we go.
+
+**Memory Entity**: Research_Paper_Documentation_Plan
+
+## 2025-12-22 Feature Scaling Hypothesis
+
+**Context**: Phase 6A shows no scaling benefit from 200M→2B with only 20 features. User hypothesizes that feature richness (20→2000 indicators) will unlock scaling laws.
+
+**Decision**: Prioritize Phase 6C (feature scaling) as potentially more important than Phase 6D (sample scaling) for demonstrating scaling laws.
+
+**Rationale**: With 2000 features, ~2M pairwise relationships exist (vs ~190 with 20 features). Transformers excel at learning relationships, so more features = more for larger models to learn. Effective_Data ≈ Samples × Features × Relationship_Complexity.
+
+**Alternatives Considered**:
+- Focus on sample scaling (6D) first — still valid, but feature scaling may be more impactful
+- Skip to combined scaling — rejected; need isolated evidence for each dimension
+
+**Implications**: Research narrative centers on "feature richness as prerequisite for scaling laws" — a publishable contribution challenging naive "just scale up" approaches.
+
+**Memory Entity**: Research_Narrative_Core_Thesis
+
+## 2025-12-26 HPO Time Optimization Plan
+
+**Context**: 2B HPO trials failing due to memory exhaustion. Trial 4 (d=1024, L=256, batch=128) consumed 115GB memory, triggered swap thrashing, and stalled for 2+ days with 0% CPU.
+
+**Decision**: Implement 4-pronged optimization: (1) dynamic batch sizing based on architecture, (2) gradient accumulation to maintain effective batch size, (3) early stopping with patience=10, (4) higher regularization (dropout, weight_decay).
+
+**Rationale**:
+- Deep+wide architectures (d≥1024, L≥192) with batch≥64 exceed 128GB unified memory
+- Gradient accumulation allows smaller physical batches while maintaining training dynamics
+- Early stopping saves ~33% time by avoiding overtraining
+- Higher regularization compensates for large-batch training
+
+**Alternatives Considered**:
+- Skip 2B entirely — rejected; user wants complete scaling curve evidence
+- Gradient checkpointing — deferred; more complex, dynamic batching should suffice
+- Filter architecture grid — partial; helps but doesn't solve core issue
+
+**Implementation**: 8-task plan documented in `docs/hpo_time_optimization_plan.md`
+
+**Memory Entity**: Phase6A_HPO_Time_Optimization_Plan
+
+## 2025-12-27 Memory-Safe Batch Config Implementation
+
+**Context**: Task 1 of HPO time optimization plan - needed function to determine safe batch sizes based on architecture.
+
+**Decision**: Implement `get_memory_safe_batch_config()` in `src/models/arch_grid.py` using memory score heuristic.
+
+**Implementation**:
+```python
+memory_score = (d_model ** 2) * n_layers / 1e9
+# Thresholds: ≤0.1→256, ≤0.5→128, ≤1.5→64, ≤3.0→32, >3.0→16
+```
+
+**Rationale**: Memory pressure scales approximately with d_model² × n_layers (attention + FFN activations). Normalized to ~1.0 for d=1024, L=256 (known problematic config).
+
+**Tests**: 6 new tests in `TestGetMemorySafeBatchConfig` class (348 → 354 total, then reduced to 351 after consolidation).
+
+## 2025-12-27 Gradient Accumulation Implementation
+
+**Context**: Task 2 of HPO time optimization plan - needed to maintain effective batch size while using smaller physical batches.
+
+**Decision**: Add `accumulation_steps` parameter to Trainer, modify `_train_epoch` to accumulate gradients.
+
+**Implementation**:
+- Zero gradients once at epoch start
+- Scale loss by accumulation_steps for proper averaging
+- Call optimizer.step() every N batches
+- Handle leftover batches at end of epoch
+
+**Rationale**: Gradient accumulation is a well-established technique that provides equivalent training dynamics to large batches while using less memory per forward pass.
+
+**Tests**: 3 new tests in `TestGradientAccumulation` class (351 total tests passing).
+
+## 2025-12-27 Project Terminology Convention
+
+**Context**: Confusion between phases, stages, and tasks in documentation and session context. HPO time optimization work was being conflated with a separate phase rather than a stage within Phase 6A.
+
+**Decision**: Establish clear hierarchy: Phase > Stage > Task > Subtask.
+
+**Definitions**:
+- **Phase**: Major project milestone (defined in `phase_tracker.md`)
+- **Stage**: Focused work block within a phase (may have temporary plan doc)
+- **Task**: Discrete deliverable with tests
+- **Subtask**: Atomic step within a task
+
+**Rationale**: Prevents scope creep and confusion. HPO Time Optimization is a stage (temporary detour) within Phase 6A, not a new phase. Once the 8 tasks complete, Phase 6A resumes.
+
+**Implications**:
+- CLAUDE.md updated with terminology section
+- Stage plan docs in `docs/` are temporary - deleted when stage completes
+- Don't create new phases for detour work

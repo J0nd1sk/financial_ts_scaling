@@ -19,6 +19,7 @@ import yaml
 
 from src.config.experiment import load_experiment_config
 from src.data.dataset import SplitIndices
+from src.models.arch_grid import get_memory_safe_batch_config
 from src.models.configs import load_patchtst_config
 from src.training.thermal import ThermalCallback
 from src.training.trainer import Trainer
@@ -261,6 +262,17 @@ def create_architectural_objective(
         # Load experiment config for dataset/task info
         experiment_config = load_experiment_config(config_path)
 
+        # Extract training params with defaults
+        learning_rate = sampled_params.get("learning_rate", 0.001)
+        epochs = sampled_params.get("epochs", 50)
+        dropout = sampled_params.get("dropout", 0.1)
+
+        # Get memory-safe batch config based on architecture size
+        batch_config = get_memory_safe_batch_config(
+            d_model=arch["d_model"],
+            n_layers=arch["n_layers"],
+        )
+
         # Build PatchTSTConfig dynamically from sampled architecture
         # Fixed params from design doc: patch_length=10, stride=5, context_length=60
         model_config = PatchTSTConfig(
@@ -272,15 +284,10 @@ def create_architectural_objective(
             n_heads=arch["n_heads"],
             n_layers=arch["n_layers"],
             d_ff=arch["d_ff"],
-            dropout=0.1,  # Default
+            dropout=dropout,  # Sampled from training_search_space
             head_dropout=0.0,  # Default
             num_classes=1,  # Binary classification
         )
-
-        # Extract training params with defaults
-        learning_rate = sampled_params.get("learning_rate", 0.001)
-        epochs = sampled_params.get("epochs", 50)
-        batch_size = sampled_params.get("batch_size", 32)
 
         # Select best available device
         if torch.backends.mps.is_available():
@@ -295,14 +302,16 @@ def create_architectural_objective(
             f"Trial {trial.number}: arch_idx={arch_idx}, "
             f"d_model={arch['d_model']}, n_layers={arch['n_layers']}, "
             f"n_heads={arch['n_heads']}, params={arch['param_count']:,}, "
-            f"lr={learning_rate:.6f}, epochs={epochs}, batch_size={batch_size}"
+            f"lr={learning_rate:.6f}, epochs={epochs}, "
+            f"batch={batch_config['micro_batch']}x{batch_config['accumulation_steps']}, "
+            f"dropout={dropout:.2f}"
         )
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             trainer = Trainer(
                 experiment_config=experiment_config,
                 model_config=model_config,
-                batch_size=batch_size,
+                batch_size=batch_config["micro_batch"],
                 learning_rate=learning_rate,
                 epochs=epochs,
                 device=device,
@@ -310,6 +319,9 @@ def create_architectural_objective(
                 thermal_callback=None,  # Thermal handled at study level
                 tracking_manager=None,  # Tracking handled at study level
                 split_indices=split_indices,
+                accumulation_steps=batch_config["accumulation_steps"],
+                early_stopping_patience=10,
+                early_stopping_min_delta=0.001,
             )
 
             result = trainer.train(verbose=verbose)

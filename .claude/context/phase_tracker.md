@@ -193,12 +193,35 @@
     - Pre-flight checks (MPS, memory, data file)
     - Background hardware monitor (5-min CSV logging)
     - Trap handler for cleanup
-- 🔄 **HPO Experiments Running (2025-12-19)**
-  - 200M_h1: 46/50 trials, best=0.3633 (d=1024, L=12, h=16)
-  - **200M_h3: COMPLETE** 50/50 trials, best=0.3081 (d=768, L=24, h=16)
-  - 200M_h5: 19/50 trials, best=0.3571 (d=384, L=96, h=8)
-  - Key finding: Wide-shallow (d=768/1024, L=12-24) beats deep-narrow
-  - 9 manual tests queued (L=28/30 variants, d=1024 L=20 interpolation)
+- ✅ **200M HPO Complete (2025-12-21)**
+  - 200M_h1: 46/50 trials, best=0.3633 (d=1024, L=12, h=16, 151M)
+  - **200M_h3: 50/50** trials, best=0.3081 (d=768, L=24, h=16, 170M) ← BEST OVERALL
+  - **200M_h5: 50/50** trials, best=0.3507 (d=256, L=256, h=16, 202M) ← NARROW-DEEP!
+  - Key finding: h1/h3 prefer wide-medium, h5 prefers narrow-deep
+  - Architecture analysis: h=16 optimal, h=8 underperforms
+- 🔄 **2B HPO Starting (2025-12-21)**
+  - 2B_h1: Trial 0 in progress (d=768, L=256, 1.8B params - very slow)
+  - 2B_h3/h5: Not started
+  - Warning: 2B trials taking hours per trial due to model size
+- ✅ **Supplementary Trials Generated (2025-12-21)**
+  - 9 training scripts in experiments/phase6a_supplementary/
+  - Cross-horizon validation: d=768 L=24, d=1024 L=12 on missing horizons
+  - New architectures: d=1024 L=16 (201.8M), d=768 L=28 (198.7M)
+- ⚠️ **2B HPO Memory Issues (2025-12-26)**
+  - 2B_h1 Trial 4 (d=1024, L=256, batch=128) consumed 115GB, swap thrashed for days
+  - Root cause: Deep+wide architectures exceed 128GB unified memory
+  - Solution: Stage detour for optimization work
+- 🔄 **Stage: HPO Time Optimization** (temporary detour, Task 5 of 6)
+  - Plan: `docs/hpo_time_optimization_plan.md` (revised 2025-12-27)
+  - ✅ Task 1: `get_memory_safe_batch_config()` in arch_grid.py (6 tests)
+  - ✅ Task 2: Gradient accumulation in trainer.py (3 tests)
+  - ✅ Task 3: Early stopping in trainer.py (5 tests)
+  - ✅ Task 4: Wire HPO to use new training features (6 tests, 2025-12-28)
+    - Config: removed batch_size, added dropout (0.1-0.3), added early_stopping
+    - hpo.py: import arch_grid, sample dropout, use dynamic batch, pass new Trainer params
+  - ⏳ **Task 5: Regenerate 12 HPO scripts + runner 'q' quit** ← NEXT
+  - ⏳ Task 6: Integration smoke test (2B, 3 trials)
+  - 361 tests passing
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)
   - Funnel/hourglass/bottleneck designs

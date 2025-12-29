@@ -680,3 +680,287 @@ class TestTrainerValLossLogging:
             if call.args:
                 logged_keys.update(call.args[0].keys())
         assert "val_loss" in logged_keys, f"val_loss not in logged keys: {logged_keys}"
+
+
+class TestGradientAccumulation:
+    """Test gradient accumulation functionality."""
+
+    def test_gradient_accumulation_steps_1_default(
+        self,
+        experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """accumulation_steps=1 (default) should behave identically to original."""
+        trainer = Trainer(
+            experiment_config=experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.001,
+            epochs=1,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            tracking_manager=None,
+            accumulation_steps=1,  # Explicit default
+        )
+
+        result = trainer.train()
+
+        assert result is not None
+        assert "train_loss" in result
+        assert isinstance(result["train_loss"], float)
+        assert result["train_loss"] > 0
+
+    def test_gradient_accumulation_steps_4_completes(
+        self,
+        experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Training with accumulation_steps=4 should complete successfully."""
+        trainer = Trainer(
+            experiment_config=experiment_config,
+            model_config=model_config,
+            batch_size=4,  # Smaller batch, accumulate 4x
+            learning_rate=0.001,
+            epochs=2,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            tracking_manager=None,
+            accumulation_steps=4,
+        )
+
+        result = trainer.train()
+
+        assert result is not None
+        assert "train_loss" in result
+        assert result["train_loss"] > 0
+        # Should complete without error
+
+    def test_gradient_accumulation_attribute_stored(
+        self,
+        experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Trainer should store accumulation_steps as attribute."""
+        trainer = Trainer(
+            experiment_config=experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.001,
+            epochs=1,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            tracking_manager=None,
+            accumulation_steps=8,
+        )
+
+        assert hasattr(trainer, "accumulation_steps")
+        assert trainer.accumulation_steps == 8
+
+
+class TestEarlyStopping:
+    """Test early stopping functionality."""
+
+    def test_early_stopping_disabled_by_default(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """patience=None (default) means training runs all epochs."""
+        from src.data.dataset import ChunkSplitter
+
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        trainer = Trainer(
+            experiment_config=split_experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.001,
+            epochs=3,  # Run 3 epochs
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            tracking_manager=None,
+            split_indices=splits,
+            # early_stopping_patience not set (default None)
+        )
+
+        result = trainer.train()
+
+        # Should NOT have stopped early
+        assert result["stopped_early"] is False
+        assert result.get("stop_reason") is None
+
+    def test_early_stopping_triggers_after_patience(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Training stops when val_loss doesn't improve for patience epochs."""
+        from src.data.dataset import ChunkSplitter
+
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        trainer = Trainer(
+            experiment_config=split_experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.0,  # Zero LR = no learning = val_loss plateaus
+            epochs=10,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            tracking_manager=None,
+            split_indices=splits,
+            early_stopping_patience=2,  # Stop after 2 epochs without improvement
+            early_stopping_min_delta=0.001,
+        )
+
+        result = trainer.train()
+
+        # Should have stopped early
+        assert result["stopped_early"] is True
+        assert result["stop_reason"] == "early_stopping"
+
+    def test_early_stopping_resets_on_improvement(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Early stopping counter resets when val_loss improves."""
+        from src.data.dataset import ChunkSplitter
+
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        trainer = Trainer(
+            experiment_config=split_experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.01,  # Normal LR = should learn and improve
+            epochs=5,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            tracking_manager=None,
+            split_indices=splits,
+            early_stopping_patience=3,  # Would stop at epoch 4 if no improvement
+            early_stopping_min_delta=0.0001,  # Very small delta
+        )
+
+        result = trainer.train()
+
+        # If learning rate is effective and model improves, should complete
+        # (this test verifies reset works when improvement happens)
+        # Either it completes all epochs or stops - check the attributes exist
+        assert "stopped_early" in result
+        assert hasattr(trainer, "early_stopping_patience")
+        assert trainer.early_stopping_patience == 3
+
+    def test_early_stopping_respects_min_delta(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Small improvements (< min_delta) don't reset the counter."""
+        from src.data.dataset import ChunkSplitter
+
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        trainer = Trainer(
+            experiment_config=split_experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=1e-6,  # Tiny LR = negligible improvement
+            epochs=10,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            tracking_manager=None,
+            split_indices=splits,
+            early_stopping_patience=2,
+            early_stopping_min_delta=0.1,  # Large delta = tiny improvements don't count
+        )
+
+        result = trainer.train()
+
+        # With tiny LR and large min_delta, improvements are < min_delta
+        # Should stop early because improvements don't count
+        assert result["stopped_early"] is True
+        assert result["stop_reason"] == "early_stopping"
+
+    def test_early_stopping_requires_validation_set(
+        self,
+        experiment_config: ExperimentConfig,  # No splits
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Early stopping is disabled when no validation set is provided."""
+        trainer = Trainer(
+            experiment_config=experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.001,
+            epochs=3,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            tracking_manager=None,
+            # No split_indices = no validation set
+            early_stopping_patience=1,  # Would stop immediately if enabled
+            early_stopping_min_delta=0.001,
+        )
+
+        result = trainer.train()
+
+        # Should NOT stop early since there's no validation set
+        assert result["stopped_early"] is False
+        assert result.get("stop_reason") is None

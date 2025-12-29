@@ -420,3 +420,71 @@ class TestGetArchitecturesForBudget:
         param_counts = [arch["param_count"] for arch in result]
 
         assert param_counts == sorted(param_counts), "Architectures should be sorted by param_count"
+
+
+class TestGetMemorySafeBatchConfig:
+    """Test memory-safe batch configuration function."""
+
+    def test_small_model_gets_large_batch(self):
+        """Small models (d=256, L=16) should use batch=256."""
+        from src.models.arch_grid import get_memory_safe_batch_config
+
+        config = get_memory_safe_batch_config(d_model=256, n_layers=16)
+        assert config["micro_batch"] == 256
+
+    def test_medium_model_gets_medium_batch(self):
+        """Medium models (d=768, L=64) should use batch=128."""
+        from src.models.arch_grid import get_memory_safe_batch_config
+
+        # memory_score = (768^2 * 64) / 1e9 = 0.0377 -> still small
+        # Let's use d=768, L=256 -> (768^2 * 256) / 1e9 = 0.151 -> medium
+        config = get_memory_safe_batch_config(d_model=768, n_layers=256)
+        assert config["micro_batch"] == 128
+
+    def test_large_model_gets_small_batch(self):
+        """Large models (d=1024, L=256) should use batch=64."""
+        from src.models.arch_grid import get_memory_safe_batch_config
+
+        # memory_score = (1024^2 * 256) / 1e9 = 0.268 -> medium, not large
+        # Let's use d=1536, L=256 -> (1536^2 * 256) / 1e9 = 0.604 -> large
+        config = get_memory_safe_batch_config(d_model=1536, n_layers=256)
+        assert config["micro_batch"] == 64
+
+    def test_xlarge_model_gets_tiny_batch(self):
+        """XLarge models (d=2048, L=256) should use batch=32."""
+        from src.models.arch_grid import get_memory_safe_batch_config
+
+        # memory_score = (2048^2 * 256) / 1e9 = 1.07 -> large
+        # For XLarge (>1.5), need d=2048, L=512 -> 2.15
+        # But L=512 isn't in search space. Use d=2048, L=256, score=1.07 -> large (64)
+        # For actual XLarge, need memory_score > 1.5
+        # d=2048, L=384 -> (2048^2 * 384) / 1e9 = 1.61 -> xlarge
+        config = get_memory_safe_batch_config(d_model=2048, n_layers=384)
+        assert config["micro_batch"] == 32
+
+    def test_effective_batch_equals_target(self):
+        """micro_batch × accumulation_steps should equal target_effective_batch."""
+        from src.models.arch_grid import get_memory_safe_batch_config
+
+        # Test with default target=256
+        config = get_memory_safe_batch_config(d_model=1024, n_layers=256)
+        assert config["effective_batch"] == config["micro_batch"] * config["accumulation_steps"]
+        assert config["effective_batch"] == 256
+
+        # Test with custom target
+        config = get_memory_safe_batch_config(d_model=1024, n_layers=256, target_effective_batch=512)
+        assert config["effective_batch"] == config["micro_batch"] * config["accumulation_steps"]
+        assert config["effective_batch"] >= 512  # May be slightly higher due to rounding
+
+    def test_returns_dict_with_required_keys(self):
+        """Return dict must have micro_batch, accumulation_steps, effective_batch."""
+        from src.models.arch_grid import get_memory_safe_batch_config
+
+        config = get_memory_safe_batch_config(d_model=512, n_layers=32)
+        assert isinstance(config, dict)
+        assert "micro_batch" in config
+        assert "accumulation_steps" in config
+        assert "effective_batch" in config
+        assert isinstance(config["micro_batch"], int)
+        assert isinstance(config["accumulation_steps"], int)
+        assert isinstance(config["effective_batch"], int)

@@ -197,6 +197,51 @@ def filter_by_budget(
     return filtered
 
 
+def get_memory_safe_batch_config(
+    d_model: int,
+    n_layers: int,
+    target_effective_batch: int = 256,
+) -> dict[str, int]:
+    """Return memory-safe batch configuration based on architecture size.
+
+    Uses a heuristic based on model memory footprint to determine safe batch sizes.
+    Memory pressure scales approximately with d_model² × n_layers (attention + FFN).
+
+    Args:
+        d_model: Model embedding dimension.
+        n_layers: Number of transformer encoder layers.
+        target_effective_batch: Desired effective batch size (default 256).
+
+    Returns:
+        dict with keys:
+        - 'micro_batch': Physical batch size per forward pass
+        - 'accumulation_steps': Number of gradient accumulation steps
+        - 'effective_batch': micro_batch × accumulation_steps
+    """
+    # Memory ∝ d_model² × n_layers (attention + FFN activations)
+    # Normalize to ~1.0 for d=1024, L=256 (known problematic config)
+    memory_score = (d_model ** 2) * n_layers / 1e9
+
+    if memory_score <= 0.1:  # Small models (d≤512 or shallow)
+        micro_batch = 256
+    elif memory_score <= 0.5:  # Medium models
+        micro_batch = 128
+    elif memory_score <= 1.5:  # Large models
+        micro_batch = 64
+    elif memory_score <= 3.0:  # XLarge models
+        micro_batch = 32
+    else:  # Massive models (2B+)
+        micro_batch = 16
+
+    accumulation_steps = max(1, target_effective_batch // micro_batch)
+
+    return {
+        "micro_batch": micro_batch,
+        "accumulation_steps": accumulation_steps,
+        "effective_batch": micro_batch * accumulation_steps,
+    }
+
+
 def get_architectures_for_budget(
     budget: str,
     num_features: int,

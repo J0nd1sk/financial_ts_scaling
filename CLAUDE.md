@@ -14,6 +14,35 @@ Experimental research testing whether neural scaling laws apply to transformer m
 
 ---
 
+## Project Terminology
+
+**Hierarchy (top to bottom):**
+- **Phase**: Major project milestone (e.g., Phase 6A: Parameter Scaling)
+- **Stage**: Focused work block within a phase (e.g., "HPO Time Optimization Stage")
+- **Task**: Discrete deliverable with tests (e.g., "Add early stopping to Trainer")
+- **Subtask**: Atomic step within a task (e.g., "Write failing test", "Implement method")
+
+**Rules:**
+- Phases are defined in `phase_tracker.md` and rarely change
+- Stages may have their own temporary plan documents in `docs/`
+- Stage plan documents are deleted or archived when stage completes
+- Tasks are tracked in `session_context.md` and TodoWrite
+- Don't conflate levels — a stage is NOT a new phase
+
+**Example:**
+```
+Phase 6A: Parameter Scaling
+├── Stage: HPO Time Optimization (temporary detour)
+│   ├── Task 1: Memory-safe batch config ✅
+│   ├── Task 2: Gradient accumulation ✅
+│   └── Task 3: Early stopping ✅
+│   └── Task 4: Dropout parameter ← CURRENT
+├── HPO Runs (main work, resumes after stage)
+└── Results Analysis
+```
+
+---
+
 ## Development Discipline Rules
 
 ### 🔴 CRITICAL: Testing
@@ -84,6 +113,8 @@ Never:
 ### 🔴 CRITICAL: Documentation Organization
 
 **ALL documentation must be placed in `docs/` - no subfolders allowed.**
+
+The only exception is documentation and evidence that we are compiling for the research paper as we go, which will be in `docs/research_paper/`.
 
 - `docs/` contains all project documentation (plans, designs, references)
 - No `docs/plans/`, `docs/archive/`, or other subfolders

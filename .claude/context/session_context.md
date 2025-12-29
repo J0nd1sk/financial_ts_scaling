@@ -1,121 +1,133 @@
-# Session Handoff - 2025-12-19 ~11:00
+# Session Handoff - 2025-12-28 14:30
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `08ce7dd` feat: add postprocess_hpo_output.py to fix missing architecture in HPO logs
-- **Uncommitted changes**:
-  - `.claude/context/decision_log.md` - updated
-  - `.claude/context/session_context.md` - this handoff
-  - `docs/experiment_results.csv` - updated
-  - `scripts/run_phase6a_2M.sh` - NEW (untracked)
-  - `scripts/run_phase6a_20M.sh` - NEW (untracked)
-  - `scripts/run_phase6a_large.sh` - NEW (untracked)
-- **Remote**: up to date with origin
+- **Last commit**: `8b854c8` feat: add supplementary training scripts for architecture exploration
+- **Uncommitted changes** (12 modified, 2 untracked):
+  - `configs/hpo/architectural_search.yaml` — Task 4: removed batch_size, added dropout, added early_stopping
+  - `src/training/hpo.py` — Task 4: wired dynamic batch, dropout sampling, early stopping
+  - `src/models/arch_grid.py` — Task 1: get_memory_safe_batch_config()
+  - `src/training/trainer.py` — Tasks 2-3: gradient accumulation + early stopping
+  - `tests/test_hpo.py` — Task 4: 6 new tests + 2 updated tests
+  - `tests/test_arch_grid.py` — Task 1: 6 batch config tests
+  - `tests/test_training.py` — Tasks 2-3: 8 tests (gradient accum + early stopping)
+  - `.claude/context/` files — session state
+  - `CLAUDE.md` — Project Terminology section
+  - `docs/experiment_results.csv` — HPO results
+  - `docs/hpo_time_optimization_plan.md` — NEW (untracked, stage plan)
+  - `docs/research_paper/` — NEW directory (untracked)
 
 ### Project Phase
-- **Phase 6A**: Parameter Scaling - IN PROGRESS
-- **Status**: HPO experiments running
+- **Phase 6A**: Parameter Scaling — IN PROGRESS
+- **Current Stage**: HPO Time Optimization (temporary detour)
+- **Stage Status**: Task 4 COMPLETE, Task 5 NEXT
 
 ---
 
 ## Test Status
-- **Last `make test`**: PASS (342 tests) - this session
+- **Last `make test`**: PASS (361 tests) — this session
 - **Failing**: none
 
 ---
 
-## HPO Progress (as of handoff)
-
-| Experiment | Trials | Best val_loss | Best Architecture |
-|------------|--------|---------------|-------------------|
-| 200M_h1 | 46/50 | 0.3633 | d=1024, L=12, h=16 |
-| **200M_h3** | **50/50 COMPLETE** | **0.3081** | **d=768, L=24, h=16** |
-| 200M_h5 | 19/50 | 0.3571 | d=384, L=96, h=8 |
-
-### Key Result: 200M_h3 Complete
-Best architecture: d=768, L=24, h=16, d_ff=3072, params=170M, val_loss=0.3081
-
-### Pattern Analysis (200M_h3, 50 trials)
-- **By d_model**: d=768 and d=1024 are clear winners
-  - d=768: best=0.3081, avg=0.409
-  - d=1024: best=0.3120, avg=0.384
-- **By depth**: Medium depth (12-24 layers) optimal
-  - Shallow (L<=12): best=0.3120
-  - Medium (12<L<=24): best=0.3081 (WINNER)
-  - Deep (L>48): best=0.3296
-- **By n_heads**: h=16 optimal (best=0.3081, avg=0.342)
-
----
-
-## Manual Test Queue (9 tests)
-
-Queued for after HPO completes:
-
-| # | Config | d_ff | Params | Task | Notes |
-|---|--------|------|--------|------|-------|
-| 1 | d=768, L=28, h=12 | 3072 | 199M | h3 | Push depth beyond L=24 |
-| 2 | d=768, L=28, h=16 | 3072 | 199M | h3 | Push depth beyond L=24 |
-| 3 | d=768, L=28, h=24 | 3072 | 199M | h3 | Push depth beyond L=24 |
-| 4 | d=768, L=30, h=12 | 3072 | 213M | h3 | Test depth limit |
-| 5 | d=768, L=30, h=16 | 3072 | 213M | h3 | Test depth limit |
-| 6 | d=768, L=30, h=24 | 3072 | 213M | h3 | Test depth limit |
-| 7 | d=768, L=24, h=16 | 3072 | 170M | **h1** | h3 winner, not tried on h1 |
-| 8 | d=1024, L=20, h=16 | 2048 | 168M | **h1** | Interpolate L=16/24 |
-| 9 | d=1024, L=20, h=16 | 2048 | 168M | **h3** | Interpolate L=16/24 |
-
-**Rationale:**
-- L=28/L=30 tests: Winner was L=24, test if more depth helps
-- d=1024, L=20: Grid has L=12 and L=24, test interpolation
-- Note: d=1024, L=20 requires d_ff=2048 (2x ratio) to fit 200M budget
-
----
-
 ## Completed This Session
-1. Session restore from previous handoff
-2. HPO progress monitoring
-3. 200M_h3 analysis (50 trials complete)
-4. Manual test queue defined (9 tests)
-5. Architecture constraint research (valid head counts, param budgets)
+
+1. **Session restore** from 2025-12-27 11:30
+2. **Planning session** for Task 4 (Wire HPO to use new training features)
+3. **Task 4 COMPLETE**: Wire HPO to use new training features
+   - **Subtask 4A**: Updated `configs/hpo/architectural_search.yaml`
+     - Removed `batch_size` (now dynamic)
+     - Added `dropout` (uniform 0.1-0.3)
+     - Added `early_stopping` section (patience: 10, min_delta: 0.001)
+     - Updated `weight_decay` range (1e-4 to 5e-3)
+   - **Subtask 4B**: Updated `src/training/hpo.py` create_architectural_objective()
+     - Imported `get_memory_safe_batch_config` from arch_grid
+     - Sample dropout from training_search_space
+     - Call `get_memory_safe_batch_config(d_model, n_layers)` for batch config
+     - Pass new params to Trainer: accumulation_steps, early_stopping_patience, early_stopping_min_delta
+   - **Subtask 4C**: Added 6 tests to `tests/test_hpo.py`
+     - 3 config tests: has_dropout, no_batch_size, has_early_stopping
+     - 3 objective tests: samples_dropout, uses_dynamic_batch, passes_early_stopping
+   - Updated 2 existing tests (weight_decay range, required params)
+   - TDD approach: RED (8 failing) -> GREEN (361 passing)
+
+---
+
+## Stage: HPO Time Optimization — Task Status
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 1 | Memory-safe batch config in arch_grid.py | ✅ Complete (6 tests) |
+| 2 | Gradient accumulation in trainer.py | ✅ Complete (3 tests) |
+| 3 | Early stopping in trainer.py | ✅ Complete (5 tests) |
+| 4 | Wire HPO to use new training features | ✅ Complete (6 tests) |
+| **5** | **Regenerate 12 HPO scripts + runner 'q' quit** | ⏳ **NEXT** |
+| 6 | Integration smoke test (2B, 3 trials) | ⏳ Pending |
+
+---
+
+## Task 5 Details (for next session)
+
+**Regenerate 12 HPO scripts with new features + add runner 'q' quit**
+
+### What needs to happen:
+1. Delete existing 12 HPO scripts in `experiments/phase6a/`
+2. Regenerate using updated `templates.py` (already has arch HPO template)
+3. New scripts will automatically use:
+   - Dynamic batch sizing from `get_memory_safe_batch_config()`
+   - Dropout sampling from config
+   - Early stopping (patience=10, min_delta=0.001)
+   - Gradient accumulation
+4. Add 'q' keystroke quit to `scripts/run_phase6a_hpo.sh`
+
+### Files affected:
+- `experiments/phase6a/hpo_*.py` (12 files) — regenerate all
+- `scripts/run_phase6a_hpo.sh` — add 'q' quit handling
 
 ---
 
 ## Key Decisions Made This Session
 
-1. **Manual test queue expanded**: Added d=1024, L=20 tests for h1 and h3
-2. **d_ff ratio clarification**: d=1024, L=20 requires d_ff=2048 (not 4096) to fit budget
-3. **Head count constraints**: For d=768, valid h values are 1,2,3,4,6,8,12,16,24,32,48,64
+1. **TDD approach for Task 4**: Wrote 6 failing tests first, then implemented
+   - Tests drive the implementation
+   - Caught mock patching issue (get_memory_safe_batch_config must be imported before mock works)
 
 ---
 
 ## Files Modified This Session
-- None (monitoring session)
+
+| File | Changes |
+|------|---------|
+| `configs/hpo/architectural_search.yaml` | Removed batch_size, added dropout + early_stopping, updated weight_decay |
+| `src/training/hpo.py` | Import arch_grid, sample dropout, use dynamic batch, pass new Trainer params |
+| `tests/test_hpo.py` | 6 new tests, 2 updated tests, updated fixture |
+
+---
+
+## Data Versions
+- **Raw manifest**: VIX.OHLCV.daily (2025-12-10, md5: e8cdd9...)
+- **Processed manifest**: SPY.dataset.a25 v1 tier_a25 (2025-12-11)
+- **Pending registrations**: none
 
 ---
 
 ## Memory Entities Updated This Session
 
-| Entity | Status | Description |
-|--------|--------|-------------|
-| `Phase6A_Manual_Tests_L28_L30` | Updated | Added 3 more tests (total 9), corrected d_ff for d=1024 |
-
----
-
-## Data Versions
-- Raw manifest: 2 entries (SPY, VIX OHLCV data)
-- Processed manifest: 2 entries
-- Pending registrations: none
+- `Task4_Consolidated_HPO_Wiring` (updated): Added completion observations
+  - Task 4 COMPLETE with 361 tests passing
+  - Config changes documented
+  - hpo.py changes documented
 
 ---
 
 ## Next Session Should
 
-1. **Monitor HPO completion**: 200M_h1 (4 remaining), 200M_h5 (31 remaining)
-2. **Run manual tests** after HPO completes (9 tests queued)
-3. **Start 2M/20M HPO** in parallel if hardware permits
-4. **Commit runner scripts** (run_phase6a_*.sh)
-5. **Analyze cross-horizon patterns** when all 200M experiments complete
+1. **Task 5**: Regenerate 12 HPO scripts with new features
+2. **Task 5b**: Add 'q' quit to runner script
+3. **Task 6**: Integration smoke test (2B, 3 trials)
+4. After stage complete: Resume Phase 6A main work (2B HPO runs)
 
 ---
 
@@ -126,21 +138,12 @@ source venv/bin/activate
 make test
 git status
 make verify
-
-# Check HPO progress
-tmux capture-pane -t hpo -p | tail -20
-
-# Get current best results
-./venv/bin/python -c "
-import json
-from pathlib import Path
-for exp in ['200M_h1', '200M_h3', '200M_h5']:
-    f = Path(f'outputs/hpo/phase6a_{exp}_threshold_1pct/phase6a_{exp}_threshold_1pct_all_trials.json')
-    if f.exists():
-        data = json.load(open(f))
-        trials = [t for t in data['trials'] if 'd_model' in t]
-        if trials:
-            best = min(trials, key=lambda t: t['value'])
-            print(f'{exp}: {len(trials)}/50 - best={best[\"value\"]:.4f} (d={best[\"d_model\"]}, L={best[\"n_layers\"]})')
-"
 ```
+
+---
+
+## User Preferences Noted
+
+- Prefers TDD approach (tests first)
+- Prefers planning sessions before implementation
+- Wants clear terminology (Phase > Stage > Task > Subtask)

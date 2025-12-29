@@ -81,13 +81,16 @@ class Trainer:
         thermal_callback: ThermalCallback | None = None,
         tracking_manager: TrackingManager | None = None,
         split_indices: SplitIndices | None = None,
+        accumulation_steps: int = 1,
+        early_stopping_patience: int | None = None,
+        early_stopping_min_delta: float = 0.001,
     ) -> None:
         """Initialize the trainer.
 
         Args:
             experiment_config: Experiment configuration (task, data, etc.)
             model_config: PatchTST model configuration
-            batch_size: Training batch size
+            batch_size: Training batch size (micro-batch for gradient accumulation)
             learning_rate: Optimizer learning rate
             epochs: Number of training epochs
             device: Device to train on ("cpu", "mps", "cuda")
@@ -96,6 +99,12 @@ class Trainer:
             tracking_manager: Optional experiment tracking manager
             split_indices: Optional SplitIndices for train/val/test splits.
                 If provided, creates separate train and val dataloaders.
+            accumulation_steps: Number of gradient accumulation steps (default 1).
+                Effective batch size = batch_size × accumulation_steps.
+            early_stopping_patience: Number of epochs without improvement before
+                stopping. None (default) disables early stopping.
+            early_stopping_min_delta: Minimum improvement in val_loss to count
+                as an improvement. Default 0.001.
         """
         self.experiment_config = experiment_config
         self.batch_size = batch_size
@@ -106,6 +115,9 @@ class Trainer:
         self.thermal_callback = thermal_callback
         self.tracking_manager = tracking_manager
         self.split_indices = split_indices
+        self.accumulation_steps = accumulation_steps
+        self.early_stopping_patience = early_stopping_patience
+        self.early_stopping_min_delta = early_stopping_min_delta
 
         # Set random seeds for reproducibility
         self._set_seeds(experiment_config.seed)
@@ -312,6 +324,31 @@ class Trainer:
 
         raise RuntimeError("Dataloader is empty")
 
+    def _check_early_stopping(self, val_loss: float) -> bool:
+        """Check if training should stop early.
+
+        Returns True if val_loss hasn't improved by min_delta for patience epochs.
+        Early stopping is disabled if patience is None or no validation set exists.
+
+        Args:
+            val_loss: Current epoch's validation loss.
+
+        Returns:
+            True if training should stop, False otherwise.
+        """
+        if self.early_stopping_patience is None:
+            return False
+
+        if val_loss < self._best_val_loss - self.early_stopping_min_delta:
+            # Meaningful improvement - reset counter
+            self._best_val_loss = val_loss
+            self._epochs_without_improvement = 0
+            return False
+
+        # No meaningful improvement
+        self._epochs_without_improvement += 1
+        return self._epochs_without_improvement >= self.early_stopping_patience
+
     def train(self, verbose: bool = False) -> dict[str, Any]:
         """Run training loop.
 
@@ -350,6 +387,10 @@ class Trainer:
         val_loss: float | None = None
         learning_curve: list[dict[str, Any]] = []
 
+        # Initialize early stopping state
+        self._best_val_loss = float("inf")
+        self._epochs_without_improvement = 0
+
         try:
             for epoch in range(self.epochs):
                 epoch_loss = self._train_epoch(epoch)
@@ -367,6 +408,12 @@ class Trainer:
                         self.tracking_manager.log_metric(
                             "val_loss", val_loss, step=epoch
                         )
+
+                    # Check early stopping (only when validation set exists)
+                    if self._check_early_stopping(val_loss):
+                        stopped_early = True
+                        stop_reason = "early_stopping"
+                        break
 
                 # Capture learning curve if verbose
                 if verbose:
@@ -423,7 +470,7 @@ class Trainer:
         return result
 
     def _train_epoch(self, epoch: int) -> float:
-        """Train for one epoch.
+        """Train for one epoch with gradient accumulation.
 
         Args:
             epoch: Current epoch number.
@@ -435,20 +482,28 @@ class Trainer:
         total_loss = 0.0
         num_batches = 0
 
-        for batch_x, batch_y in self.dataloader:
+        # Zero gradients once at epoch start
+        self.optimizer.zero_grad()
+
+        for batch_idx, (batch_x, batch_y) in enumerate(self.dataloader):
             # Move to device
             batch_x = batch_x.to(self.device)
             batch_y = batch_y.to(self.device)
 
             # Forward pass
-            self.optimizer.zero_grad()
             outputs = self.model(batch_x)
             loss = self.criterion(outputs, batch_y)
 
-            # Backward pass
-            loss.backward()
-            self.optimizer.step()
+            # Scale loss by accumulation steps for proper averaging
+            scaled_loss = loss / self.accumulation_steps
+            scaled_loss.backward()
 
+            # Step optimizer every accumulation_steps batches
+            if (batch_idx + 1) % self.accumulation_steps == 0:
+                self.optimizer.step()
+                self.optimizer.zero_grad()
+
+            # Track unscaled loss for reporting
             total_loss += loss.item()
             num_batches += 1
 
@@ -457,6 +512,11 @@ class Trainer:
                 status = self.thermal_callback.check()
                 if status.should_pause:
                     break
+
+        # Handle leftover batches (if total not divisible by accumulation_steps)
+        if num_batches % self.accumulation_steps != 0:
+            self.optimizer.step()
+            self.optimizer.zero_grad()
 
         return total_loss / max(num_batches, 1)
 
