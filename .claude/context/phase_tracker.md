@@ -211,7 +211,7 @@
   - 2B_h1 Trial 4 (d=1024, L=256, batch=128) consumed 115GB, swap thrashed for days
   - Root cause: Deep+wide architectures exceed 128GB unified memory
   - Solution: Stage detour for optimization work
-- 🔄 **Stage: HPO Time Optimization** (temporary detour, Task 5 of 6)
+- 🔄 **Stage: HPO Time Optimization** (temporary detour, Task 6 of 6)
   - Plan: `docs/hpo_time_optimization_plan.md` (revised 2025-12-27)
   - ✅ Task 1: `get_memory_safe_batch_config()` in arch_grid.py (6 tests)
   - ✅ Task 2: Gradient accumulation in trainer.py (3 tests)
@@ -219,8 +219,11 @@
   - ✅ Task 4: Wire HPO to use new training features (6 tests, 2025-12-28)
     - Config: removed batch_size, added dropout (0.1-0.3), added early_stopping
     - hpo.py: import arch_grid, sample dropout, use dynamic batch, pass new Trainer params
-  - ⏳ **Task 5: Regenerate 12 HPO scripts + runner 'q' quit** ← NEXT
-  - ⏳ Task 6: Integration smoke test (2B, 3 trials)
+  - ✅ Task 5: Regenerate 12 HPO scripts + runner 'q' quit (2025-12-28)
+    - Regenerated all 12 scripts (auto-pick up new features from hpo.py)
+    - Added graceful stop: `touch outputs/logs/STOP_HPO` to stop between experiments
+    - Documented in: Memory MCP, runner comments, runbook
+  - ⏳ **Task 6: Integration smoke test (2B, 3 trials)** ← NEXT
   - 361 tests passing
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)

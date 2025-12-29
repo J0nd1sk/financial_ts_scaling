@@ -2,7 +2,7 @@
 """
 PHASE6A Experiment: 2M parameters, threshold_1pct task
 Type: HPO (Hyperparameter Optimization) with Architectural Search
-Generated: 2025-12-13T17:38:17.714623+00:00
+Generated: 2025-12-29T02:34:12.822104+00:00
 
 This script searches both model ARCHITECTURE (d_model, n_layers, n_heads, d_ff)
 and TRAINING parameters (lr, epochs, batch_size) to find optimal configuration.
@@ -44,7 +44,7 @@ TASK = "threshold_1pct"
 HORIZON = 1
 TIMESCALE = "daily"
 DATA_PATH = "data/processed/v1/SPY_dataset_a25.parquet"
-FEATURE_COLUMNS = ['dema_9', 'dema_10', 'sma_12', 'dema_20', 'dema_25', 'sma_50', 'dema_90', 'sma_100', 'sma_200', 'rsi_daily', 'rsi_weekly', 'stochrsi_daily', 'stochrsi_weekly', 'macd_line', 'obv', 'adosc', 'atr_14', 'adx_14', 'bb_percent_b', 'vwap_20']
+FEATURE_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume', 'dema_9', 'dema_10', 'sma_12', 'dema_20', 'dema_25', 'sma_50', 'dema_90', 'sma_100', 'sma_200', 'rsi_daily', 'rsi_weekly', 'stochrsi_daily', 'stochrsi_weekly', 'macd_line', 'obv', 'adosc', 'atr_14', 'adx_14', 'bb_percent_b', 'vwap_20']
 
 # HPO settings
 N_TRIALS = 50

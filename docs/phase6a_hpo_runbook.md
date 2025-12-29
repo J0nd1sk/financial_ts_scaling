@@ -85,6 +85,21 @@ tail -f outputs/logs/phase6a_hpo_*.log
 tmux attach -t hpo
 ```
 
+**Graceful Stop:**
+
+To stop the runner after the current experiment finishes (without killing mid-experiment):
+
+```bash
+touch outputs/logs/STOP_HPO
+```
+
+The runner checks for this file between experiments. When found:
+1. Logs "STOP REQUESTED" message
+2. Removes the stop file
+3. Exits gracefully with summary of completed experiments
+
+This works even when tmux is detached. You do NOT need to be attached to the session.
+
 ### Manual Execution (Alternative)
 
 For running individual experiments or debugging:

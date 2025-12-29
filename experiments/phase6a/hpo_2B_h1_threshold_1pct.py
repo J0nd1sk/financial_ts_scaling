@@ -2,7 +2,7 @@
 """
 PHASE6A Experiment: 2B parameters, threshold_1pct task
 Type: HPO (Hyperparameter Optimization) with Architectural Search
-Generated: 2025-12-13T22:44:31.947407+00:00
+Generated: 2025-12-29T02:34:12.825802+00:00
 
 This script searches both model ARCHITECTURE (d_model, n_layers, n_heads, d_ff)
 and TRAINING parameters (lr, epochs, batch_size) to find optimal configuration.

@@ -9,6 +9,13 @@
 #   # Ctrl+B, D to detach
 #   # tmux attach -t hpo to reattach
 #
+# Graceful Stop:
+#   To stop after the current experiment finishes:
+#   touch outputs/logs/STOP_HPO
+#
+#   The runner checks for this file between experiments.
+#   When found, it stops gracefully and removes the file.
+#
 
 set -o pipefail
 
@@ -21,6 +28,7 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="${LOG_DIR}/phase6a_hpo_${TIMESTAMP}.log"
 HARDWARE_LOG="${LOG_DIR}/hardware_monitor_${TIMESTAMP}.log"
 MONITOR_INTERVAL=300  # 5 minutes
+STOP_FILE="${LOG_DIR}/STOP_HPO"  # Touch this file to stop after current experiment
 
 # Background monitor PID (for cleanup)
 MONITOR_PID=""
@@ -135,6 +143,8 @@ stop_hardware_monitor() {
 # Cleanup on exit
 cleanup() {
     stop_hardware_monitor
+    # Remove stop file if it exists (clean state for next run)
+    rm -f "${STOP_FILE}"
 }
 trap cleanup EXIT INT TERM
 
@@ -173,6 +183,10 @@ echo ""
 start_hardware_monitor
 echo ""
 
+# Show graceful stop hint
+echo "💡 To stop gracefully after current experiment: touch ${STOP_FILE}"
+echo ""
+
 # Header
 echo "============================================================" | tee "${LOG_FILE}"
 echo "Phase 6A HPO Runner" | tee -a "${LOG_FILE}"
@@ -188,6 +202,17 @@ TOTAL_START=$(date +%s)
 for i in "${!EXPERIMENTS[@]}"; do
     exp="${EXPERIMENTS[$i]}"
     exp_num=$((i + 1))
+
+    # Check for graceful stop request
+    if [ -f "${STOP_FILE}" ]; then
+        echo "" | tee -a "${LOG_FILE}"
+        echo "============================================================" | tee -a "${LOG_FILE}"
+        echo "STOP REQUESTED: Found ${STOP_FILE}" | tee -a "${LOG_FILE}"
+        echo "Stopping after completing ${exp_num-1}/${#EXPERIMENTS[@]} experiments." | tee -a "${LOG_FILE}"
+        echo "============================================================" | tee -a "${LOG_FILE}"
+        rm -f "${STOP_FILE}"
+        break
+    fi
 
     echo "" | tee -a "${LOG_FILE}"
     echo "============================================================" | tee -a "${LOG_FILE}"
