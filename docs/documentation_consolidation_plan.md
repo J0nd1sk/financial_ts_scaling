@@ -197,22 +197,46 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
 
 ---
 
+### Task 7: Update `project_phase_plans.md` to v3.0 (FUTURE)
+
+**Purpose**: Master roadmap document is stale (v2.0, Nov 2025). Needs update to reflect reality.
+
+**Current gaps**:
+- Phase 5: Shows "Task 1/8 complete" — actually COMPLETE
+- Phase 5.5: Shows "PROPOSED" — actually COMPLETE
+- Phase 6A: Shows original 32-run design — pivoted to 12 architectural HPO runs
+- Missing: 2B budget, dynamic batch sizing, architectural HPO, gradient accum, early stopping
+
+**Changes required**:
+- Mark Phase 5/5.5 COMPLETE
+- Rewrite Phase 6A section to match actual design (architectural HPO, 12 runs, 1% threshold only)
+- Add Phase 6A-prep section documenting infrastructure work
+- Revise Phase 6B/6C/6D estimates based on lessons learned
+- Update runtime estimates with actual data
+
+**Priority**: LOW — defer until after 2B HPO complete
+**Estimated effort**: 2-3 hours
+
+---
+
 ## Execution Order
 
 ```
-Task 1: Create phase6a_implementation_history.md
+Task 1: Create phase6a_implementation_history.md ✅ DONE
     ↓
-Task 2: Update config_architecture.md v2.0
+Task 2: Update config_architecture.md v2.0 ← NEXT
     ↓
 Task 3: Update phase6a_execution_plan.md v2.0
     ↓
 Task 4: Verify + Delete 5 consolidated files
     ↓
-Task 5: Revert N_TRIALS = 50
+Task 5: Revert N_TRIALS = 50 ✅ DONE (collapsed into earlier commit)
     ↓
 Task 6: git add -A && git commit
     ↓
 Resume 2B HPO (50 trials × 3 horizons)
+    ↓
+Task 7: Update project_phase_plans.md v3.0 (FUTURE - after 2B HPO)
 ```
 
 ---

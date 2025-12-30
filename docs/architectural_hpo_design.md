@@ -255,7 +255,7 @@ Output filename: `{experiment}_{budget}_best.json`
 
 ## Implementation Plan
 
-See `docs/architectural_hpo_implementation_plan.md` for detailed task breakdown.
+See `docs/phase6a_implementation_history.md` for detailed task breakdown and execution history.
 
 ---
 

@@ -1,28 +1,21 @@
-# Session Handoff - 2025-12-29 (Documentation Consolidation Planning)
+# Session Handoff - 2025-12-29 (Task 2 Complete)
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `c985afd` docs: session handoff - Task 5 complete, Task 6 next
+- **Last commit**: `1c42fb4` docs: session handoff + documentation consolidation plan
 - **Uncommitted changes**:
-  - `M .claude/context/decision_log.md`
   - `M .claude/context/phase_tracker.md`
   - `M .claude/context/session_context.md`
-  - `M .claude/rules/context-handoff.md`
-  - `M .claude/skills/session_handoff/SKILL.md`
-  - `M .cursor/rules/context-handoff.mdc`
-  - `M CLAUDE.md`
-  - `M docs/experiment_results.csv`
-  - `M experiments/phase6a/hpo_2B_h1_threshold_1pct.py` (N_TRIALS=3 - NEEDS REVERT)
-  - `?? .claude/settings.json`
-  - `?? docs/documentation_consolidation_plan.md` (**NEW - approved plan**)
-  - `?? docs/hpo_logging_plan.md`
+  - `M docs/config_architecture.md` (Task 2 output - v2.0 update)
+  - `M docs/documentation_consolidation_plan.md`
+  - `?? docs/phase6a_implementation_history.md` (Task 1 output)
 
 ### Project Phase
 - **Phase 6A**: Parameter Scaling — IN PROGRESS
-- **Current Stage**: Documentation Consolidation (blocking 2B HPO resumption)
-- **Next**: Execute 6-task consolidation plan, then resume 2B HPO
+- **Current Stage**: Documentation Consolidation (Task 2 complete, Task 3 next)
+- **Next**: Execute Task 3 — Update `phase6a_execution_plan.md` to v2.0
 
 ---
 
@@ -35,63 +28,69 @@
 ## Completed This Session
 
 1. **Session restore** from previous session
-2. **Documentation audit** — verified actual repository state vs. plan file claims
-3. **Identified session handoff skill gap** — plan files not updated when tasks complete
-4. **Created documentation consolidation plan v2** — approved by user
-5. **Stored plan in Memory MCP** — `Documentation_Consolidation_Plan_v2` entity
+2. **Planning session for Task 2** (config_architecture.md v2.0)
+3. **Executed Task 2**: Updated `config_architecture.md` from v1.0 to v2.0
+   - 364 → 561 lines (+197 lines, +54%)
+   - Added: 2B budget, architectural HPO, dynamic batch sizing, training optimizations
+   - Added: Production Readiness section, Phase Implementation updates
+   - All 10 subtasks completed
 
 ---
 
-## 🚨 NEXT SESSION: Execute Documentation Consolidation Plan
+## Documentation Consolidation Status
 
-**Plan location**: `docs/documentation_consolidation_plan.md`
+| Task | Description | Status |
+|------|-------------|--------|
+| 1 | Create `phase6a_implementation_history.md` | ✅ DONE |
+| 2 | Update `config_architecture.md` to v2.0 | ✅ **DONE** |
+| 3 | Update `phase6a_execution_plan.md` to v2.0 | ⏳ **NEXT** |
+| 4 | Delete 5 stale files | ⏳ Pending |
+| 5 | N_TRIALS revert | ✅ Done |
+| 6 | Commit all changes | ⏳ Pending |
+| 7 | Update `project_phase_plans.md` to v3.0 | 📅 FUTURE (after 2B HPO) |
 
-### 6 Tasks (execute in order)
+---
 
-| Task | Description | Est. |
-|------|-------------|------|
-| 1 | Create `docs/phase6a_implementation_history.md` (consolidate 5 files, 20 tasks) | 30 min |
-| 2 | Update `docs/config_architecture.md` to v2.0 | 20 min |
-| 3 | Update `docs/phase6a_execution_plan.md` to v2.0 | 15 min |
-| 4 | Delete 5 stale files (after verification) | 5 min |
-| 5 | Revert `N_TRIALS = 50` in hpo_2B_h1_threshold_1pct.py | 2 min |
-| 6 | Commit all changes | 5 min |
+## Task 3 Preview: Update `phase6a_execution_plan.md` to v2.0
 
-### Key Insight from Planning Session
+From the consolidation plan:
 
-**Execution plan vs. Implementation plans**:
-- `phase6a_execution_plan.md` = What experiments we're running → **KEEP + UPDATE**
-- `config_architecture.md` = Methodology for paper → **KEEP + UPDATE**
-- Implementation plans (hpo_fixes, hpo_time_optimization, etc.) = How we built tooling → **CONSOLIDATE to history**
+| Section | Current | Update To |
+|---------|---------|-----------|
+| Status line | (none) | **Status: Stage 4 in progress** |
+| Stage 1 | Checklist unchecked | ✅ COMPLETE |
+| Stage 2 | Checklist unchecked | ✅ COMPLETE (horizon variance confirmed) |
+| Stage 3 | Options A/B | ✅ COMPLETE (Option A: 12 HPO runs per budget) |
+| Stage 4 | Checklist unchecked | 🔄 IN PROGRESS |
+| HPO Scripts table | 3 rows, some ⏳ | 12 rows, status per run |
+| Key Decisions | 4 items from Dec 11 | Add Dec 13, Dec 21, Dec 26-29 decisions |
 
-### Files to CREATE
-- `docs/phase6a_implementation_history.md` — archive of 20 completed tasks
+**Add new sections**:
+- HPO Results Summary (link to experiment_results.csv)
+- Remaining Work (2B HPO, final analysis)
+- Lessons Learned (link to implementation_history.md)
 
-### Files to UPDATE
-- `docs/config_architecture.md` — add 2B, dynamic batch, architectural HPO
-- `docs/phase6a_execution_plan.md` — mark stages 1-3 complete
+---
 
-### Files to DELETE (after consolidation)
-1. `docs/hpo_fixes_plan.md`
-2. `docs/hpo_time_optimization_plan.md`
-3. `docs/architectural_hpo_implementation_plan.md`
-4. `docs/hpo_supplemental_tests.md`
-5. `docs/feature_pipeline_integration_issues.md`
+## Next Session Should
+
+1. **Run planning session for Task 3** (phase6a_execution_plan.md v2.0)
+2. **Execute Task 3**: Update the document following the plan
+3. Proceed to Task 4 (delete 5 stale files)
+4. Task 6: Commit all documentation consolidation changes
+5. Resume 2B HPO after consolidation complete
 
 ---
 
 ## Key Decisions Made This Session
 
-### Documentation Consolidation Strategy
-- **Decision**: Update active docs (config_architecture, execution_plan), consolidate completed plans to history
-- **Rationale**: Execution plan defines WHAT experiments; implementation plans define HOW we built tooling (historical)
-- **User input**: config_architecture.md is for research paper methodology, not just HPO
+### Task 2 Execution Approach
+- **Decision**: Follow session_context.md detailed plan exactly
+- **Rationale**: Plan was already approved last session with section-by-section breakdown
 
-### Session Handoff Skill Gap Identified
-- **Issue**: Plan files show stale status while phase_tracker shows truth
-- **Example**: hpo_time_optimization_plan.md says "Task 4 of 6" but all 6 tasks complete
-- **Action needed**: Revise session_handoff skill to update ALL applicable plan docs
-- **Memory entity**: `Session_Handoff_Skill_Gap`
+### Document Structure
+- **Decision**: Add "Supersedes" line to header/footer for version tracking
+- **Rationale**: Clear lineage for document evolution
 
 ---
 
@@ -104,9 +103,8 @@
 
 ## Memory Entities Updated This Session
 
-- `Session_Handoff_Skill_Gap` (created): Plan files not updated when tasks complete
-- `Documentation_Consolidation_Plan_v2` (created): Approved 6-task plan for consolidation
-- `Documentation_Consolidation_Plan` (updated): Marked superseded by v2
+- `Task2_ConfigArchitecture_v2_Plan` (created): Plan for config_architecture.md v2.0 update
+  - Updated with execution results: SUCCESS, 561 lines, 361 tests pass
 
 ---
 
@@ -116,7 +114,7 @@
 source venv/bin/activate
 make test
 git status
-cat docs/documentation_consolidation_plan.md  # Read the plan
+make verify
 ```
 
 ---

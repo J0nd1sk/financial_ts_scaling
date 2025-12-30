@@ -229,10 +229,14 @@
     - All features verified: dynamic batch, gradient accum, early stopping, dropout
   - 361 tests passing
   - **Stage COMPLETE** — all 6 tasks done, code ready for production HPO
-- 📝 **Immediate Backlog**
-  - Documentation consolidation: Merge completed plans into `phase6a_implementation_history.md`
-  - Revert N_TRIALS=3 → 50 in `hpo_2B_h1_threshold_1pct.py`
-  - HPO Logging Infrastructure: Add Python logging to templates.py (plan in `docs/hpo_logging_plan.md`)
+- 📝 **Immediate Backlog: Documentation Consolidation** (Task 2 of 6 complete)
+  - ✅ Task 1: Created `phase6a_implementation_history.md` (277 lines, 20 tasks)
+  - ✅ Task 2: Updated `config_architecture.md` to v2.0 (364→561 lines, +54%)
+  - ⏳ Task 3: Update `phase6a_execution_plan.md` to v2.0 ← NEXT
+  - ⏳ Task 4: Delete 5 stale files
+  - ✅ Task 5: N_TRIALS reverted (collapsed into commit 1c42fb4)
+  - ⏳ Task 6: Commit all changes
+  - 📝 HPO Logging Infrastructure: deferred (plan in `docs/hpo_logging_plan.md`)
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)
   - Funnel/hourglass/bottleneck designs
