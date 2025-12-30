@@ -1011,3 +1011,119 @@ memory_score = (d_model ** 2) * n_layers / 1e9
 - CLAUDE.md updated with terminology section
 - Stage plan docs in `docs/` are temporary - deleted when stage completes
 - Don't create new phases for detour work
+
+## 2025-12-29 Documentation Consolidation Approach
+
+**Context**: Audit revealed 8 completed implementation plans sitting as standalone files in docs/. Initial proposal was to delete them as obsolete.
+
+**Decision**: Consolidate completed plans into a single historical record rather than delete. Create `docs/phase6a_implementation_history.md` that preserves the "what we did and why" context.
+
+**Files to consolidate**:
+- `hpo_fixes_plan.md` (6 tasks complete)
+- `hpo_time_optimization_plan.md` (6 tasks complete)
+- `architectural_hpo_implementation_plan.md` (8 tasks complete)
+- `hpo_supplemental_tests.md` (strategy changed)
+- `config_architecture.md` (merge into design doc)
+- `timeseries_transformer_experimentation_project.md` (early draft)
+- `feature_pipeline_integration_issues.md` (fixed issues)
+- `rules_and_skills_background.md` (background context)
+
+**Rationale**: User preference - preserving historical context allows future sessions to understand not just the current state but the journey. "What we did and why" is valuable for:
+1. Debugging if issues resurface
+2. Understanding design decisions
+3. Onboarding future agents or collaborators
+4. Research paper methodology section
+
+**Alternatives Considered**:
+- Pure deletion - rejected; loses valuable context
+- Keep all files as-is - rejected; fragmented and confusing
+- Archive to `.archive/` folder - rejected; still fragmented
+
+**Implications**:
+- Create comprehensive history document before deleting originals
+- Include timeline, rationale, and outcomes for each implementation
+- Reference Memory MCP entities for additional context
+
+## 2025-12-29 User Preferences Durability Protocol
+
+**Context**: Session handoff inadvertently reduced fidelity of user preferences by summarizing them. User explicitly requested restoration of full precision.
+
+**Decision**: Implement 6-location durability chain for user preferences with explicit verification during handoff.
+
+**Locations**:
+1. `session_context.md` — authoritative full list (User Preferences section)
+2. `CLAUDE.md` — key preferences enforced every session
+3. `.claude/rules/context-handoff.md` — Step 2.5 verification requirement
+4. `.cursor/rules/context-handoff.mdc` — Cursor sync of verification
+5. Memory MCP — `User_Preferences_Authoritative` entity as backup
+6. `session_handoff` skill — Step 7 verification before handoff completes
+
+**Rationale**: User preferences are stable configuration that must never be inadvertently summarized or reduced. Multiple locations ensure durability across crashes and session boundaries.
+
+**Key Preferences Preserved**:
+- TDD approach, planning sessions before implementation
+- Uses tmux for long-running experiments
+- Insists on durability for pending actions (document in multiple places)
+- Prefers consolidation of docs/ over deletion
+- Flat docs/ structure (no subdirectories except research_paper/)
+- Precision in language — never reduce fidelity
+
+**Implications**:
+- Handoff skill now verifies preferences section exists and is complete
+- Future agents can reconstruct from Memory MCP if files corrupted
+- NEVER summarize or reduce precision of user preferences
+
+## 2025-12-29 Execution Plan vs Implementation Plan Distinction
+
+**Context**: Planning documentation consolidation revealed confusion about which docs to archive vs. update.
+
+**Decision**: Distinguish between two types of plan documents:
+- **Execution plans** (what experiments we run) — KEEP and UPDATE
+- **Implementation plans** (how we built tooling) — CONSOLIDATE to history when complete
+
+**Files by Category**:
+| Type | File | Action |
+|------|------|--------|
+| Execution | `phase6a_execution_plan.md` | UPDATE to v2.0 |
+| Methodology | `config_architecture.md` | UPDATE to v2.0 |
+| Implementation | `hpo_fixes_plan.md` | CONSOLIDATE |
+| Implementation | `hpo_time_optimization_plan.md` | CONSOLIDATE |
+| Implementation | `architectural_hpo_implementation_plan.md` | CONSOLIDATE |
+| Implementation | `hpo_supplemental_tests.md` | CONSOLIDATE |
+| Implementation | `feature_pipeline_integration_issues.md` | CONSOLIDATE |
+
+**Rationale**:
+- Execution plan defines WHAT experiments we run — stays active as the "current state" document
+- `config_architecture.md` defines methodology for research paper — needs update not deletion
+- Implementation plans define HOW we built infrastructure — historical value only once tasks complete
+
+**User Input**: `config_architecture.md` will be referenced in research paper methodology section. Must reflect current reality (2B budget, dynamic batch sizing, architectural HPO).
+
+**Implications**:
+- Create `phase6a_implementation_history.md` for 20 completed tasks
+- Update `config_architecture.md` to v2.0 (add 2B, dynamic batch, architectural HPO)
+- Update `phase6a_execution_plan.md` to v2.0 (mark stages 1-3 complete)
+- Full plan in `docs/documentation_consolidation_plan.md`
+
+## 2025-12-29 Session Handoff Skill Gap Identified
+
+**Context**: Audit of plan files revealed they have stale status fields (e.g., "In Progress Task 4") while `phase_tracker.md` shows all tasks complete.
+
+**Problem**: Session handoff skill only updates `phase_tracker.md`, not individual plan files.
+
+**Decision**: Note for future skill revision — session handoff should update ALL applicable plan documentation when tasks complete.
+
+**Evidence**:
+- `hpo_time_optimization_plan.md` says "Status: In Progress — Task 4 of 6"
+- Reality: All 6 tasks complete (verified in code and phase_tracker)
+
+**Scope of Required Fix**:
+- Any plan doc in `docs/` with task checkboxes or status fields
+- Corresponding Memory MCP entities
+
+**Memory Entity**: `Session_Handoff_Skill_Gap` — captures this process improvement item
+
+**Implications**:
+- Next session restores may see misleading status in plan files
+- Use `phase_tracker.md` as source of truth until skill is revised
+- Documentation consolidation will naturally fix this for Phase 6A plans

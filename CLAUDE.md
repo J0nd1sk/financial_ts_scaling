@@ -339,6 +339,29 @@ At session start:
 
 ---
 
+## User Preferences
+
+### Development Discipline
+- TDD approach: tests first, always
+- Planning sessions before implementation
+- Uses tmux for long-running experiments
+
+### Context Durability (Critical)
+Pending actions MUST be documented in multiple places to survive crashes:
+1. **Memory MCP** — create entities for critical state
+2. **`.claude/context/`** — session_context.md, phase_tracker.md, decision_log.md
+3. **`docs/`** — project documentation when appropriate
+
+Code comments are secondary, not primary durability mechanisms.
+
+### Documentation Principles
+- Prefer consolidation of `docs/` files over deletion — preserve historical context
+- Maintain coherent, PRECISE history of "what we did and why"
+- Flat `docs/` structure — no subdirectories except `research_paper/`
+- Precision in language — never reduce fidelity of descriptions
+
+---
+
 ## Rules Reference
 
 See `.claude/rules/` for detailed rules:

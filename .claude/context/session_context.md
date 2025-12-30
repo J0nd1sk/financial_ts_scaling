@@ -1,16 +1,28 @@
-# Session Handoff - 2025-12-28 18:45
+# Session Handoff - 2025-12-29 (Documentation Consolidation Planning)
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `d09425e` feat: Task 5 - regenerate HPO scripts + graceful stop mechanism
-- **Uncommitted changes**: none (clean)
+- **Last commit**: `c985afd` docs: session handoff - Task 5 complete, Task 6 next
+- **Uncommitted changes**:
+  - `M .claude/context/decision_log.md`
+  - `M .claude/context/phase_tracker.md`
+  - `M .claude/context/session_context.md`
+  - `M .claude/rules/context-handoff.md`
+  - `M .claude/skills/session_handoff/SKILL.md`
+  - `M .cursor/rules/context-handoff.mdc`
+  - `M CLAUDE.md`
+  - `M docs/experiment_results.csv`
+  - `M experiments/phase6a/hpo_2B_h1_threshold_1pct.py` (N_TRIALS=3 - NEEDS REVERT)
+  - `?? .claude/settings.json`
+  - `?? docs/documentation_consolidation_plan.md` (**NEW - approved plan**)
+  - `?? docs/hpo_logging_plan.md`
 
 ### Project Phase
 - **Phase 6A**: Parameter Scaling — IN PROGRESS
-- **Current Stage**: HPO Time Optimization (temporary detour)
-- **Stage Status**: Task 5 COMPLETE, **Task 6 NEXT** (final task of stage)
+- **Current Stage**: Documentation Consolidation (blocking 2B HPO resumption)
+- **Next**: Execute 6-task consolidation plan, then resume 2B HPO
 
 ---
 
@@ -22,78 +34,64 @@
 
 ## Completed This Session
 
-1. **Session restore** from 2025-12-28 14:30
-2. **Committed Tasks 1-4** (`82bed6f`): HPO time optimization - dynamic batch, gradient accum, early stopping
-3. **Planning session** for Task 5 (Regenerate HPO scripts)
-4. **Task 5 COMPLETE** (`d09425e`): Regenerate 12 HPO scripts + runner quit mechanism
-   - Deleted old 12 HPO scripts from `experiments/phase6a/`
-   - Regenerated 12 scripts using `generate_hpo_script()` from templates.py
-   - Key insight: templates.py didn't need changes - scripts read config at runtime
-   - Added file-based graceful stop: `touch outputs/logs/STOP_HPO`
-   - Documented stop mechanism in 3 places:
-     - Memory MCP (`HPO_Runner_Stop_Mechanism`)
-     - Runner script comments + startup message
-     - Runbook "Graceful Stop" section
+1. **Session restore** from previous session
+2. **Documentation audit** — verified actual repository state vs. plan file claims
+3. **Identified session handoff skill gap** — plan files not updated when tasks complete
+4. **Created documentation consolidation plan v2** — approved by user
+5. **Stored plan in Memory MCP** — `Documentation_Consolidation_Plan_v2` entity
 
 ---
 
-## Stage: HPO Time Optimization — Task Status
+## 🚨 NEXT SESSION: Execute Documentation Consolidation Plan
 
-| Task | Description | Status |
-|------|-------------|--------|
-| 1 | Memory-safe batch config in arch_grid.py | ✅ Complete (6 tests) |
-| 2 | Gradient accumulation in trainer.py | ✅ Complete (3 tests) |
-| 3 | Early stopping in trainer.py | ✅ Complete (5 tests) |
-| 4 | Wire HPO to use new training features | ✅ Complete (6 tests) |
-| 5 | Regenerate 12 HPO scripts + runner 'q' quit | ✅ Complete |
-| **6** | **Integration smoke test (2B, 3 trials)** | ⏳ **NEXT** |
+**Plan location**: `docs/documentation_consolidation_plan.md`
 
----
+### 6 Tasks (execute in order)
 
-## Task 6 Details (for next session)
+| Task | Description | Est. |
+|------|-------------|------|
+| 1 | Create `docs/phase6a_implementation_history.md` (consolidate 5 files, 20 tasks) | 30 min |
+| 2 | Update `docs/config_architecture.md` to v2.0 | 20 min |
+| 3 | Update `docs/phase6a_execution_plan.md` to v2.0 | 15 min |
+| 4 | Delete 5 stale files (after verification) | 5 min |
+| 5 | Revert `N_TRIALS = 50` in hpo_2B_h1_threshold_1pct.py | 2 min |
+| 6 | Commit all changes | 5 min |
 
-**Integration Smoke Test**: Run 2B HPO with 3 trials to verify new features work.
+### Key Insight from Planning Session
 
-### What to verify:
-1. **Memory stays under control** - dynamic batch sizing working
-2. **Early stopping triggers** - should see "early stopping" in logs if val_loss plateaus
-3. **Dropout is being sampled** - check trial logs for varying dropout values
-4. **Gradient accumulation working** - check logs for "batch=NxM" format
+**Execution plan vs. Implementation plans**:
+- `phase6a_execution_plan.md` = What experiments we're running → **KEEP + UPDATE**
+- `config_architecture.md` = Methodology for paper → **KEEP + UPDATE**
+- Implementation plans (hpo_fixes, hpo_time_optimization, etc.) = How we built tooling → **CONSOLIDATE to history**
 
-### Command:
-```bash
-# Modify script temporarily to run only 3 trials
-# Or use environment variable if supported
-./venv/bin/python experiments/phase6a/hpo_2B_h1_threshold_1pct.py
-```
+### Files to CREATE
+- `docs/phase6a_implementation_history.md` — archive of 20 completed tasks
 
-### Success criteria:
-- 3 trials complete without memory exhaustion
-- Logs show dynamic batch config (e.g., "batch=16x16" or "batch=32x8")
-- Logs show dropout values between 0.1-0.3
+### Files to UPDATE
+- `docs/config_architecture.md` — add 2B, dynamic batch, architectural HPO
+- `docs/phase6a_execution_plan.md` — mark stages 1-3 complete
+
+### Files to DELETE (after consolidation)
+1. `docs/hpo_fixes_plan.md`
+2. `docs/hpo_time_optimization_plan.md`
+3. `docs/architectural_hpo_implementation_plan.md`
+4. `docs/hpo_supplemental_tests.md`
+5. `docs/feature_pipeline_integration_issues.md`
 
 ---
 
 ## Key Decisions Made This Session
 
-1. **File-based quit mechanism over interactive read**
-   - Rationale: Works in tmux detached mode, no delay, simpler implementation
-   - Command: `touch outputs/logs/STOP_HPO`
+### Documentation Consolidation Strategy
+- **Decision**: Update active docs (config_architecture, execution_plan), consolidate completed plans to history
+- **Rationale**: Execution plan defines WHAT experiments; implementation plans define HOW we built tooling (historical)
+- **User input**: config_architecture.md is for research paper methodology, not just HPO
 
-2. **Templates don't need changes for new features**
-   - Rationale: Generated scripts read config at runtime and call `hpo.py` functions
-   - Insight: Regenerating scripts automatically picks up all Task 1-4 improvements
-
----
-
-## Files Modified This Session
-
-| File | Changes |
-|------|---------|
-| `experiments/phase6a/hpo_*.py` (12 files) | Regenerated with new timestamp |
-| `scripts/run_phase6a_hpo.sh` | Added STOP_FILE, quit check, startup hint |
-| `docs/phase6a_hpo_runbook.md` | Added "Graceful Stop" section |
-| `.claude/context/phase_tracker.md` | Updated Task 5 status |
+### Session Handoff Skill Gap Identified
+- **Issue**: Plan files show stale status while phase_tracker shows truth
+- **Example**: hpo_time_optimization_plan.md says "Task 4 of 6" but all 6 tasks complete
+- **Action needed**: Revise session_handoff skill to update ALL applicable plan docs
+- **Memory entity**: `Session_Handoff_Skill_Gap`
 
 ---
 
@@ -106,33 +104,43 @@
 
 ## Memory Entities Updated This Session
 
-- `HPO_Runner_Stop_Mechanism` (created): Graceful stop via `touch outputs/logs/STOP_HPO`
-- `Task5_HPO_Scripts_Regeneration` (created): Task 5 completion details
+- `Session_Handoff_Skill_Gap` (created): Plan files not updated when tasks complete
+- `Documentation_Consolidation_Plan_v2` (created): Approved 6-task plan for consolidation
+- `Documentation_Consolidation_Plan` (updated): Marked superseded by v2
 
 ---
 
-## Next Session Should
-
-1. **Task 6**: Integration smoke test (2B, 3 trials)
-2. **After stage complete**: Resume Phase 6A main work (2B HPO runs with all 50 trials)
-3. **Monitor**: First 2B run to verify memory management working
-
----
-
-## Commands to Run
+## Commands to Run First
 
 ```bash
 source venv/bin/activate
 make test
 git status
-make verify
+cat docs/documentation_consolidation_plan.md  # Read the plan
 ```
 
 ---
 
-## User Preferences Noted
+## User Preferences (Authoritative)
 
-- Prefers TDD approach (tests first)
-- Prefers planning sessions before implementation
-- Wants documentation in multiple places (Memory MCP + docs + code comments)
-- Uses tmux for long-running experiments
+### Development Approach
+- **TDD approach** — tests first, always
+- **Planning sessions before implementation** — no coding without approved plan
+- **Uses tmux for long-running experiments** — HPO, training runs
+
+### Context Durability (Critical)
+- **Insists on durability for pending actions** — document in multiple places to survive crashes:
+  - Memory MCP entities
+  - `.claude/context/` files (session_context.md, phase_tracker.md, decision_log.md)
+  - `docs/` (project documentation)
+  - Code comments are SECONDARY, not primary
+
+### Documentation Philosophy
+- **Prefers consolidation of `docs/` files over deletion** — preserve historical context
+- **Wants coherent, PRECISE history** of "what we did and why" for future sessions
+- **Flat `docs/` structure** — no subdirectories except `research_paper/`
+- **Tendency toward coherence** of context, documentation, and understanding
+
+### Communication Standards
+- **Precision in language** — never reduce fidelity of descriptions
+- **Don't summarize away important details** — if uncertain, ask

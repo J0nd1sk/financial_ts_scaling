@@ -107,13 +107,29 @@ Capture current session state for seamless continuation.
    git status
    make verify
    ```
+
+   ## User Preferences (Authoritative)
+   [MUST include complete section - copy from previous session or reconstruct from User_Preferences_Authoritative Memory entity]
    ```
 
-7. **Update Phase Tracker** (if progress made)
+7. **Verify User Preferences Section**
+
+   Confirm the "User Preferences (Authoritative)" section is complete with all subsections:
+   - Development Approach (TDD, planning, tmux)
+   - Context Durability (Memory MCP, context files, docs/)
+   - Documentation Philosophy (consolidation, precision, flat structure)
+   - Communication Standards (precision, no summarizing away details)
+
+   If previous session_context.md has this section, copy it verbatim.
+   If missing, query `User_Preferences_Authoritative` from Memory MCP to reconstruct.
+
+   **NEVER reduce fidelity or summarize preferences.**
+
+8. **Update Phase Tracker** (if progress made)
 
    Update `.claude/context/phase_tracker.md` with completion status.
 
-8. **Store Lessons in Memory MCP** (additive - context files remain primary)
+9. **Store Lessons in Memory MCP** (additive - context files remain primary)
 
    Extract and store key learnings from this session. **Track all entity names for session_context.md.**
 
@@ -156,7 +172,7 @@ Capture current session state for seamless continuation.
 
    **Note**: This supplements (not replaces) decision_log.md. Memory MCP enables agent-queryable knowledge; decision_log.md remains the human-readable, version-controlled record.
 
-9. **Report to User**
+10. **Report to User**
    - Confirm file written
    - Summarize key state
    - Warn of any uncommitted work

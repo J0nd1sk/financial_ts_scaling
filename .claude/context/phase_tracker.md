@@ -223,8 +223,16 @@
     - Regenerated all 12 scripts (auto-pick up new features from hpo.py)
     - Added graceful stop: `touch outputs/logs/STOP_HPO` to stop between experiments
     - Documented in: Memory MCP, runner comments, runbook
-  - ⏳ **Task 6: Integration smoke test (2B, 3 trials)** ← NEXT
+  - ✅ **Task 6: Integration smoke test (2B, 3 trials)** — COMPLETE (2025-12-29)
+    - 3/3 trials completed successfully before system crash
+    - Best: Trial 1 (d=2048, L=32, 1.6B params) val_loss=0.3863
+    - All features verified: dynamic batch, gradient accum, early stopping, dropout
   - 361 tests passing
+  - **Stage COMPLETE** — all 6 tasks done, code ready for production HPO
+- 📝 **Immediate Backlog**
+  - Documentation consolidation: Merge completed plans into `phase6a_implementation_history.md`
+  - Revert N_TRIALS=3 → 50 in `hpo_2B_h1_threshold_1pct.py`
+  - HPO Logging Infrastructure: Add Python logging to templates.py (plan in `docs/hpo_logging_plan.md`)
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)
   - Funnel/hourglass/bottleneck designs

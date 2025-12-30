@@ -100,6 +100,16 @@ If phase progress changed, update `.claude/context/phase_tracker.md`:
 - Task C: ⏸️ Pending
 ```
 
+### Step 2.5: Verify User Preferences Section
+
+Confirm session_context.md contains complete "User Preferences (Authoritative)" section with all subsections:
+- Development Approach (TDD, planning, tmux)
+- Context Durability (Memory MCP, context files, docs/)
+- Documentation Philosophy (consolidation, precision, flat structure)
+- Communication Standards (precision, no summarizing away details)
+
+If section is missing or incomplete, reconstruct from `User_Preferences_Authoritative` Memory entity.
+
 ### Step 3: Confirm
 
 Report to user:
