@@ -1,6 +1,6 @@
 # Phase 6A Execution Plan
 
-**Status: Stage 4 in progress** | Updated: 2025-12-29 | v2.0
+**Status: Stage 3 re-running** | Updated: 2025-12-30 | v2.1
 
 **Objective:** Parameter scaling baseline - test if error ∝ N^(-α)
 
@@ -62,9 +62,17 @@ Key findings:
 - Optimal architecture varies by horizon (different depth/heads configurations)
 - Conclusion: Separate HPO per horizon required for valid scaling analysis
 
-### Stage 3: Full HPO Matrix ✅ COMPLETE (2M, 20M, 200M)
+### Stage 3: Full HPO Matrix 🔄 RE-RUNNING (optimized scripts)
 
-**Completed: 2025-12-21** (2M, 20M, 200M complete; 2B started)
+**Status: Fresh re-run in progress** (2025-12-30)
+
+> **Why re-run?** Previous runs (2025-12-11 to 2025-12-21) lacked critical optimizations:
+> - Dropout search (was hardcoded at 0.1, now 0.1-0.3 HPO range)
+> - Dynamic batch sizing (memory-safe batch selection per architecture)
+> - Gradient accumulation (maintains effective batch=256 with small actual batches)
+> - Early stopping (patience=10 prevents wasted compute)
+>
+> All 12 runs archived to `outputs/hpo/archive/20251230_122812/` and re-executing with optimized scripts.
 
 **Option A Selected: 12 HPO runs per budget** (4 budgets × 3 horizons × 1 task)
 
@@ -75,14 +83,14 @@ Rationale:
 
 | Budget | h1 Status | h3 Status | h5 Status |
 |--------|-----------|-----------|-----------|
-| 2M | ✅ 50 trials | ✅ 50 trials | ⏳ Pending |
-| 20M | ✅ 50 trials | ✅ 50 trials | ✅ 50 trials |
-| 200M | ✅ 46 trials | ✅ 50 trials | ✅ 50 trials |
-| 2B | 🔄 3 trials (smoke) | ⏳ Pending | ⏳ Pending |
+| 2M | ⏳ Pending | ⏳ Pending | ⏳ Pending |
+| 20M | ⏳ Pending | ⏳ Pending | ⏳ Pending |
+| 200M | ⏳ Pending | ⏳ Pending | ⏳ Pending |
+| 2B | ⏳ Pending | ⏳ Pending | ⏳ Pending |
 
 ### Stage 4: Final Training 🔄 IN PROGRESS
 
-**Status: 2B HPO in progress, final training pending**
+**Status: Blocked on Stage 3 re-run**
 
 After all HPO completes:
 1. Run final training with best params per budget/horizon
@@ -91,23 +99,22 @@ After all HPO completes:
 4. Fit power law: error = C × N^(-α)
 
 **Current blockers:**
-- 2B HPO not complete (memory optimization stage completed 2025-12-29)
-- Missing runs: 2M_h5, 2B_h1 (full 50), 2B_h3, 2B_h5
+- All 12 HPO runs pending (fresh re-run with optimized scripts)
 
 ## HPO Scripts (12 Total)
 
 | # | Script | Budget | Horizon | Trials | Best Val Loss | Status |
 |---|--------|--------|---------|--------|---------------|--------|
-| 1 | `hpo_2M_h1_threshold_1pct.py` | 2M | 1-day | 50 | 0.337 | ✅ Complete |
-| 2 | `hpo_2M_h3_threshold_1pct.py` | 2M | 3-day | 50 | 0.262 | ✅ Complete |
+| 1 | `hpo_2M_h1_threshold_1pct.py` | 2M | 1-day | 0 | — | ⏳ Pending |
+| 2 | `hpo_2M_h3_threshold_1pct.py` | 2M | 3-day | 0 | — | ⏳ Pending |
 | 3 | `hpo_2M_h5_threshold_1pct.py` | 2M | 5-day | 0 | — | ⏳ Pending |
-| 4 | `hpo_20M_h1_threshold_1pct.py` | 20M | 1-day | 50 | 0.363 | ✅ Complete |
-| 5 | `hpo_20M_h3_threshold_1pct.py` | 20M | 3-day | 50 | 0.274 | ✅ Complete |
-| 6 | `hpo_20M_h5_threshold_1pct.py` | 20M | 5-day | 50 | 0.347 | ✅ Complete |
-| 7 | `hpo_200M_h1_threshold_1pct.py` | 200M | 1-day | 46 | 0.363 | ✅ Complete |
-| 8 | `hpo_200M_h3_threshold_1pct.py` | 200M | 3-day | 50 | 0.308 | ✅ Complete |
-| 9 | `hpo_200M_h5_threshold_1pct.py` | 200M | 5-day | 50 | 0.351 | ✅ Complete |
-| 10 | `hpo_2B_h1_threshold_1pct.py` | 2B | 1-day | 3 | 0.363 | 🔄 Smoke test |
+| 4 | `hpo_20M_h1_threshold_1pct.py` | 20M | 1-day | 0 | — | ⏳ Pending |
+| 5 | `hpo_20M_h3_threshold_1pct.py` | 20M | 3-day | 0 | — | ⏳ Pending |
+| 6 | `hpo_20M_h5_threshold_1pct.py` | 20M | 5-day | 0 | — | ⏳ Pending |
+| 7 | `hpo_200M_h1_threshold_1pct.py` | 200M | 1-day | 0 | — | ⏳ Pending |
+| 8 | `hpo_200M_h3_threshold_1pct.py` | 200M | 3-day | 0 | — | ⏳ Pending |
+| 9 | `hpo_200M_h5_threshold_1pct.py` | 200M | 5-day | 0 | — | ⏳ Pending |
+| 10 | `hpo_2B_h1_threshold_1pct.py` | 2B | 1-day | 0 | — | ⏳ Pending |
 | 11 | `hpo_2B_h3_threshold_1pct.py` | 2B | 3-day | 0 | — | ⏳ Pending |
 | 12 | `hpo_2B_h5_threshold_1pct.py` | 2B | 5-day | 0 | — | ⏳ Pending |
 
@@ -231,30 +238,38 @@ done
 
 ## HPO Results Summary
 
+**Status: Pending — fresh re-run in progress (2025-12-30)**
+
 Best validation loss per budget/horizon (lower is better):
 
 | Budget | h1 (1-day) | h3 (3-day) | h5 (5-day) | Best Architecture |
 |--------|------------|------------|------------|-------------------|
-| 2M | 0.337 | **0.262** | — | d=64, L=32-48, h=8-32 |
-| 20M | 0.363 | **0.274** | 0.347 | d=192-768, L=4-64, h=2-4 |
-| 200M | 0.363 | **0.308** | 0.351 | d=256-1024, L=12-256, h=16 |
-| 2B | 0.363 | — | — | d=1024, L=180, h=2 (smoke test) |
+| 2M | — | — | — | TBD |
+| 20M | — | — | — | TBD |
+| 200M | — | — | — | TBD |
+| 2B | — | — | — | TBD |
 
 **Key Observations:**
-- h3 (3-day horizon) consistently achieves lowest loss across all budgets
-- 200M_h3 achieved best overall: val_loss=0.308 (d=768, L=24, h=16)
-- h5 prefers narrow-deep: 200M_h5 best with d=256, L=256, h=16
-- Larger models don't always beat smaller ones (20M_h1 ≈ 200M_h1)
+- *Pending fresh results with optimized scripts*
 
-**Full results:** `docs/experiment_results.csv`
+**Previous results (archived):** `outputs/hpo/archive/20251230_122812/`
+**Current results:** `docs/experiment_results.csv`
 
 ---
 
 ## Remaining Work
 
-### HPO (4 runs remaining)
+### HPO (12 runs — full re-run with optimized scripts)
+- [ ] 2M_h1: 50 trials
+- [ ] 2M_h3: 50 trials
 - [ ] 2M_h5: 50 trials
-- [ ] 2B_h1: Complete 50 trials (3 smoke test done)
+- [ ] 20M_h1: 50 trials
+- [ ] 20M_h3: 50 trials
+- [ ] 20M_h5: 50 trials
+- [ ] 200M_h1: 50 trials
+- [ ] 200M_h3: 50 trials
+- [ ] 200M_h5: 50 trials
+- [ ] 2B_h1: 50 trials
 - [ ] 2B_h3: 50 trials
 - [ ] 2B_h5: 50 trials
 
@@ -285,6 +300,6 @@ See `docs/phase6a_implementation_history.md` for detailed history of:
 
 ---
 
-*Updated: 2025-12-29*
-*Version: 2.0*
-*Supersedes: v1.0 (2025-12-11)*
+*Updated: 2025-12-30*
+*Version: 2.1*
+*Supersedes: v2.0 (2025-12-29), v1.0 (2025-12-11)*

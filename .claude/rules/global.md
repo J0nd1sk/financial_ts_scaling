@@ -42,6 +42,19 @@ git add -p
 ### Test Before Stage
 Run `make test` BEFORE any `git add` command, not after.
 
+### Always Use venv Python
+```bash
+# ✅ CORRECT
+./venv/bin/python scripts/script.py
+source venv/bin/activate && python script.py
+
+# ❌ FORBIDDEN
+python scripts/script.py
+python3 scripts/script.py
+```
+
+All dependencies are in `venv/`. System Python causes `ModuleNotFoundError`.
+
 ### Commit Messages
 ```
 [type]: Brief description (50 chars max)

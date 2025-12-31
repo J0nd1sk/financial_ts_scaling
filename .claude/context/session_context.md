@@ -1,26 +1,28 @@
-# Session Handoff - 2025-12-29 (Task 2 Complete)
+# Session Handoff - 2025-12-30 13:15
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `1c42fb4` docs: session handoff + documentation consolidation plan
+- **Last commit**: `245024a` docs: consolidate Phase 6A documentation
 - **Uncommitted changes**:
-  - `M .claude/context/phase_tracker.md`
-  - `M .claude/context/session_context.md`
-  - `M docs/config_architecture.md` (Task 2 output - v2.0 update)
-  - `M docs/documentation_consolidation_plan.md`
-  - `?? docs/phase6a_implementation_history.md` (Task 1 output)
+  - `.claude/context/phase_tracker.md`
+  - `.claude/context/session_context.md`
+  - `.claude/rules/global.md` (venv Python rule)
+  - `CLAUDE.md` (venv Python rule)
+  - `docs/experiment_results.csv` (reset to header-only)
+  - `docs/phase6a_execution_plan.md` (v2.1 — Task 5 update)
+  - `outputs/results/experiment_log.csv` (reset to header-only)
+- **Ahead of origin**: 2 commits (unpushed)
 
 ### Project Phase
 - **Phase 6A**: Parameter Scaling — IN PROGRESS
-- **Current Stage**: Documentation Consolidation (Task 2 complete, Task 3 next)
-- **Next**: Execute Task 3 — Update `phase6a_execution_plan.md` to v2.0
+- **Current Stage**: HPO Re-Run Infrastructure Setup (Tasks 2-5 complete, Task 6 pending)
 
 ---
 
 ## Test Status
-- **Last `make test`**: PASS (361 tests) — this session
+- **Last `make test`**: PASS (361 tests) — 2025-12-30 13:10
 - **Failing**: none
 
 ---
@@ -28,69 +30,76 @@
 ## Completed This Session
 
 1. **Session restore** from previous session
-2. **Planning session for Task 2** (config_architecture.md v2.0)
-3. **Executed Task 2**: Updated `config_architecture.md` from v1.0 to v2.0
-   - 364 → 561 lines (+197 lines, +54%)
-   - Added: 2B budget, architectural HPO, dynamic batch sizing, training optimizations
-   - Added: Production Readiness section, Phase Implementation updates
-   - All 10 subtasks completed
+2. **Task 5**: Updated `docs/phase6a_execution_plan.md` to v2.1
+   - Changed Stage 3 status to "RE-RUNNING (optimized scripts)"
+   - Added rationale explaining why re-run needed (dropout, batch, accum, early stop)
+   - Marked all 12 HPO scripts as Pending (0 trials)
+   - Cleared old HPO Results Summary values (now TBD)
+   - Updated Remaining Work to list all 12 runs
+   - Updated version to v2.1, date to 2025-12-30
 
 ---
 
-## Documentation Consolidation Status
+## HPO Re-Run Setup Status (7 Tasks)
 
-| Task | Description | Status |
-|------|-------------|--------|
-| 1 | Create `phase6a_implementation_history.md` | ✅ DONE |
-| 2 | Update `config_architecture.md` to v2.0 | ✅ **DONE** |
-| 3 | Update `phase6a_execution_plan.md` to v2.0 | ⏳ **NEXT** |
-| 4 | Delete 5 stale files | ⏳ Pending |
-| 5 | N_TRIALS revert | ✅ Done |
-| 6 | Commit all changes | ⏳ Pending |
-| 7 | Update `project_phase_plans.md` to v3.0 | 📅 FUTURE (after 2B HPO) |
+| # | Task | Status |
+|---|------|--------|
+| 1 | Verify N_TRIALS=50 | Done (prior session) |
+| 2 | Archive 200M outputs | Done (prior session) |
+| 3 | Archive 2B smoke test | Done (prior session) |
+| 4 | Archive CSVs + reset | Done (prior session) |
+| 5 | Update execution plan | **Done (this session)** |
+| 6 | Update runner script comments | Pending |
+| 7 | Run make test | Done (tests pass) |
 
----
+### Archive Contents (20251230_122812)
+- `phase6a_200M_h1_threshold_1pct/` (50 trials)
+- `phase6a_200M_h3_threshold_1pct/` (50 trials)
+- `phase6a_200M_h5_threshold_1pct/` (50 trials)
+- `phase6a_2B_h1_threshold_1pct/` (3 trials smoke test)
+- `docs_experiment_results_backup.csv`
+- `experiment_log_backup.csv`
+- Old logs (hardware_monitor, phase6a_hpo, smoke_test)
 
-## Task 3 Preview: Update `phase6a_execution_plan.md` to v2.0
-
-From the consolidation plan:
-
-| Section | Current | Update To |
-|---------|---------|-----------|
-| Status line | (none) | **Status: Stage 4 in progress** |
-| Stage 1 | Checklist unchecked | ✅ COMPLETE |
-| Stage 2 | Checklist unchecked | ✅ COMPLETE (horizon variance confirmed) |
-| Stage 3 | Options A/B | ✅ COMPLETE (Option A: 12 HPO runs per budget) |
-| Stage 4 | Checklist unchecked | 🔄 IN PROGRESS |
-| HPO Scripts table | 3 rows, some ⏳ | 12 rows, status per run |
-| Key Decisions | 4 items from Dec 11 | Add Dec 13, Dec 21, Dec 26-29 decisions |
-
-**Add new sections**:
-- HPO Results Summary (link to experiment_results.csv)
-- Remaining Work (2B HPO, final analysis)
-- Lessons Learned (link to implementation_history.md)
+### Clean State Ready for Fresh HPO
+- `outputs/hpo/` — only contains archive/
+- `outputs/logs/` — empty
+- `outputs/results/experiment_log.csv` — header-only
+- `docs/experiment_results.csv` — header-only
+- `outputs/checkpoints/` — empty
 
 ---
 
-## Next Session Should
+## In Progress
+- **Task 6**: Update runner script comments — NOT STARTED (deferred to next session)
 
-1. **Run planning session for Task 3** (phase6a_execution_plan.md v2.0)
-2. **Execute Task 3**: Update the document following the plan
-3. Proceed to Task 4 (delete 5 stale files)
-4. Task 6: Commit all documentation consolidation changes
-5. Resume 2B HPO after consolidation complete
+## Pending
+1. Complete Task 6 (runner script comments) — optional, low priority
+2. Commit all changes (venv rule + HPO setup + Task 5 updates)
+3. Push 2 local commits to origin
+4. Start production HPO runs (12 runs × 50 trials = 600 trials)
+
+---
+
+## Files Modified This Session
+- `docs/phase6a_execution_plan.md`: Updated to v2.1 (Task 5 — mark all 12 runs for re-run)
+
+## Files Modified Prior Session (uncommitted)
+- `outputs/hpo/archive/20251230_122812/*` — archive with 200M, 2B, logs, CSVs
+- `outputs/logs/*` — moved to archive (now empty)
+- `docs/experiment_results.csv` — reset to header-only
+- `outputs/results/experiment_log.csv` — reset to header-only
+- `.claude/rules/global.md` — venv Python rule
+- `CLAUDE.md` — venv Python rule
 
 ---
 
 ## Key Decisions Made This Session
 
-### Task 2 Execution Approach
-- **Decision**: Follow session_context.md detailed plan exactly
-- **Rationale**: Plan was already approved last session with section-by-section breakdown
-
-### Document Structure
-- **Decision**: Add "Supersedes" line to header/footer for version tracking
-- **Rationale**: Clear lineage for document evolution
+### Task 5 Planning Approved
+- **Decision**: Update execution plan to mark all 12 HPO runs as pending for fresh re-run
+- **Rationale**: Old runs lacked dropout search, dynamic batch, gradient accum, early stopping
+- **Documented**: Memory entity `Task5_ExecutionPlanUpdate_Plan`
 
 ---
 
@@ -103,8 +112,22 @@ From the consolidation plan:
 
 ## Memory Entities Updated This Session
 
-- `Task2_ConfigArchitecture_v2_Plan` (created): Plan for config_architecture.md v2.0 update
-  - Updated with execution results: SUCCESS, 561 lines, 361 tests pass
+- `Task5_ExecutionPlanUpdate_Plan` (created): Plan for updating execution plan to v2.1
+- `User_Preferences_Authoritative` (unchanged): Referenced for session restore
+- `Lesson_SimpleCommands` (unchanged): Referenced for session restore
+
+---
+
+## Next Session Should
+
+1. **Optional**: Complete Task 6 (runner script comments) — low priority, can skip
+2. **Commit all changes** (venv rule + HPO archiving + Task 5 execution plan update)
+3. **Push to origin** (2 local commits pending)
+4. **Start production HPO runs** with runner script in tmux:
+   ```bash
+   tmux new -s hpo
+   ./scripts/run_phase6a_hpo.sh
+   ```
 
 ---
 
@@ -142,3 +165,5 @@ make verify
 ### Communication Standards
 - **Precision in language** — never reduce fidelity of descriptions
 - **Don't summarize away important details** — if uncertain, ask
+- **Prefers simple, direct commands** (ls, cat) over complex search commands (find, grep -r) when location is likely known
+- **Archive over delete** — more data is better than less

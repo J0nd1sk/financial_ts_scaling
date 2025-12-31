@@ -229,13 +229,20 @@
     - All features verified: dynamic batch, gradient accum, early stopping, dropout
   - 361 tests passing
   - **Stage COMPLETE** — all 6 tasks done, code ready for production HPO
-- 📝 **Immediate Backlog: Documentation Consolidation** (Task 2 of 6 complete)
+- ✅ **Documentation Consolidation COMPLETE** (2025-12-30, commit 245024a)
   - ✅ Task 1: Created `phase6a_implementation_history.md` (277 lines, 20 tasks)
   - ✅ Task 2: Updated `config_architecture.md` to v2.0 (364→561 lines, +54%)
-  - ⏳ Task 3: Update `phase6a_execution_plan.md` to v2.0 ← NEXT
-  - ⏳ Task 4: Delete 5 stale files
-  - ✅ Task 5: N_TRIALS reverted (collapsed into commit 1c42fb4)
-  - ⏳ Task 6: Commit all changes
+  - ✅ Task 3: Updated `phase6a_execution_plan.md` to v2.0 (155→290 lines, +87%)
+  - ✅ Task 4: Deleted 5 stale files (content in history doc)
+  - ✅ Task 5: N_TRIALS reverted
+  - ✅ Task 6: Committed all changes
+- 🔄 **HPO Re-Run Infrastructure** (Tasks 1-5 complete, Task 6 pending)
+  - All 12 HPO runs need re-running with new optimized scripts
+  - Old runs (2M/20M/200M) lacked: dropout search, dynamic batch, early stopping, gradient accum
+  - ✅ Task 1-4: Archived old outputs, reset CSVs (2025-12-30)
+  - ✅ Task 5: Updated `docs/phase6a_execution_plan.md` to v2.1 (2025-12-30)
+  - ⏳ Task 6: Update runner script comments (optional)
+  - Ready to commit and start production HPO
   - 📝 HPO Logging Infrastructure: deferred (plan in `docs/hpo_logging_plan.md`)
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)

@@ -247,15 +247,32 @@ source venv/bin/activate
 make test                    # Run ALL tests
 
 # Data
-python scripts/download_ohlcv.py
-python scripts/calculate_indicators.py
+./venv/bin/python scripts/download_ohlcv.py
+./venv/bin/python scripts/calculate_indicators.py
 
 # Training
-python scripts/train.py --config configs/phase1/2M-daily-direction.yaml
+./venv/bin/python scripts/train.py --config configs/phase1/2M-daily-direction.yaml
 
 # Thermal monitoring
 sudo powermetrics --samplers smc -i 1000 | grep -i temp
 ```
+
+### 🔴 CRITICAL: Always Use venv Python
+
+**NEVER use system Python. ALWAYS use the virtual environment.**
+
+```bash
+# ✅ CORRECT - Use venv Python:
+./venv/bin/python scripts/script.py
+./venv/bin/python -c "import torch; print(torch.__version__)"
+source venv/bin/activate && python scripts/script.py
+
+# ❌ FORBIDDEN - System Python lacks dependencies:
+python scripts/script.py
+python3 scripts/script.py
+```
+
+**Rationale:** All dependencies (PyTorch, Optuna, pandas-ta, etc.) are installed in `venv/`, not system Python. Using system Python causes `ModuleNotFoundError`.
 
 ---
 
