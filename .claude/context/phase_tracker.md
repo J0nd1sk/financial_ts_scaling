@@ -119,7 +119,32 @@
 - Vary: 2M → 20M → 200M → 2B parameters × 1d/3d/5d horizons
 - Research: Does error ∝ N^(-α)? Do optimal params vary by horizon?
 
-**Status (2025-12-11):**
+**Status (2026-01-01):**
+- ✅ **2M HPO Complete** (all 3 horizons, 50 trials each)
+  - h1: best=0.3199 (d=64, L=48, h=2)
+  - h3: best=0.2630 (d=64, L=32, h=2) ← BEST OVERALL
+  - h5: best=0.3371 (d=64, L=64, h=16)
+  - Finding: All prefer narrow-deep (d=64), h3 easiest to predict
+- ✅ **20M HPO Complete** (all 3 horizons, 50 trials each)
+  - h1: best=0.3483 (d=128, L=180, h=16) — worse than 2M
+  - h3: best=0.3191 (d=256, L=32, h=2) — worse than 2M
+  - h5: best=0.3458 (d=384, L=12, h=4) — worse than 2M
+  - Finding: More params did NOT help at this data scale
+- ✅ **200M HPO Complete** (all 3 horizons, 50 trials each)
+  - h1: best=0.3564 (d=384, L=96, h=4)
+  - h3: complete (see outputs)
+  - h5: best=0.3612 (d=384, L=180, h=4)
+- 🔄 **2B HPO Running** (h1 trial 3/50, h3/h5 pending)
+  - 75 architecture configs, d_model range 768-2048
+  - d=2048 configs cause swap pressure on 128GB system
+  - Closing browser recommended during 2B runs
+- ✅ **Supplementary 2M Experiments Complete** (10 runs)
+  - Tested h3-optimal config on h1/h5
+  - Finding: Architecture does NOT transfer across horizons
+  - h3-optimal on h5: +132% worse (catastrophic)
+  - n_heads tuning has zero effect when depth is wrong
+
+**Historical Status (2025-12-11):**
 - ✅ Fixed feature pipeline integration issues (vix_regime encoding, non-numeric column filtering)
 - ✅ Config file created: `configs/experiments/threshold_1pct.yaml`
 - ✅ **CRITICAL FIX: Implemented train/val/test data splits (commit 0e9ec1b)**
@@ -244,6 +269,15 @@
   - ⏳ Task 6: Update runner script comments (optional)
   - Ready to commit and start production HPO
   - 📝 HPO Logging Infrastructure: deferred (plan in `docs/hpo_logging_plan.md`)
+- ✅ **Supplementary Scripts Rewrite** (2025-12-31)
+  - All 10 scripts REWRITTEN with correct API (ExperimentConfig, PatchTSTConfig, ChunkSplitter, Trainer)
+  - Plan: `docs/supplementary_scripts_rewrite_plan.md`
+  - ✅ Task A: Fixed runner script pipefail
+  - ✅ Task B: Wrote ONE template script (`train_h1_d64_L32_h2_drop010.py`)
+  - ✅ Task C: Generated remaining 9 scripts from template
+  - ✅ All 10 scripts pass syntax check (py_compile) and parameter verification
+  - ⏳ **Next**: Validate ONE runs end-to-end, then run all 10 via `scripts/run_supplementary_2M.sh`
+  - Memory: `Supplementary_Scripts_Rewrite_Plan`, `Lesson_VerifyAPIBeforeGenerating`
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)
   - Funnel/hourglass/bottleneck designs

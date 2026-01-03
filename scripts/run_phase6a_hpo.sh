@@ -6,18 +6,55 @@
 # Usage:
 #   tmux new -s hpo
 #   ./scripts/run_phase6a_hpo.sh
+#   ./scripts/run_phase6a_hpo.sh --start-from 10   # Start from experiment 10 (2B_h1)
 #   # Ctrl+B, D to detach
 #   # tmux attach -t hpo to reattach
 #
 # Graceful Stop:
-#   To stop after the current experiment finishes:
-#   touch outputs/logs/STOP_HPO
+#   Option 1: touch outputs/logs/STOP_HPO
+#   Option 2: Ctrl+C (SIGINT) - stops after current experiment
 #
-#   The runner checks for this file between experiments.
-#   When found, it stops gracefully and removes the file.
+#   The runner checks for stop signals between experiments.
+#   When triggered, it stops gracefully after the current experiment.
 #
 
 set -o pipefail
+
+# ============================================================
+# ARGUMENT PARSING
+# ============================================================
+
+START_FROM=1
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --start-from)
+            START_FROM="$2"
+            shift 2
+            ;;
+        -h|--help)
+            echo "Usage: $0 [--start-from N]"
+            echo ""
+            echo "Options:"
+            echo "  --start-from N   Start from experiment N (1-12)"
+            echo "                   1-3: 2M, 4-6: 20M, 7-9: 200M, 10-12: 2B"
+            echo ""
+            echo "Graceful stop: touch outputs/logs/STOP_HPO or Ctrl+C"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage"
+            exit 1
+            ;;
+    esac
+done
+
+# Validate START_FROM
+if [[ ! "$START_FROM" =~ ^[0-9]+$ ]] || [ "$START_FROM" -lt 1 ] || [ "$START_FROM" -gt 12 ]; then
+    echo "Error: --start-from must be a number between 1 and 12"
+    exit 1
+fi
 
 # Configuration
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -32,6 +69,9 @@ STOP_FILE="${LOG_DIR}/STOP_HPO"  # Touch this file to stop after current experim
 
 # Background monitor PID (for cleanup)
 MONITOR_PID=""
+
+# Flag for graceful stop on signal (must use file for subshell visibility)
+STOP_SIGNAL_FILE="${LOG_DIR}/.stop_signal_$$"
 
 # ============================================================
 # PRE-FLIGHT CHECKS
@@ -140,15 +180,28 @@ stop_hardware_monitor() {
     fi
 }
 
+# Handle interrupt signals gracefully
+handle_signal() {
+    echo ""
+    echo "============================================================"
+    echo "⚠️  Signal received - will stop after current experiment"
+    echo "============================================================"
+    touch "${STOP_SIGNAL_FILE}"
+}
+
 # Cleanup on exit
 cleanup() {
     stop_hardware_monitor
-    # Remove stop file if it exists (clean state for next run)
-    rm -f "${STOP_FILE}"
+    # Remove stop files (clean state for next run)
+    rm -f "${STOP_FILE}" "${STOP_SIGNAL_FILE}"
 }
-trap cleanup EXIT INT TERM
+
+# Set up signal handlers
+trap handle_signal INT TERM
+trap cleanup EXIT
 
 # Experiments in order (smallest to largest)
+# Note: 2B_h1 uses resume script if it exists (to continue from saved trials)
 EXPERIMENTS=(
     "hpo_2M_h1_threshold_1pct.py"
     "hpo_2M_h3_threshold_1pct.py"
@@ -163,6 +216,12 @@ EXPERIMENTS=(
     "hpo_2B_h3_threshold_1pct.py"
     "hpo_2B_h5_threshold_1pct.py"
 )
+
+# Check if resume script exists for 2B_h1 and use it instead
+if [ -f "${EXPERIMENTS_DIR}/hpo_2B_h1_resume.py" ]; then
+    EXPERIMENTS[9]="hpo_2B_h1_resume.py"
+    echo "📌 Using resume script for 2B_h1"
+fi
 
 # Results tracking
 declare -a RESULTS
@@ -203,14 +262,23 @@ for i in "${!EXPERIMENTS[@]}"; do
     exp="${EXPERIMENTS[$i]}"
     exp_num=$((i + 1))
 
-    # Check for graceful stop request
-    if [ -f "${STOP_FILE}" ]; then
+    # Skip experiments before START_FROM
+    if [ $exp_num -lt $START_FROM ]; then
+        echo "[${exp_num}/${#EXPERIMENTS[@]}] Skipping: ${exp} (--start-from ${START_FROM})"
+        RESULTS[$i]="SKIP"
+        DURATIONS[$i]=0
+        continue
+    fi
+
+    # Check for graceful stop request (file OR signal)
+    if [ -f "${STOP_FILE}" ] || [ -f "${STOP_SIGNAL_FILE}" ]; then
         echo "" | tee -a "${LOG_FILE}"
         echo "============================================================" | tee -a "${LOG_FILE}"
-        echo "STOP REQUESTED: Found ${STOP_FILE}" | tee -a "${LOG_FILE}"
-        echo "Stopping after completing ${exp_num-1}/${#EXPERIMENTS[@]} experiments." | tee -a "${LOG_FILE}"
+        echo "⏹️  STOP REQUESTED" | tee -a "${LOG_FILE}"
+        echo "Completed ${exp_num-1}/${#EXPERIMENTS[@]} experiments." | tee -a "${LOG_FILE}"
+        echo "Resume with: $0 --start-from ${exp_num}" | tee -a "${LOG_FILE}"
         echo "============================================================" | tee -a "${LOG_FILE}"
-        rm -f "${STOP_FILE}"
+        rm -f "${STOP_FILE}" "${STOP_SIGNAL_FILE}"
         break
     fi
 
@@ -265,11 +333,12 @@ echo "" | tee -a "${LOG_FILE}"
 
 PASSED=0
 FAILED=0
+SKIPPED=0
 
 for i in "${!EXPERIMENTS[@]}"; do
     exp="${EXPERIMENTS[$i]}"
     result="${RESULTS[$i]}"
-    duration="${DURATIONS[$i]}"
+    duration="${DURATIONS[$i]:-0}"
 
     HOURS=$((duration / 3600))
     MINUTES=$(((duration % 3600) / 60))
@@ -279,15 +348,17 @@ for i in "${!EXPERIMENTS[@]}"; do
     if [ "$result" = "PASS" ]; then
         echo "  [PASS] ${exp} (${DUR_FMT})" | tee -a "${LOG_FILE}"
         ((PASSED++))
-    else
+    elif [ "$result" = "SKIP" ]; then
+        echo "  [SKIP] ${exp}" | tee -a "${LOG_FILE}"
+        ((SKIPPED++))
+    elif [ -n "$result" ]; then
         echo "  [FAIL] ${exp} (${DUR_FMT})" | tee -a "${LOG_FILE}"
         ((FAILED++))
     fi
 done
 
 echo "" | tee -a "${LOG_FILE}"
-echo "Passed: ${PASSED}/${#EXPERIMENTS[@]}" | tee -a "${LOG_FILE}"
-echo "Failed: ${FAILED}/${#EXPERIMENTS[@]}" | tee -a "${LOG_FILE}"
+echo "Passed: ${PASSED}, Failed: ${FAILED}, Skipped: ${SKIPPED}" | tee -a "${LOG_FILE}"
 echo "" | tee -a "${LOG_FILE}"
 echo "Log saved to: ${LOG_FILE}" | tee -a "${LOG_FILE}"
 echo "============================================================" | tee -a "${LOG_FILE}"

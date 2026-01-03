@@ -65,6 +65,7 @@ def create_study(
     budget: str,
     storage: str | None = None,
     direction: str = "minimize",
+    n_startup_trials: int = 20,
 ) -> optuna.Study:
     """Create Optuna study with optional persistent storage.
 
@@ -73,17 +74,22 @@ def create_study(
         budget: Parameter budget ('2M', '20M', '200M', '2B')
         storage: SQLite URL for persistence, or None for in-memory
         direction: 'minimize' for loss, 'maximize' for accuracy
+        n_startup_trials: Number of random trials before TPE kicks in (default 20)
 
     Returns:
         Optuna Study object with study_name = f"{experiment_name}_{budget}"
     """
     study_name = f"{experiment_name}_{budget}"
 
+    # Use TPESampler with more startup trials for broader exploration
+    sampler = optuna.samplers.TPESampler(n_startup_trials=n_startup_trials)
+
     study = optuna.create_study(
         study_name=study_name,
         storage=storage,
         direction=direction,
         load_if_exists=True,
+        sampler=sampler,
     )
 
     return study
@@ -266,6 +272,37 @@ def create_architectural_objective(
         learning_rate = sampled_params.get("learning_rate", 0.001)
         epochs = sampled_params.get("epochs", 50)
         dropout = sampled_params.get("dropout", 0.1)
+
+        # Force variation when same architecture is reused with similar params
+        # This ensures we learn something new from each trial
+        study = trial.study
+        same_arch_trials = []
+        for t in study.trials:
+            if t.state == optuna.trial.TrialState.COMPLETE:
+                prev_arch_idx = t.params.get("arch_idx")
+                if prev_arch_idx is None:
+                    prev_arch_idx = t.user_attrs.get("arch_idx")
+                if prev_arch_idx == arch_idx:
+                    same_arch_trials.append(t)
+
+        if same_arch_trials:
+            prev = same_arch_trials[-1]  # Most recent trial with this arch
+            prev_dropout = prev.params.get("dropout", 0.1)
+            prev_epochs = prev.params.get("epochs", 50)
+
+            dropout_similar = abs(dropout - prev_dropout) < 0.08
+            epochs_similar = abs(epochs - prev_epochs) < 20
+
+            if dropout_similar and epochs_similar:
+                # Force dropout to opposite extreme for meaningful variation
+                if prev_dropout < 0.2:
+                    dropout = 0.27  # Push to high end
+                else:
+                    dropout = 0.12  # Push to low end
+                logger.info(
+                    f"  → Forced dropout={dropout:.2f} for diversity "
+                    f"(was {sampled_params.get('dropout', 0.1):.2f}, prev={prev_dropout:.2f})"
+                )
 
         # Get memory-safe batch config based on architecture size
         batch_config = get_memory_safe_batch_config(

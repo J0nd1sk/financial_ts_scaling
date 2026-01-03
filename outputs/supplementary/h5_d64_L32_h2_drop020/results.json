@@ -1,0 +1,24 @@
+{
+  "experiment": "h5_d64_L32_h2_drop020",
+  "horizon": 5,
+  "architecture": {
+    "d_model": 64,
+    "n_layers": 32,
+    "n_heads": 2,
+    "d_ff": 256,
+    "dropout": 0.2
+  },
+  "training": {
+    "learning_rate": 0.001,
+    "batch_size": 256,
+    "epochs": 50
+  },
+  "results": {
+    "train_loss": 0.6710717537823845,
+    "val_loss": 0.7869188785552979,
+    "stopped_early": false,
+    "stop_reason": null
+  },
+  "runtime_seconds": 62.33327913284302,
+  "timestamp": "2025-12-31T10:38:27.071110"
+}

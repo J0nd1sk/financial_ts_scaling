@@ -16,6 +16,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch, Mock
 
+import optuna
 import pytest
 import yaml
 
@@ -1791,3 +1792,138 @@ class TestArchObjectiveUsesNewFeatures:
         assert "early_stopping_min_delta" in trainer_kwargs
         assert trainer_kwargs["early_stopping_min_delta"] == 0.001
         assert "accumulation_steps" in trainer_kwargs
+
+
+class TestCreateStudyUsesTpeSampler:
+    """Tests for TPESampler configuration in create_study."""
+
+    def test_create_study_uses_tpe_sampler(self) -> None:
+        """Test that create_study returns study with TPESampler."""
+        study = create_study(
+            experiment_name="test_experiment",
+            budget="2M",
+            direction="minimize",
+        )
+
+        assert isinstance(study.sampler, optuna.samplers.TPESampler)
+
+    def test_create_study_default_n_startup_trials(self) -> None:
+        """Test that create_study uses n_startup_trials=20 by default."""
+        study = create_study(
+            experiment_name="test_experiment",
+            budget="2M",
+            direction="minimize",
+        )
+
+        # TPESampler stores n_startup_trials in _n_startup_trials attribute
+        assert study.sampler._n_startup_trials == 20
+
+    def test_create_study_custom_n_startup_trials(self) -> None:
+        """Test that create_study accepts custom n_startup_trials."""
+        study = create_study(
+            experiment_name="test_experiment",
+            budget="2M",
+            direction="minimize",
+            n_startup_trials=30,
+        )
+
+        assert study.sampler._n_startup_trials == 30
+
+
+class TestArchObjectiveForcesVariation:
+    """Tests for forced variation when same architecture is reused."""
+
+    @pytest.fixture
+    def sample_architectures(self) -> list[dict]:
+        """Sample architectures for testing."""
+        return [
+            {"d_model": 64, "n_layers": 8, "n_heads": 2, "d_ff": 256, "param_count": 2_000_000},
+            {"d_model": 128, "n_layers": 16, "n_heads": 4, "d_ff": 512, "param_count": 2_500_000},
+        ]
+
+    @pytest.fixture
+    def mock_experiment_config(self) -> MagicMock:
+        """Create mock experiment config."""
+        config = MagicMock()
+        config.data_path = "data/test.parquet"
+        config.context_length = 60
+        config.horizon = 1
+        config.task = "threshold_1pct"
+        return config
+
+    @patch("src.training.hpo.get_memory_safe_batch_config")
+    @patch("src.training.hpo.Trainer")
+    @patch("src.training.hpo.load_experiment_config")
+    def test_forces_variation_when_same_arch_similar_params(
+        self,
+        mock_load_exp: MagicMock,
+        mock_trainer_cls: MagicMock,
+        mock_get_batch_config: MagicMock,
+        mock_experiment_config: MagicMock,
+        sample_architectures: list[dict],
+    ) -> None:
+        """Test that dropout is forced to different value when same arch with similar params."""
+        mock_load_exp.return_value = mock_experiment_config
+        mock_trainer = MagicMock()
+        mock_trainer.train.return_value = {"train_loss": 0.5, "val_loss": 0.55}
+        mock_trainer_cls.return_value = mock_trainer
+        mock_get_batch_config.return_value = {
+            "micro_batch": 128,
+            "accumulation_steps": 2,
+            "effective_batch": 256,
+        }
+
+        training_search_space = {
+            "learning_rate": {"type": "log_uniform", "low": 1e-4, "high": 1e-3},
+            "epochs": {"type": "categorical", "choices": [50]},
+            "weight_decay": {"type": "log_uniform", "low": 1e-4, "high": 5e-3},
+            "warmup_steps": {"type": "categorical", "choices": [100]},
+            "dropout": {"type": "uniform", "low": 0.1, "high": 0.3},
+        }
+
+        objective = create_architectural_objective(
+            config_path="configs/test.yaml",
+            budget="2M",
+            architectures=sample_architectures,
+            training_search_space=training_search_space,
+            num_features=20,
+            force_extreme_trials=False,
+        )
+
+        # Create a real study to test variation forcing
+        study = create_study(
+            experiment_name="test_variation",
+            budget="2M",
+        )
+
+        # Add a completed trial with arch_idx=0, dropout=0.15, epochs=50
+        prev_trial = optuna.trial.create_trial(
+            params={"arch_idx": 0, "dropout": 0.15, "epochs": 50, "learning_rate": 0.001, "weight_decay": 0.001, "warmup_steps": 100},
+            distributions={
+                "arch_idx": optuna.distributions.IntDistribution(0, 1),
+                "dropout": optuna.distributions.FloatDistribution(0.1, 0.3),
+                "epochs": optuna.distributions.IntDistribution(25, 100),
+                "learning_rate": optuna.distributions.FloatDistribution(1e-4, 1e-3),
+                "weight_decay": optuna.distributions.FloatDistribution(1e-4, 5e-3),
+                "warmup_steps": optuna.distributions.CategoricalDistribution([100, 300, 500]),
+            },
+            values=[0.4],
+            state=optuna.trial.TrialState.COMPLETE,
+        )
+        study.add_trial(prev_trial)
+
+        # Now run a new trial that samples same arch_idx=0 and similar dropout
+        # The objective should force dropout to a different value
+        mock_trial = MagicMock()
+        mock_trial.number = 1
+        mock_trial.study = study
+        mock_trial.suggest_int.return_value = 0  # Same arch_idx
+        mock_trial.suggest_float.return_value = 0.16  # Similar dropout (delta < 0.08)
+        mock_trial.suggest_categorical.side_effect = lambda name, choices: choices[0]
+
+        objective(mock_trial)
+
+        # Verify that model_config received a forced dropout value (not 0.16)
+        model_config = mock_trainer_cls.call_args.kwargs["model_config"]
+        # Since prev_dropout=0.15 < 0.2, forced dropout should be 0.27 (high end)
+        assert model_config.dropout == 0.27, f"Expected dropout=0.27 (forced high), got {model_config.dropout}"
