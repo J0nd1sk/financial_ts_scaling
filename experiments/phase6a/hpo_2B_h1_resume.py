@@ -112,7 +112,7 @@ def inject_trials_into_study(study, trial_data_list):
             "learning_rate": optuna.distributions.FloatDistribution(1e-5, 1e-3, log=True),
             "epochs": optuna.distributions.IntDistribution(25, 100),
             "weight_decay": optuna.distributions.FloatDistribution(1e-6, 1e-2, log=True),
-            "warmup_steps": optuna.distributions.CategoricalDistribution([100, 300, 500]),
+            "warmup_steps": optuna.distributions.IntDistribution(100, 500),  # Broader range to accept historical values
             "dropout": optuna.distributions.FloatDistribution(0.1, 0.3),
         }
 
