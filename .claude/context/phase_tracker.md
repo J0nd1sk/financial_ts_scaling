@@ -134,10 +134,17 @@
   - h1: best=0.3564 (d=384, L=96, h=4)
   - h3: complete (see outputs)
   - h5: best=0.3612 (d=384, L=180, h=4)
-- 🔄 **2B HPO Running** (h1 trial 3/50, h3/h5 pending)
+- 🔄 **2B HPO Running** (h1 trial 11+/50, h3/h5 pending)
   - 75 architecture configs, d_model range 768-2048
   - d=2048 configs cause swap pressure on 128GB system
-  - Closing browser recommended during 2B runs
+  - Best so far: Trial 4, val_loss=0.3778, d=1024, L=180, h=16
+  - Skip arch_idx=52 (d=1024, L=256 - memory issues)
+  - Resume script: `experiments/phase6a/hpo_2B_h1_resume.py`
+- ✅ **HPO Diversity Enhancement** (2026-01-03)
+  - Added n_startup_trials=20 to TPESampler
+  - Added forced variation logic for same-arch trials
+  - Fixed arch_idx=0 falsy bug (0 or x returns x)
+  - 4 new tests, 365 total passing
 - ✅ **Supplementary 2M Experiments Complete** (10 runs)
   - Tested h3-optimal config on h1/h5
   - Finding: Architecture does NOT transfer across horizons

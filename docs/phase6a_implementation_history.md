@@ -17,7 +17,8 @@ This document archives the implementation work completed during Phase 6A setup. 
 | 1. Architectural HPO | 8 | Dec 11-12 | Architecture search (d_model, n_layers, n_heads) added to HPO |
 | 2. HPO Fixes | 6 | Dec 13 | Grid gaps filled, forced extreme testing, n_heads logging |
 | 3. HPO Time Optimization | 6 | Dec 26-29 | Dynamic batch sizing, gradient accumulation, early stopping |
-| **Total** | **20** | | Production-ready HPO infrastructure |
+| 4. HPO Diversity Enhancement | 5 | Jan 3, 2026 | n_startup_trials=20, forced variation, falsy zero fix |
+| **Total** | **25** | | Production-ready HPO infrastructure |
 
 ### Files Created
 
@@ -237,6 +238,70 @@ Created `docs/hpo_supplemental_tests.md` to fill gaps in completed experiments:
 
 ---
 
+## Stage 4: HPO Diversity Enhancement (Jan 3, 2026)
+
+### Problem Statement
+
+**Discovery:** 2B HPO was reusing the same architecture (arch_idx) with very similar hyperparameters, wasting trials on near-duplicate configurations. Additionally, arch_idx=0 was being skipped due to a Python falsy zero bug.
+
+**Issues Identified:**
+1. TPESampler with default n_startup_trials=10 converged too quickly
+2. No mechanism to force variation when same architecture sampled with similar params
+3. Bug: `0 or fallback` returns fallback because 0 is falsy in Python
+
+### Solution Design
+
+Three-part diversity enhancement:
+1. **Increase n_startup_trials**: 10 → 20 for broader random exploration
+2. **Forced variation logic**: When same arch_idx with similar dropout (<0.08) AND epochs (<20), force dropout to opposite extreme (0.12 or 0.27)
+3. **Falsy fix**: Use explicit `if prev_arch_idx is None` instead of `prev_arch_idx or fallback`
+
+### Tasks Completed
+
+| Task | Description | Tests |
+|------|-------------|-------|
+| 1 | Add n_startup_trials=20 to TPESampler | 2 tests |
+| 2 | Add forced variation logic | 2 tests |
+| 3 | Fix falsy zero bug | (verified by test 2) |
+| 4 | Create 2B resume script | - |
+| 5 | Fix warmup_steps IntDistribution | - |
+
+### Implementation Details
+
+**Code Changes:**
+- `src/training/hpo.py:85`: Added `n_startup_trials=20` to TPESampler
+- `src/training/hpo.py:276-303`: Forced variation logic
+- `src/training/hpo.py:282-284`: Falsy fix - explicit None check
+- `experiments/phase6a/hpo_2B_h1_resume.py`: New resume script
+
+**Resume Script Features:**
+- Loads trials 0-10 from JSON files
+- Injects into Optuna study via `add_trial()`
+- Filters architecture list to exclude arch_idx=52 (memory issues)
+- Uses IntDistribution(100,500) for warmup_steps to accept historical values
+
+### Key Learning
+
+**Python Falsy Zero Bug:**
+```python
+# WRONG: fails when value is 0
+x = value or default
+
+# CORRECT: explicit None check
+x = value if value is not None else default
+```
+
+This pattern applies to any code dealing with indices, counts, or numeric IDs that can legitimately be zero.
+
+### Memory Entities Created
+
+- `HPO_Diversity_Enhancement`: Implementation details
+- `HPO_2B_Resume_Script`: Resume script and status
+- `Lesson_FalsyZeroBug`: Python falsy zero pattern
+- `Phase6A_2B_HPO_Status`: Current 2B experiment status
+
+---
+
 ## Memory MCP Entities
 
 The following Memory entities were created during this implementation:
@@ -248,18 +313,22 @@ The following Memory entities were created during this implementation:
 | `HPO_Time_Optimization_Design` | design | Dynamic batch, gradient accum, early stopping |
 | `PatchTST_Dropout_Discovery` | discovery | Model already had dropout, was hardcoded |
 | `Session_Handoff_Skill_Gap` | process_improvement | Plan files not updated when tasks complete |
+| `HPO_Diversity_Enhancement` | implementation | n_startup_trials=20, forced variation logic |
+| `HPO_2B_Resume_Script` | implementation | Resume 2B HPO from trial 11, skip arch_idx=52 |
+| `Lesson_FalsyZeroBug` | lesson_learned | Python falsy zero pattern to avoid |
+| `Phase6A_2B_HPO_Status` | experiment_status | 2B HPO progress and best results |
 
 ---
 
 ## Test Coverage
 
-Final test count after Stage 3: **361 tests passing**
+Final test count after Stage 4: **365 tests passing**
 
 | Component | Tests Added |
 |-----------|-------------|
 | arch_grid.py | 34 tests (param estimation, grid generation, budget filtering, batch config) |
 | trainer.py | 8 tests (gradient accumulation, early stopping) |
-| hpo.py | 17 tests (architectural objective, config validation) |
+| hpo.py | 21 tests (architectural objective, config validation, diversity enhancement) |
 
 ---
 
@@ -272,6 +341,7 @@ Final test count after Stage 3: **361 tests passing**
 
 ---
 
-*Document Version: 1.0*
+*Document Version: 1.1*
 *Created: 2025-12-29*
+*Updated: 2026-01-03 (Stage 4: HPO Diversity Enhancement)*
 *Consolidated from: hpo_fixes_plan.md, hpo_time_optimization_plan.md, architectural_hpo_implementation_plan.md, hpo_supplemental_tests.md, feature_pipeline_integration_issues.md*

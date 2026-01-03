@@ -1127,3 +1127,78 @@ memory_score = (d_model ** 2) * n_layers / 1e9
 - Next session restores may see misleading status in plan files
 - Use `phase_tracker.md` as source of truth until skill is revised
 - Documentation consolidation will naturally fix this for Phase 6A plans
+
+## 2026-01-03 HPO Diversity Enhancement
+
+**Context**: 2B HPO was reusing the same architecture (arch_idx) with very similar hyperparameters, wasting trials on near-duplicate configurations.
+
+**Problem Identified**:
+1. TPESampler with default n_startup_trials=10 converged too quickly to similar configs
+2. No mechanism to force variation when same architecture sampled with similar params
+3. Bug: arch_idx=0 was being skipped due to Python's falsy zero behavior
+
+**Decision**: Implement three-part diversity enhancement:
+1. Increase n_startup_trials to 20 for broader random exploration
+2. Add forced variation logic: when same arch_idx with similar dropout (<0.08) AND epochs (<20), force dropout to opposite extreme
+3. Fix falsy bug: use explicit `if prev_arch_idx is None` instead of `prev_arch_idx or fallback`
+
+**Implementation Details**:
+- `create_study()`: Added `n_startup_trials=20` parameter to TPESampler
+- `create_architectural_objective()`: Added forced variation logic at lines 276-303
+- Fixed comparison at lines 282-284: `prev_arch_idx = t.params.get("arch_idx")` then `if prev_arch_idx is None: prev_arch_idx = t.user_attrs.get("arch_idx")`
+
+**Rationale**:
+- 20 startup trials ensures more architecture diversity before TPE optimization
+- Forcing dropout variation ensures each trial with same architecture learns something new
+- Falsy fix prevents arch_idx=0 from being incorrectly skipped
+
+**Tests Added**: 4 new tests in `TestTPESamplerConfig` and `TestArchObjectiveForcesVariation` classes (365 total passing)
+
+**Memory Entity**: `HPO_Diversity_Enhancement`, `Lesson_FalsyZeroBug`
+
+## 2026-01-03 2B HPO Resume Script
+
+**Context**: 2B HPO h1 had 11 trials complete (0-10) but needed to skip problematic arch_idx=52 (d=1024, L=256) which caused memory exhaustion.
+
+**Decision**: Create dedicated resume script rather than modifying main HPO script.
+
+**Implementation**: `experiments/phase6a/hpo_2B_h1_resume.py`
+- Loads existing trials 0-10 from JSON files
+- Injects them into new Optuna study via `study.add_trial()`
+- Filters architecture list to exclude arch_idx=52
+- Runs remaining 39 trials
+
+**Bug Fix During Testing**: Historical trials had `warmup_steps=200` which wasn't in current CategoricalDistribution([100, 300, 500]). Changed to `IntDistribution(100, 500)` for injection to accept any historical value.
+
+**Rationale**: Resume approach preserves 11 trials of compute (~hours of work) while skipping known-problematic configurations.
+
+**2B HPO Status**:
+- 11/50 trials complete
+- Best: Trial 4, val_loss=0.3778, d=1024, L=180, h=16
+- Skip: arch_idx=52 (d=1024, L=256) - memory exhaustion
+- h3/h5 pending h1 completion
+
+**Memory Entity**: `HPO_2B_Resume_Script`, `Phase6A_2B_HPO_Status`
+
+## 2026-01-03 Lesson Learned: Python Falsy Zero Bug
+
+**Context**: Diversity forcing logic wasn't triggering for arch_idx=0 trials.
+
+**Root Cause**: Expression `t.params.get("arch_idx") or t.user_attrs.get("arch_idx")` returns the fallback when value is 0 because 0 is falsy in Python.
+
+**Pattern to Avoid**:
+```python
+# WRONG: fails when value is 0
+x = value or default
+
+# CORRECT: explicit None check
+x = value if value is not None else default
+# OR
+x = value
+if x is None:
+    x = default
+```
+
+**Applicability**: Any code dealing with indices, counts, or numeric IDs that can legitimately be zero.
+
+**Memory Entity**: `Lesson_FalsyZeroBug`

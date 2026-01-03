@@ -1,75 +1,100 @@
-# Session Handoff - 2026-01-03 15:00
+# Session Handoff - 2026-01-03 16:00
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Uncommitted changes**: hpo.py, test_hpo.py, hpo_2B_h1_resume.py
+- **Last commit**: `b710d30` - fix: use IntDistribution for warmup_steps in resume script injection
+- **Uncommitted changes**: None (clean working tree)
 
-### Task In Progress
-**HPO Diversity Enhancement** - 1 failing test remains
+### Task Status
+**HPO Diversity Enhancement** - ✅ COMPLETE
+- Fixed arch_idx=0 falsy bug
+- Added n_startup_trials=20 to TPESampler
+- Added forced variation logic for same-arch trials
+- Created hpo_2B_h1_resume.py script
+- Fixed warmup_steps IntDistribution issue
+- All 365 tests passing
 
 ## What Was Done This Session
 
-1. ✅ Fixed `hpo_2B_h1_resume.py` injection bug (arch_idx in user_attrs not params)
-2. ✅ Added `n_startup_trials=20` to `create_study()` in hpo.py
-3. ✅ Added forced variation logic to `create_architectural_objective()` in hpo.py
-4. ✅ Updated resume script to load 11 trials (0-10)
-5. ⚠️ Added tests but 1 failing - forced variation test not working
+1. ✅ Session restore - loaded previous context
+2. ✅ Fixed failing test `test_forces_variation_when_same_arch_similar_params`
+   - Root cause: `0 or x` returns x because 0 is falsy in Python
+   - Fix: Changed to explicit `if prev_arch_idx is None` check
+3. ✅ Ran `make test` - all 365 tests pass
+4. ✅ Committed: `5c2b35f` - fix: arch_idx=0 falsy bug in HPO diversity forcing logic
+5. ✅ User tested resume script - encountered warmup_steps=200 injection error
+6. ✅ Fixed: Changed CategoricalDistribution to IntDistribution for warmup_steps
+7. ✅ Committed: `b710d30` - fix: use IntDistribution for warmup_steps in resume script injection
+8. ✅ User confirmed resume script working - new trial has same arch as trial 10 but different epochs
+9. ✅ Documented everything in Memory, decision_log.md, and session_context.md
 
-## Failing Test
+## 2B HPO Status
 
-`TestArchObjectiveForcesVariation::test_forces_variation_when_same_arch_similar_params`
-
-**Issue**: The mock `trial.study` has the previous trial, but the forced dropout value (0.27) is not being applied - still getting 0.16.
-
-**Root Cause**: The mock trial's `suggest_float` returns 0.16, but after the forced variation logic runs, we modify the local `dropout` variable. However, this modified value IS being used (see log shows `dropout=0.16`). The logic isn't triggering.
-
-**Debug needed**: Check why `same_arch_trials` isn't finding the injected trial. Likely the mock trial's `study.trials` isn't returning the added trial correctly.
-
-## Files Modified (Uncommitted)
-
-| File | Changes |
-|------|---------|
-| `src/training/hpo.py` | Added TPESampler, added forced variation logic (~30 lines) |
-| `tests/test_hpo.py` | Added 4 tests, added optuna import |
-| `experiments/phase6a/hpo_2B_h1_resume.py` | Fixed injection, updated to 11 trials |
+| Metric | Value |
+|--------|-------|
+| Trials Complete | 11/50 (trials 0-10) |
+| Best Trial | 4 |
+| Best val_loss | 0.3778 |
+| Best Architecture | d=1024, L=180, h=16 |
+| Skipped | arch_idx=52 (d=1024, L=256 - memory issues) |
+| Resume Script | `experiments/phase6a/hpo_2B_h1_resume.py` |
+| Status | Running in user's terminal |
 
 ## Test Status
-- 364 passed, 1 failed
-- Failing: `test_forces_variation_when_same_arch_similar_params`
+- Last `make test`: 2026-01-03 ~15:30
+- Result: ✅ 365 passed
+- All tests passing
 
-## Next Session Must
-
-1. **Fix the failing test** - mock setup issue with `trial.study.trials`
-2. **Run `make test`** - verify all 365 pass
-3. **Smoke test resume script** - run 2-3 trials to verify diversity forcing works
-4. **Commit changes** - once verified
-5. **Run 2B HPO** - resume script ready
+## Memory Entities Updated
+- `HPO_Diversity_Enhancement` - implementation details
+- `HPO_2B_Resume_Script` - resume script and status
+- `Lesson_FalsyZeroBug` - Python falsy zero pattern
+- `Phase6A_2B_HPO_Status` - current experiment status
+- `Supplementary_2M_Scripts_Complete` - earlier work summary
 
 ## Key Code Locations
 
-- Forced variation logic: `src/training/hpo.py:276-303`
-- Failing test: `tests/test_hpo.py:1856-1929`
-- Resume script: `experiments/phase6a/hpo_2B_h1_resume.py`
+| Feature | File | Lines |
+|---------|------|-------|
+| Forced variation logic | `src/training/hpo.py` | 276-303 |
+| Falsy fix | `src/training/hpo.py` | 282-284 |
+| n_startup_trials | `src/training/hpo.py` | 85 |
+| Resume script | `experiments/phase6a/hpo_2B_h1_resume.py` | full file |
 
-## Memory Entity Created
-- `HPO_Diversity_Enhancement_Plan` - approved plan for this work
+## Files Modified This Session
+- `src/training/hpo.py`: Fixed falsy bug (1 line)
+- `experiments/phase6a/hpo_2B_h1_resume.py`: Fixed warmup_steps distribution (1 line)
+- `.claude/context/decision_log.md`: Added 3 new entries
+- `.claude/context/session_context.md`: This file
 
-## 2B HPO Status
-- 11/50 trials complete (0-10 saved)
-- Best: Trial 4, val_loss=0.3778, d=1024, L=180
-- Skip arch_idx=52 (d=1024, L=256 - memory issues)
+## Next Steps
+1. Monitor 2B HPO progress (running in user terminal)
+2. After h1 completes, run h3 and h5
+3. Analyze 2B results for scaling law evidence
 
 ---
 
 ## User Preferences (Authoritative)
 
 ### Development Approach
-- TDD, planning sessions, tmux for experiments
+- TDD: tests first, always
+- Planning sessions before implementation
+- Uses tmux for long-running experiments
 
 ### Context Durability
-- Memory MCP + context files + docs/
+- Insists on durability for pending actions
+- Document in multiple places: Memory MCP + context files + docs/
+- Code comments are secondary, not primary durability
 
-### Documentation
-- Consolidation over deletion, precision, flat docs/ structure
+### Documentation Philosophy
+- Prefers consolidation of docs/ files over deletion
+- Preserve historical context - "what we did and why"
+- Flat docs/ structure - no subdirectories except research_paper/
+- Precision in language - never reduce fidelity of descriptions
+
+### Communication Standards
+- Never summarize away important details
+- Maintain coherent, PRECISE history
+- Evidence > assumptions
