@@ -134,12 +134,12 @@
   - h1: best=0.3564 (d=384, L=96, h=4)
   - h3: complete (see outputs)
   - h5: best=0.3612 (d=384, L=180, h=4)
-- 🔄 **2B HPO Running** (h1 trial 11+/50, h3/h5 pending)
-  - 75 architecture configs, d_model range 768-2048
-  - d=2048 configs cause swap pressure on 128GB system
-  - Best so far: Trial 4, val_loss=0.3778, d=1024, L=180, h=16
-  - Skip arch_idx=52 (d=1024, L=256 - memory issues)
-  - Resume script: `experiments/phase6a/hpo_2B_h1_resume.py`
+- ✅ **2B HPO Complete** (all 3 horizons, 50 trials each) - 2026-01-10
+  - h1: best=0.3609 (d=1024, L=128, h=2)
+  - h3: best=0.3948 (d=768, L=256, h=32)
+  - h5: best=0.3592 (d=1024, L=180, h=4)
+  - 14 diverged trials (val_loss=100.0), all L=256 architectures
+  - Finding: 2B scale did NOT improve over smaller models - data-limited regime
 - ✅ **HPO Diversity Enhancement** (2026-01-03)
   - Added n_startup_trials=20 to TPESampler
   - Added forced variation logic for same-arch trials
@@ -285,6 +285,15 @@
   - ✅ All 10 scripts pass syntax check (py_compile) and parameter verification
   - ⏳ **Next**: Validate ONE runs end-to-end, then run all 10 via `scripts/run_supplementary_2M.sh`
   - Memory: `Supplementary_Scripts_Rewrite_Plan`, `Lesson_VerifyAPIBeforeGenerating`
+- 🔄 **HPO Analysis Stage** (2026-01-10)
+  - Plan: `docs/hpo_analysis_data_plan.md`
+  - ⏳ Task 1: Implement extraction script `scripts/extract_hpo_analysis.py`
+  - ⏳ Task 2: Generate analysis data files
+  - ⏳ Task 3: Deep analysis (architecture patterns, training dynamics, horizon effects)
+  - ⏳ Task 4: Diverged trials analysis (14 trials, all 2B scale)
+- ⏳ **Final Training Stage** (pending analysis)
+  - Pre-requisite: Best checkpoint saving in Trainer (Task_BestCheckpointSaving)
+  - Train final models with best architectures per budget/horizon
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)
   - Funnel/hourglass/bottleneck designs

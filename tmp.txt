@@ -1,0 +1,1 @@
+caffeinate -dims -w $$ & ./venv/bin/python experiments/phase6a/hpo_2B_h5_threshold_1pct.py
