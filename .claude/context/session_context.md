@@ -1,85 +1,75 @@
-# Session Handoff - 2026-01-10 ~15:30
+# Session Handoff - 2026-01-16 ~18:00
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `66c02a1` - docs: comprehensive documentation of HPO diversity enhancement
-- **Uncommitted changes**:
-  - `.claude/context/session_context.md` (this file)
-  - `docs/experiment_results.csv` (results data)
-  - `docs/hpo_analysis_data_plan.md` (NEW - analysis infrastructure plan)
-  - `docs/research_paper/appendix_b1_hpo_methodology.md` (NEW - untracked)
-  - `experiments/phase6a/hpo_2B_h3_resume.py` (NEW - untracked)
+- **Last commit**: `91a8235` - docs: add Appendix B.2 architecture analysis results
+- **Uncommitted changes**: None (clean working tree)
 
 ### Task Status
-**HPO Analysis Data Infrastructure** - Plan complete, ready for implementation
-- Brainstorming session completed
-- Plan document written: `docs/hpo_analysis_data_plan.md`
-- Next: implement extraction script
+**HPO Analysis Stage** - Analysis complete, documented
 
 ## Test Status
-- Last `make test`: 2026-01-10 (session restore)
-- Result: **365 passed**
+- Last `make test`: 2026-01-16
+- Result: **380 passed**
 - All tests passing
 
 ## Completed This Session
 
-1. Session restore from 2026-01-07
-2. Monitored 2B h5 HPO progress (trials 3-50)
-3. Confirmed ALL 12 HPO studies complete (600 total trials)
-4. Brainstorming session for HPO analysis data infrastructure
-5. Created plan document: `docs/hpo_analysis_data_plan.md`
+1. Session restore from 2026-01-10
+2. Committed pending work (HPO analysis plan, appendix B.1)
+3. Reviewed HPO analysis data plan
+4. **Planning session** for extraction script implementation
+5. **TDD implementation** of `scripts/extract_hpo_analysis.py` (15 tests)
+6. Generated analysis files: hpo_summary.csv (600 rows), hpo_full.json, diverged files
+7. **Deep architecture analysis**:
+   - Optimal d_model by budget: 2M→64, 20M→256, 200M→384-512, 2B→1024
+   - n_heads has minimal impact (use n_heads=2)
+   - Architecture style: balanced→wide-shallow→balanced as budget increases
+   - Depth limit ~180 layers (divergence boundary)
+8. Created `docs/research_paper/appendix_b2_architecture_analysis.md`
+9. **Validated findings against archived trials** (691 early trials)
+   - Patterns are robust across methodologies
+   - 2M d=64 unanimous in both early and final runs
 
-## In Progress
-- **HPO Analysis Data Infrastructure** - Plan approved, implementation pending
+## Key Findings (Phase 6A HPO)
 
-## Pending
-1. **Implement extraction script** - `scripts/extract_hpo_analysis.py`
-2. Generate analysis data files (hpo_summary.csv, hpo_full.json, etc.)
-3. Deep analysis of HPO results (architecture patterns, training dynamics, horizon effects)
-4. Review diverged trials (14 total, all 2B scale)
-5. **Best checkpoint saving** - add to Trainer before final training (Task_BestCheckpointSaving in Memory)
-6. Finalize Appendix B.1 (HPO methodology)
-7. Write Appendix B.2 (results analysis)
-8. Commit uncommitted changes
+### Optimal Architecture by Budget
+| Budget | d_model | n_layers | Style | Best val_loss |
+|--------|---------|----------|-------|---------------|
+| 2M | 64 | 32-48 | Balanced | 0.2630 |
+| 20M | 256 | 32 | Wide-shallow | 0.3191 |
+| 200M | 384-512 | 48-96 | Wide-shallow | 0.3547 |
+| 2B | 1024 | 180 | Balanced | 0.3592 |
 
-## Files Created This Session
-- `docs/hpo_analysis_data_plan.md`: HPO analysis infrastructure plan (approved)
+### Critical Findings
+- **2M is optimal** - Larger models overfit on limited data
+- **n_heads doesn't matter** - Correlation r=0.05-0.19, use n_heads=2
+- **h3 (3-day) easiest** to predict across all budgets
+- **Depth limit ~180 layers** - All 14 diverged trials had L≥180
 
-## Key Decisions
-- **Analysis priorities**: Architecture patterns > Training dynamics > Horizon effects
-- **Scaling laws deprioritized**: HPO used limited data (~53% for training), scaling analysis deferred to final experiments
-- **Output structure**: `outputs/analysis/` with 4 files (summary CSV, full JSON, diverged CSV, diverged JSON) + README
-- **Diverged trials**: Both separate files AND flagged in main data
-- **Learning curves**: Full curves in JSON, summary stats in CSV (hybrid approach)
+## Files Created/Modified This Session
 
-## HPO Final Results
-
-| Budget | h1 (1-day) | h3 (3-day) | h5 (5-day) |
-|--------|------------|------------|------------|
-| **2M** | 0.3199 | **0.2630** | 0.3371 |
-| **20M** | 0.3483 | 0.3191 | 0.3458 |
-| **200M** | 0.3564 | 0.3612 | 0.3547 |
-| **2B** | 0.3609 | 0.3948 | 0.3592 |
-
-**12/12 HPO studies complete. 600 total trials. 14 diverged (all 2B scale).**
-
-## Context for Next Session
-- All HPO complete - major milestone achieved
-- Ready to implement data extraction and begin deep analysis
-- User prefers conversational exploration with me, spreadsheet for offline
-- Top-down analysis approach: high-level perspective first, then drill down
-
-## Next Session Should
-1. Implement `scripts/extract_hpo_analysis.py` (TDD)
-2. Generate analysis data files
-3. Begin deep analysis of architecture patterns
+- `scripts/extract_hpo_analysis.py` (NEW): HPO data extraction script
+- `tests/analysis/test_extract_hpo.py` (NEW): 15 tests for extraction
+- `docs/research_paper/appendix_b2_architecture_analysis.md` (NEW): Architecture analysis results
+- `outputs/analysis/` (GENERATED): hpo_summary.csv, hpo_full.json, diverged files, README.md
 
 ## Memory Entities Updated
-- `Phase6A_2B_HPO_Status` (updated): All HPO complete, 600 trials, 14 diverged
-- `HPO_Analysis_Plan` (created): Plan document location, output structure, priorities
-- `Task_BestCheckpointSaving` (exists): Pending task for Trainer enhancement
+- `HPO_Extraction_Script_Plan`: Planning decision stored
+- `HPO_Architecture_Findings_Phase6A`: All findings + archive validation
+
+## Pending Tasks
+1. Final training with best architectures per budget/horizon
+2. Best checkpoint saving in Trainer (Task_BestCheckpointSaving)
+3. Phase 6B planning (horizon scaling)
+4. Finalize research paper appendices
+
+## Next Session Should
+1. Decide next priority: final training vs Phase 6B planning
+2. If final training: implement best checkpoint saving first
+3. Consider whether 2M-only results are sufficient for paper
 
 ## Commands to Run
 ```bash
