@@ -155,8 +155,8 @@ def download_ticker(
 
     df = df[required_cols]
 
-    # Ensure Date is datetime (remove timezone if present)
-    df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.tz_localize(None)
+    # Ensure Date is datetime (remove timezone and normalize to midnight)
+    df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.tz_localize(None).dt.normalize()
 
     # Ensure OHLC are float
     for col in ["Open", "High", "Low", "Close"]:
@@ -245,8 +245,8 @@ def download_spy(
 
     df = df[required_cols]
 
-    # Ensure Date is datetime (remove timezone if present)
-    df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.tz_localize(None)
+    # Ensure Date is datetime (remove timezone and normalize to midnight)
+    df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.tz_localize(None).dt.normalize()
 
     # Ensure OHLC are float
     for col in ["Open", "High", "Low", "Close"]:

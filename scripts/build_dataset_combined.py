@@ -65,15 +65,15 @@ def build_combined(
     raw = pd.read_parquet(raw_path)
     feats = pd.read_parquet(features_path)
 
-    raw["Date"] = pd.to_datetime(raw["Date"])
-    feats["Date"] = pd.to_datetime(feats["Date"])
+    raw["Date"] = pd.to_datetime(raw["Date"]).dt.normalize()
+    feats["Date"] = pd.to_datetime(feats["Date"]).dt.normalize()
 
     df = pd.merge(raw, feats, on="Date", how="inner", validate="one_to_one")
 
     # Merge VIX features if requested
     if include_vix and vix_path:
         vix = pd.read_parquet(vix_path)
-        vix["Date"] = pd.to_datetime(vix["Date"])
+        vix["Date"] = pd.to_datetime(vix["Date"]).dt.normalize()
 
         # Check for date overlap before merge
         asset_dates = set(df["Date"])
@@ -91,7 +91,7 @@ def build_combined(
 
     if include_labels and labels_path and labels_path.exists():
         labels = pd.read_parquet(labels_path)
-        labels["Date"] = pd.to_datetime(labels["Date"])
+        labels["Date"] = pd.to_datetime(labels["Date"]).dt.normalize()
         df = pd.merge(df, labels, on="Date", how="inner", validate="one_to_one")
 
     df = df.dropna().reset_index(drop=True)
