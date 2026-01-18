@@ -11,6 +11,7 @@ Also provides ChunkSplitter for hybrid train/val/test splits:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -44,10 +45,17 @@ class ChunkSplitter:
     - Val/Test: Non-overlapping chunks of size (context_length + horizon)
     - Train: Sliding window samples that don't overlap any val/test chunk
 
-    This prevents any data leakage between train and val/test sets while
-    providing ~30x more training samples than pure non-overlapping splits.
+    Two modes are available:
 
-    Example:
+    - "scattered" (default): Val and test chunks are randomly distributed
+      throughout the dataset. Good for HPO where you want val to cover
+      all market regimes.
+
+    - "contiguous": Test chunks are at the END of the dataset (most recent),
+      val chunks immediately BEFORE test. Good for production-realistic
+      evaluation where you train on history and test on recent/future data.
+
+    Example (scattered mode - default):
         >>> splitter = ChunkSplitter(
         ...     total_days=8073,
         ...     context_length=60,
@@ -57,7 +65,17 @@ class ChunkSplitter:
         ...     seed=42,
         ... )
         >>> splits = splitter.split()
-        >>> print(f"Train: {len(splits.train_indices)}, Val: {len(splits.val_indices)}")
+
+    Example (contiguous mode - production):
+        >>> splitter = ChunkSplitter(
+        ...     total_days=8073,
+        ...     context_length=60,
+        ...     horizon=1,
+        ...     val_ratio=0.01,   # Small val, just for early stopping
+        ...     test_ratio=0.03,  # ~250 days for backtest
+        ...     mode="contiguous",
+        ... )
+        >>> splits = splitter.split()
     """
 
     def __init__(
@@ -68,6 +86,7 @@ class ChunkSplitter:
         val_ratio: float = 0.15,
         test_ratio: float = 0.15,
         seed: int = 42,
+        mode: Literal["scattered", "contiguous"] = "scattered",
     ) -> None:
         """Initialize the chunk splitter.
 
@@ -77,11 +96,14 @@ class ChunkSplitter:
             horizon: Number of days to predict ahead (e.g., 1).
             val_ratio: Fraction of chunks to assign to validation (default 0.15).
             test_ratio: Fraction of chunks to assign to test (default 0.15).
-            seed: Random seed for reproducibility.
+            seed: Random seed for reproducibility (only used in scattered mode).
+            mode: Split mode - "scattered" (random chunks) or "contiguous"
+                (test at end, val before test). Default: "scattered".
 
         Raises:
             ValueError: If total_days is too small for meaningful splits.
             ValueError: If val_ratio + test_ratio >= 1.0.
+            ValueError: If mode is not "scattered" or "contiguous".
         """
         self.total_days = total_days
         self.context_length = context_length
@@ -89,6 +111,7 @@ class ChunkSplitter:
         self.val_ratio = val_ratio
         self.test_ratio = test_ratio
         self.seed = seed
+        self.mode = mode
 
         # Chunk size = context + horizon (one complete sample's span)
         self.chunk_size = context_length + horizon
@@ -102,6 +125,12 @@ class ChunkSplitter:
         Raises:
             ValueError: If parameters are invalid.
         """
+        # Check mode
+        if self.mode not in ("scattered", "contiguous"):
+            raise ValueError(
+                f"mode must be 'scattered' or 'contiguous', got {self.mode!r}"
+            )
+
         # Check ratio constraints
         if self.val_ratio + self.test_ratio >= 1.0:
             raise ValueError(
@@ -142,13 +171,19 @@ class ChunkSplitter:
                 f"{n_val_chunks} val, {n_test_chunks} test"
             )
 
-        # Create chunk indices and shuffle
-        chunk_indices = np.arange(n_chunks)
-        rng.shuffle(chunk_indices)
-
-        # Assign chunks to splits
-        val_chunk_ids = sorted(chunk_indices[:n_val_chunks])
-        test_chunk_ids = sorted(chunk_indices[n_val_chunks : n_val_chunks + n_test_chunks])
+        if self.mode == "contiguous":
+            # Contiguous mode: test at end, val immediately before test
+            # Test: last n_test_chunks (most recent data)
+            test_chunk_ids = list(range(n_chunks - n_test_chunks, n_chunks))
+            # Val: n_val_chunks immediately before test
+            val_start = n_chunks - n_test_chunks - n_val_chunks
+            val_chunk_ids = list(range(val_start, val_start + n_val_chunks))
+        else:
+            # Scattered mode (default): shuffle all chunks, pick val then test
+            chunk_indices = np.arange(n_chunks)
+            rng.shuffle(chunk_indices)
+            val_chunk_ids = sorted(chunk_indices[:n_val_chunks])
+            test_chunk_ids = sorted(chunk_indices[n_val_chunks : n_val_chunks + n_test_chunks])
 
         # Convert chunk IDs to start day indices
         val_indices = np.array([cid * self.chunk_size for cid in val_chunk_ids])

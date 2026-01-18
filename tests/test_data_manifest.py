@@ -63,3 +63,35 @@ def test_verify_all_manifests_passes_with_empty_files(tmp_path: Path, monkeypatc
 
     assert dv.verify_all_manifests() == 0
 
+
+def test_verify_manifest_only_checks_latest_entry_per_path(tmp_path: Path) -> None:
+    """When multiple entries exist for same path, only verify the latest by timestamp."""
+    manifest = tmp_path / "manifest.json"
+    data_file = tmp_path / "data.parquet"
+    data_file.write_bytes(b"new content")
+
+    # Old entry with wrong checksum (historical - should be ignored)
+    # New entry with correct checksum (current - should be verified)
+    manifest_data = {
+        "schema_version": 1,
+        "entries": [
+            {
+                "dataset": "SPY",
+                "path": str(data_file),
+                "md5": "old_wrong_checksum",
+                "downloaded_at": "2025-01-01T00:00:00Z",
+            },
+            {
+                "dataset": "SPY",
+                "path": str(data_file),
+                "md5": dv._compute_md5(data_file),  # correct checksum
+                "downloaded_at": "2026-01-17T00:00:00Z",
+            },
+        ],
+    }
+    manifest.write_text(json.dumps(manifest_data))
+
+    errors = dv.verify_manifest(manifest)
+
+    assert errors == []  # Should pass - only latest entry checked
+

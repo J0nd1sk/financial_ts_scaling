@@ -291,9 +291,17 @@
   - ⏳ Task 2: Generate analysis data files
   - ⏳ Task 3: Deep analysis (architecture patterns, training dynamics, horizon effects)
   - ⏳ Task 4: Diverged trials analysis (14 trials, all 2B scale)
-- ⏳ **Final Training Stage** (pending analysis)
-  - Pre-requisite: Best checkpoint saving in Trainer (Task_BestCheckpointSaving)
-  - Train final models with best architectures per budget/horizon
+- 🔄 **Final Training Stage** (2026-01-17)
+  - ✅ Task 0: Refresh SPY data (download + features + combined dataset)
+    - Fixed date normalization bug in download_ohlcv.py and build_dataset_combined.py
+    - SPY data: 8,299 raw rows, 8,100 processed rows (through 2026-01-16)
+    - 250 rows for 2025 test set, 11 rows for 2026
+  - ⏳ Task 1: Add hybrid split mode to ChunkSplitter
+  - ⏳ Task 2: Interpolate H2 architectures from H1/H3
+  - ⏳ Task 3: Implement best checkpoint saving in Trainer
+  - ⏳ Task 4: Create final training script template
+  - ⏳ Task 5: Generate 16 final training scripts
+  - ⏳ Task 6: Create runner script with thermal monitoring
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)
   - Funnel/hourglass/bottleneck designs

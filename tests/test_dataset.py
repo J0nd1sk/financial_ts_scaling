@@ -654,3 +654,157 @@ class TestChunkSplitterHPOSubset:
         hpo2 = splitter.get_hpo_subset(splits, fraction=0.3, seed=42)
 
         np.testing.assert_array_equal(hpo1, hpo2)
+
+
+class TestChunkSplitterContiguousMode:
+    """Test contiguous split mode for production-realistic train/val/test."""
+
+    def test_contiguous_mode_test_at_end(self):
+        """When mode='contiguous', test should be contiguous block at dataset end."""
+        total_days = 1000
+        context_length = 60
+        horizon = 1
+        chunk_size = context_length + horizon  # 61
+
+        splitter = ChunkSplitter(
+            total_days=total_days,
+            context_length=context_length,
+            horizon=horizon,
+            val_ratio=0.10,
+            test_ratio=0.15,
+            seed=42,
+            mode="contiguous",
+        )
+        splits = splitter.split()
+
+        # Test indices should be at the end of the dataset
+        n_chunks = total_days // chunk_size
+        n_test_chunks = max(1, int(n_chunks * 0.15))
+        expected_test_start = (n_chunks - n_test_chunks) * chunk_size
+
+        # All test indices should be >= expected_test_start
+        assert all(idx >= expected_test_start for idx in splits.test_indices), (
+            f"Test indices should start at {expected_test_start}, got {splits.test_indices}"
+        )
+
+        # Test indices should be contiguous (consecutive chunk starts)
+        test_starts = sorted(splits.test_indices)
+        for i in range(len(test_starts) - 1):
+            assert test_starts[i + 1] == test_starts[i] + chunk_size, (
+                f"Test chunks not contiguous: {test_starts[i]} and {test_starts[i + 1]}"
+            )
+
+    def test_contiguous_mode_val_before_test(self):
+        """Val should be contiguous block immediately before test."""
+        total_days = 1000
+        context_length = 60
+        horizon = 1
+        chunk_size = context_length + horizon
+
+        splitter = ChunkSplitter(
+            total_days=total_days,
+            context_length=context_length,
+            horizon=horizon,
+            val_ratio=0.10,
+            test_ratio=0.15,
+            seed=42,
+            mode="contiguous",
+        )
+        splits = splitter.split()
+
+        # Val should end where test begins
+        val_end = max(splits.val_indices) + chunk_size
+        test_start = min(splits.test_indices)
+        assert val_end == test_start, (
+            f"Val should end where test begins: val_end={val_end}, test_start={test_start}"
+        )
+
+        # Val indices should be contiguous
+        val_starts = sorted(splits.val_indices)
+        for i in range(len(val_starts) - 1):
+            assert val_starts[i + 1] == val_starts[i] + chunk_size, (
+                f"Val chunks not contiguous: {val_starts[i]} and {val_starts[i + 1]}"
+            )
+
+    def test_contiguous_mode_train_no_overlap(self):
+        """Train samples shouldn't overlap val or test regions in contiguous mode."""
+        splitter = ChunkSplitter(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.10,
+            test_ratio=0.15,
+            seed=42,
+            mode="contiguous",
+        )
+        splits = splitter.split()
+        chunk_size = splits.chunk_size
+
+        # Create set of all val/test days
+        blocked_days = set()
+        for start in splits.val_indices:
+            blocked_days.update(range(start, start + chunk_size))
+        for start in splits.test_indices:
+            blocked_days.update(range(start, start + chunk_size))
+
+        # Check each train sample doesn't touch blocked days
+        for train_start in splits.train_indices:
+            sample_days = set(range(train_start, train_start + chunk_size))
+            overlap = sample_days & blocked_days
+            assert len(overlap) == 0, (
+                f"Train sample at {train_start} overlaps blocked days: {overlap}"
+            )
+
+    def test_scattered_mode_is_default(self):
+        """Default mode='scattered' produces same output as no mode specified."""
+        kwargs = dict(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+
+        # Explicit scattered
+        splitter_scattered = ChunkSplitter(**kwargs, mode="scattered")
+        splits_scattered = splitter_scattered.split()
+
+        # Implicit (no mode, should default to scattered)
+        splitter_default = ChunkSplitter(**kwargs)
+        splits_default = splitter_default.split()
+
+        np.testing.assert_array_equal(splits_scattered.train_indices, splits_default.train_indices)
+        np.testing.assert_array_equal(splits_scattered.val_indices, splits_default.val_indices)
+        np.testing.assert_array_equal(splits_scattered.test_indices, splits_default.test_indices)
+
+    def test_invalid_mode_raises_error(self):
+        """Invalid mode should raise ValueError."""
+        with pytest.raises(ValueError, match="mode"):
+            ChunkSplitter(
+                total_days=1000,
+                context_length=60,
+                horizon=1,
+                val_ratio=0.15,
+                test_ratio=0.15,
+                seed=42,
+                mode="invalid",
+            )
+
+    def test_contiguous_mode_reproducible(self):
+        """Contiguous mode should be deterministic (no randomness needed)."""
+        kwargs = dict(
+            total_days=1000,
+            context_length=60,
+            horizon=1,
+            val_ratio=0.10,
+            test_ratio=0.15,
+            mode="contiguous",
+        )
+
+        # Different seeds should produce same splits (contiguous is deterministic)
+        splits1 = ChunkSplitter(**kwargs, seed=42).split()
+        splits2 = ChunkSplitter(**kwargs, seed=999).split()
+
+        np.testing.assert_array_equal(splits1.val_indices, splits2.val_indices)
+        np.testing.assert_array_equal(splits1.test_indices, splits2.test_indices)

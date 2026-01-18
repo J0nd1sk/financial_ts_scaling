@@ -105,10 +105,33 @@ def register_processed_entry(
     return entry
 
 
+def _get_entry_timestamp(entry: dict[str, Any]) -> str:
+    """Extract timestamp from entry (downloaded_at for raw, generated_at for processed)."""
+    return entry.get("downloaded_at") or entry.get("generated_at") or ""
+
+
 def verify_manifest(manifest_path: Path) -> list[str]:
+    """Verify manifest entries against on-disk files.
+
+    Only verifies the latest entry per path (by timestamp). Historical entries
+    are kept for provenance but not verified against current files.
+    """
     manifest = _load_manifest(manifest_path)
     errors: list[str] = []
+
+    # Group entries by path, keep only the latest per path
+    latest_by_path: dict[str, dict[str, Any]] = {}
     for entry in manifest.get("entries", []):
+        path = entry["path"]
+        if path not in latest_by_path:
+            latest_by_path[path] = entry
+        else:
+            # Keep the entry with the more recent timestamp
+            if _get_entry_timestamp(entry) > _get_entry_timestamp(latest_by_path[path]):
+                latest_by_path[path] = entry
+
+    # Verify only the latest entry per path
+    for entry in latest_by_path.values():
         file_path = Path(entry["path"])
         if not file_path.exists():
             errors.append(f"{manifest_path}: missing file {file_path}")
