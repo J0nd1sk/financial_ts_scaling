@@ -324,30 +324,33 @@ class Trainer:
 
         raise RuntimeError("Dataloader is empty")
 
-    def _check_early_stopping(self, val_loss: float) -> bool:
-        """Check if training should stop early.
+    def _check_early_stopping(self, val_loss: float, epoch: int) -> bool:
+        """Check if training should stop early and save best checkpoint.
 
         Returns True if val_loss hasn't improved by min_delta for patience epochs.
-        Early stopping is disabled if patience is None or no validation set exists.
+        When val_loss improves, saves a checkpoint (best_checkpoint.pt).
 
         Args:
             val_loss: Current epoch's validation loss.
+            epoch: Current epoch number.
 
         Returns:
             True if training should stop, False otherwise.
         """
-        if self.early_stopping_patience is None:
-            return False
-
         if val_loss < self._best_val_loss - self.early_stopping_min_delta:
-            # Meaningful improvement - reset counter
+            # Meaningful improvement - save best checkpoint and reset counter
             self._best_val_loss = val_loss
+            self._best_epoch = epoch
+            self._save_best_checkpoint(val_loss, epoch)
             self._epochs_without_improvement = 0
             return False
 
         # No meaningful improvement
-        self._epochs_without_improvement += 1
-        return self._epochs_without_improvement >= self.early_stopping_patience
+        if self.early_stopping_patience is not None:
+            self._epochs_without_improvement += 1
+            return self._epochs_without_improvement >= self.early_stopping_patience
+
+        return False
 
     def train(self, verbose: bool = False) -> dict[str, Any]:
         """Run training loop.
@@ -387,8 +390,9 @@ class Trainer:
         val_loss: float | None = None
         learning_curve: list[dict[str, Any]] = []
 
-        # Initialize early stopping state
+        # Initialize early stopping and best checkpoint state
         self._best_val_loss = float("inf")
+        self._best_epoch = -1
         self._epochs_without_improvement = 0
 
         try:
@@ -409,8 +413,8 @@ class Trainer:
                             "val_loss", val_loss, step=epoch
                         )
 
-                    # Check early stopping (only when validation set exists)
-                    if self._check_early_stopping(val_loss):
+                    # Check early stopping and save best checkpoint (only when validation set exists)
+                    if self._check_early_stopping(val_loss, epoch):
                         stopped_early = True
                         stop_reason = "early_stopping"
                         break
@@ -432,8 +436,10 @@ class Trainer:
                         break
 
         finally:
-            # Always save checkpoint and finish tracking
-            self._save_checkpoint(self.epochs if not stopped_early else epoch)
+            # Save final checkpoint only if no validation set (legacy behavior)
+            # When validation exists, best checkpoint is saved during training
+            if self.val_dataloader is None:
+                self._save_checkpoint(self.epochs if not stopped_early else epoch)
 
             if self.tracking_manager:
                 self.tracking_manager.finish()
@@ -606,7 +612,7 @@ class Trainer:
         return {"loss": avg_loss, "accuracy": 0.0}
 
     def _save_checkpoint(self, epoch: int) -> None:
-        """Save model checkpoint.
+        """Save model checkpoint (legacy - used when no validation set).
 
         Args:
             epoch: Current epoch number.
@@ -615,6 +621,33 @@ class Trainer:
         torch.save(
             {
                 "epoch": epoch,
+                "model_state_dict": self.model.state_dict(),
+                "optimizer_state_dict": self.optimizer.state_dict(),
+                "experiment_config": {
+                    "seed": self.experiment_config.seed,
+                    "data_path": self.experiment_config.data_path,
+                    "task": self.experiment_config.task,
+                    "timescale": self.experiment_config.timescale,
+                },
+                "data_md5": self.data_md5,
+            },
+            checkpoint_path,
+        )
+
+    def _save_best_checkpoint(self, val_loss: float, epoch: int) -> None:
+        """Save best model checkpoint when val_loss improves.
+
+        Saves to best_checkpoint.pt, overwriting any previous best.
+
+        Args:
+            val_loss: Validation loss at this checkpoint.
+            epoch: Epoch number when this checkpoint was saved.
+        """
+        checkpoint_path = self.checkpoint_dir / "best_checkpoint.pt"
+        torch.save(
+            {
+                "epoch": epoch,
+                "val_loss": val_loss,
                 "model_state_dict": self.model.state_dict(),
                 "optimizer_state_dict": self.optimizer.state_dict(),
                 "experiment_config": {

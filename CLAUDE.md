@@ -112,18 +112,19 @@ Never:
 
 ### 🔴 CRITICAL: Documentation Organization
 
-**ALL documentation must be placed in `docs/` - no subfolders allowed.**
+**ALL active documentation must be placed in `docs/` - no subfolders allowed.**
 
-The only exception is documentation and evidence that we are compiling for the research paper as we go, which will be in `docs/research_paper/`.
+Exceptions:
+- `docs/research_paper/` - evidence and notes for eventual publication
+- `docs/archive/` - superseded documents preserved for historical reference
 
-- `docs/` contains all project documentation (plans, designs, references)
-- No `docs/plans/`, `docs/archive/`, or other subfolders
-- Temporary working files may be placed in subfolders but MUST be deleted when work is complete
+- `docs/` contains all active project documentation (plans, designs, references)
+- No other subfolders (e.g., `docs/plans/`, `docs/drafts/`)
 - `.claude/context/` is for session state only (phase_tracker, session_context, decision_log)
 - `.claude/rules/` is for agent rules only
 - `.claude/skills/` is for Claude Code skills only
 
-**Rationale:** Flat structure prevents documentation sprawl and ensures discoverability.
+**Rationale:** Flat structure for active docs prevents sprawl; archive preserves history without clutter.
 
 ---
 

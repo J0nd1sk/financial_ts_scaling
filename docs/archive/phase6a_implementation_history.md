@@ -1,3 +1,5 @@
+> **ARCHIVED** - This document has been superseded. See docs/project_history.md and docs/project_phase_plans.md for current information.
+
 # Phase 6A Implementation History
 
 **Phase**: 6A (Parameter Scaling)

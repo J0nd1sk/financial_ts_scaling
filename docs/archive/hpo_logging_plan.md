@@ -1,3 +1,5 @@
+> **ARCHIVED** - This document has been superseded. See docs/project_history.md and docs/project_phase_plans.md for current information.
+
 # HPO Logging Infrastructure Plan
 
 **Status**: APPROVED, waiting for implementation

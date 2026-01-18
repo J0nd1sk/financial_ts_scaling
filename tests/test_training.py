@@ -201,41 +201,55 @@ class TestTrainLogsMetrics:
 
 
 class TestTrainSavesCheckpoint:
-    """Test that checkpoints are saved."""
+    """Test that checkpoints are saved when validation set is provided."""
 
     def test_train_saves_checkpoint(
         self,
-        experiment_config: ExperimentConfig,
+        split_experiment_config: ExperimentConfig,
         model_config: PatchTSTConfig,
         mock_thermal_normal: ThermalCallback,
         tmp_path: Path,
     ) -> None:
-        """Test that a checkpoint file is created after training."""
-        # Arrange
+        """Test that a checkpoint file is created after training with validation."""
+        from src.data.dataset import ChunkSplitter
+
+        # Arrange - need validation set for checkpoint saving
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
         trainer = Trainer(
-            experiment_config=experiment_config,
+            experiment_config=split_experiment_config,
             model_config=model_config,
             batch_size=8,
-            learning_rate=0.001,
-            epochs=1,
+            learning_rate=0.01,
+            epochs=2,
             device="cpu",
             checkpoint_dir=tmp_path,
             thermal_callback=mock_thermal_normal,
             tracking_manager=None,
+            split_indices=splits,
         )
 
         # Act
         trainer.train()
 
-        # Assert - checkpoint file should exist
-        checkpoint_files = list(tmp_path.glob("*.pt"))
-        assert len(checkpoint_files) >= 1, "No checkpoint file created"
+        # Assert - best_checkpoint.pt should exist
+        checkpoint_path = tmp_path / "best_checkpoint.pt"
+        assert checkpoint_path.exists(), "best_checkpoint.pt not created"
 
         # Verify checkpoint contents
-        checkpoint = torch.load(checkpoint_files[0], weights_only=False)
+        checkpoint = torch.load(checkpoint_path, weights_only=False)
         assert "model_state_dict" in checkpoint
         assert "optimizer_state_dict" in checkpoint
         assert "epoch" in checkpoint
+        assert "val_loss" in checkpoint
 
 
 class TestTrainRespectsThermalStop:
@@ -764,6 +778,128 @@ class TestGradientAccumulation:
 
         assert hasattr(trainer, "accumulation_steps")
         assert trainer.accumulation_steps == 8
+
+
+class TestBestCheckpointSaving:
+    """Test that checkpoints are saved only when val_loss improves."""
+
+    def test_trainer_saves_checkpoint_on_val_improvement(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Checkpoint is saved when val_loss improves."""
+        from src.data.dataset import ChunkSplitter
+
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        trainer = Trainer(
+            experiment_config=split_experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.01,  # Normal LR = model should improve
+            epochs=3,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            tracking_manager=None,
+            split_indices=splits,
+        )
+
+        trainer.train()
+
+        # Checkpoint should exist (named best_checkpoint.pt)
+        checkpoint_path = tmp_path / "best_checkpoint.pt"
+        assert checkpoint_path.exists(), "best_checkpoint.pt should exist after training"
+
+    def test_trainer_checkpoint_not_saved_without_validation(
+        self,
+        experiment_config: ExperimentConfig,  # No splits
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """No checkpoint saved when no validation set is provided."""
+        trainer = Trainer(
+            experiment_config=experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.001,
+            epochs=2,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            tracking_manager=None,
+            # No split_indices = no validation set
+        )
+
+        trainer.train()
+
+        # No best_checkpoint.pt should exist without validation
+        checkpoint_path = tmp_path / "best_checkpoint.pt"
+        assert not checkpoint_path.exists(), "best_checkpoint.pt should NOT exist without validation"
+
+    def test_trainer_checkpoint_contains_val_loss_and_epoch(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Checkpoint includes val_loss and epoch metadata for reproducibility."""
+        from src.data.dataset import ChunkSplitter
+
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        trainer = Trainer(
+            experiment_config=split_experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.01,
+            epochs=3,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            tracking_manager=None,
+            split_indices=splits,
+        )
+
+        trainer.train()
+
+        # Load checkpoint and verify contents
+        checkpoint_path = tmp_path / "best_checkpoint.pt"
+        assert checkpoint_path.exists(), "best_checkpoint.pt should exist"
+
+        checkpoint = torch.load(checkpoint_path, weights_only=False)
+
+        # Must contain val_loss and epoch
+        assert "val_loss" in checkpoint, "Checkpoint must contain val_loss"
+        assert "epoch" in checkpoint, "Checkpoint must contain epoch"
+        assert isinstance(checkpoint["val_loss"], float)
+        assert isinstance(checkpoint["epoch"], int)
+        assert checkpoint["val_loss"] > 0
+        assert checkpoint["epoch"] >= 0
+
+        # Should also contain model state
+        assert "model_state_dict" in checkpoint
 
 
 class TestEarlyStopping:

@@ -1,3 +1,5 @@
+> **ARCHIVED** - This document has been superseded. See docs/project_history.md and docs/project_phase_plans.md for current information.
+
 # Financial Time-Series Transformer Scaling Experiments
 ## Comprehensive Project Plan
 

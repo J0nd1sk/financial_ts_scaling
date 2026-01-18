@@ -1,5 +1,9 @@
 # Product Requirements Document: Financial Time-Series Transformer Scaling Laws
 
+> **ARCHIVED VERSION** - This document reflects the project state at completion of Phase 6A HPO (January 2026). Some approaches described here (e.g., scattered chunk-based data splits, Meta-Module consideration) were appropriate for HPO exploration but were revised for final training experiments. See `docs/project_prd.md` for current specification.
+
+---
+
 ## 1. Research Objective
 
 Empirically test whether neural scaling laws apply to transformer models trained on financial time-series data, with findings suitable for publication by a non-academic researcher.
@@ -22,11 +26,16 @@ Transformer model performance on financial prediction tasks scales predictably w
 - Binary classification: Sigmoid activation with probability scoring
 - Regression: Continuous prediction with conformal prediction for uncertainty quantification
 
+**Meta-Module (Conditional):**
+- CatBoost stacking layer to combine transformer outputs
+- **Status:** Tentative, contingent on experimental results
+- Purpose: Test if ensemble improves scaling behavior
+
 ## 4. Experimental Design
 
 ### 4.1 Scaling Dimensions
 
-**Parameter Budgets:** 2M, 20M, 200M, 2B parameters
+**Parameter Budgets:** 2M, 20M, 200M parameters
 - Systematic 10x scaling intervals
 - Batch size re-tuning required per budget change
 
@@ -52,7 +61,7 @@ Transformer model performance on financial prediction tasks scales predictably w
 ### 4.2 Temporal Configuration
 
 **8 Timescales:**
-- Daily, 2-day, 3-day, 5-day, weekly, 2-week, monthly
+- Daily, 2-day, 3-day, weekly, 2-week, 3-week, monthly
 - Daily+multi-resolution (includes weekly/monthly as features)
 
 **6 Tasks per Timescale (48 models per dataset):**
@@ -68,19 +77,18 @@ Transformer model performance on financial prediction tasks scales predictably w
 
 ### 4.3 Data Splits
 
-**Contiguous temporal splits (for final training):**
-- Training: 1993 through September 2024
-- Validation: October - December 2024 (early stopping)
-- Test: 2025+ (backtest evaluation)
-
-**Note:** HPO used scattered chunk-based splits for regime diversity (see archived PRD).
+- Training: Through 2020
+- Validation: 2021-2022
+- Test: 2023+
 
 ### 4.4 Experimental Phases
 
-- **Phase 6A - Parameter Scaling:** Fixed features (25), SPY only, vary parameters (2M → 2B)
-- **Phase 6B - Horizon Scaling:** Add timescales (1d, 2d, 3d, 5d, weekly)
-- **Phase 6C - Feature Scaling:** Add feature tiers (100 → 500 → 2000 indicators)
-- **Phase 6D - Data Scaling:** Add assets (DIA, QQQ, stocks, economic indicators)
+1. **Parameter Scaling:** Fixed features/data, vary parameters
+2. **Feature Scaling:** Fixed parameters/data, vary features
+3. **Data Scaling:** Fixed parameters/features, vary dataset size
+4. **Quality Scaling:** Fixed parameters/features, vary data quality
+5. **Interaction Effects:** Test coupled scaling dimensions
+6. **Full Expansion:** Complete parameter space exploration
 
 ## 5. Technical Stack
 
@@ -124,8 +132,7 @@ Transformer model performance on financial prediction tasks scales predictably w
 
 ### 6.2 Terminology Standards
 
-- "Budget" for parameter count targets (2M, 20M, 200M, 2B)
-- "Horizon" for prediction timeframe (h1=1-day, h3=3-day, h5=5-day)
+- "Module" for stacking architecture (Base Module, Meta-Module)
 - Never "Layer" for architecture levels (reserve for neural network layers)
 
 ### 6.3 Documentation Requirements

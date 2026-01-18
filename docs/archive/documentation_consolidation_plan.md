@@ -1,3 +1,5 @@
+> **ARCHIVED** - This document has been superseded. See docs/project_history.md and docs/project_phase_plans.md for current information.
+
 # Documentation Consolidation Plan
 
 **Created**: 2025-12-29
