@@ -1,59 +1,48 @@
-# Session Handoff - 2026-01-17 ~17:35 UTC
+# Session Handoff - 2026-01-17 ~18:30 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `e8a16db` - fix: normalize dates in data pipeline to prevent merge failures
-- **Uncommitted changes**: `.claude/context/session_context.md` (this file)
-- **Untracked files**: `docs/research_paper/appendix_b3_training_parameters.md`
-- **Ahead of origin**: 5 commits (unpushed)
+- **Last commit**: `2bf5212` - feat: add contiguous split mode to ChunkSplitter
+- **Uncommitted changes**: none (clean working tree)
+- **Ahead of origin**: 6 commits (unpushed)
 
 ### Task Status
-**Phase 6A Final Training** - Task 0 COMPLETE
+**Phase 6A Final Training** - Task 1 COMPLETE
 
 ## Test Status
 - Last `make test`: 2026-01-17
-- Result: **380 passed**
+- Result: **387 passed**
 - Failing: none
-
-## Data Verification
-All data files verified consistent and up to date:
-
-| File | Rows | 2025 | 2026 | Date Range |
-|------|------|------|------|------------|
-| `SPY.parquet` (raw) | 8,299 | 250 | 11 | 1993-01-29 → 2026-01-16 |
-| `SPY_features_a20.parquet` | 8,100 | 250 | 11 | 1993-11-11 → 2026-01-16 |
-| `SPY_dataset_a20.parquet` | 8,100 | 250 | 11 | 1993-11-11 → 2026-01-16 |
-
-Note: 199-row difference is due to SMA-200 warmup period (expected).
 
 ## Completed This Session
 
 1. **Session restore**: Verified environment, read context files
-2. **Planning session**: Confirmed need to rebuild BOTH features and combined dataset (not just combined)
-   - Discovered old features were computed from stale raw data (3 hours before re-download)
-   - All 20 indicators showed value differences due to yfinance adjusted price recalculation
-3. **Rebuilt features**: `SPY_features_a20.parquet` from new raw data (8,100 rows)
-4. **Rebuilt combined**: `SPY_dataset_a20.parquet` (8,100 rows, 26 columns)
-5. **Verified data**: All files have 250 rows for 2025, 11 rows for 2026
-6. **Committed fix**: `e8a16db` - date normalization fix in download_ohlcv.py and build_dataset_combined.py
-7. **Explained warmup loss**: SMA-200 requires 199 rows warmup, causing ~9.5 months data loss from 1993 (acceptable)
+2. **Fixed verify_manifest**: Now only checks latest entry per path (was failing on historical entries)
+3. **Task 1 COMPLETE**: Added contiguous split mode to ChunkSplitter
+   - New `mode` parameter: `"scattered"` (default, backwards-compatible) or `"contiguous"`
+   - Contiguous mode: test at end, val immediately before test
+   - 6 new tests added, all passing
+4. **Committed all changes**: `2bf5212`
 
 ## Key Decisions
 
-- **Rebuild both files**: Even though features file "looked" correct (dates matched), values differed from fresh computation. Must rebuild from same source for scientific integrity.
-- **SMA-200 warmup acceptable**: Losing 199 rows (2.4%) from 1993 is negligible; 2025-2026 test data unaffected.
+- **Contiguous split for final training**: Decided to use contiguous mode (not scattered) for production-realistic evaluation
+  - Train: 1993 — Sept 2024 (~7,700 days) — gradient updates
+  - Val: Oct — Dec 2024 (~60 days) — early stopping only
+  - Test: 2025 (~250 days) — backtest, never touched until final eval
+- **Val only for early stopping**: Since HPO is complete, val's only purpose is detecting when to stop training (no hyperparameter tuning needed)
 
 ## Implementation Plan Context
 
 ### Phase 6A Final Training Plan (16 experiments)
 The plan tests whether scaling laws emerge with ~2x more training data.
 
-**Data Split Strategy**:
-- Train: All data except val chunks and test period (~7,200 samples)
-- Val: 5% scattered chunks through 2024 (covers all market regimes)
-- Test: Time-contiguous 2025 (~250 samples)
+**Data Split Strategy (REVISED)**:
+- Train: 1993 — Sept 2024 (~7,700 days)
+- Val: Oct — Dec 2024 (~60 days, early stopping only)
+- Test: 2025 (~250 days, backtest)
 
 **Experiments**: 4 budgets × 4 horizons = 16 final training runs
 - Budgets: 2M, 20M, 200M, 2B
@@ -61,7 +50,7 @@ The plan tests whether scaling laws emerge with ~2x more training data.
 
 **Task List**:
 1. ✅ Task 0: Refresh SPY data (all steps complete)
-2. ⏸️ Task 1: Add hybrid split mode to ChunkSplitter
+2. ✅ Task 1: Add contiguous split mode to ChunkSplitter
 3. ⏸️ Task 2: Interpolate H2 architectures from H1/H3
 4. ⏸️ Task 3: Implement best checkpoint saving in Trainer
 5. ⏸️ Task 4: Create final training script template
@@ -94,9 +83,9 @@ The plan tests whether scaling laws emerge with ~2x more training data.
 
 ## Next Session Should
 
-1. **Continue with Task 1**: Add hybrid split mode to ChunkSplitter
-2. **Tasks 2-6**: Implement remaining final training infrastructure
-3. **Consider**: Commit the untracked `appendix_b3_training_parameters.md` if ready
+1. **Task 2**: Interpolate H2 architectures from H1/H3 (no HPO was run for H2)
+2. **Task 3**: Implement best checkpoint saving in Trainer
+3. **Tasks 4-6**: Complete remaining final training infrastructure
 
 ## Data Version Snapshot
 
@@ -130,7 +119,8 @@ The plan tests whether scaling laws emerge with ~2x more training data.
 
 ## Memory Entities Updated
 
-No Memory entities created or updated this session (work was execution-only, no new lessons).
+- `Task1_ContiguousSplitMode_Plan` (created): Planning decision for contiguous split mode implementation
+- `Phase6A_ContiguousSplit_Decision` (created): Decision to use contiguous splits for production-realistic final training
 
 ## Commands to Run First
 ```bash

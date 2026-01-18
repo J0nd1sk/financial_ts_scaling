@@ -296,7 +296,10 @@
     - Fixed date normalization bug in download_ohlcv.py and build_dataset_combined.py
     - SPY data: 8,299 raw rows, 8,100 processed rows (through 2026-01-16)
     - 250 rows for 2025 test set, 11 rows for 2026
-  - ⏳ Task 1: Add hybrid split mode to ChunkSplitter
+  - ✅ Task 1: Add contiguous split mode to ChunkSplitter
+    - New `mode` parameter: "scattered" (default) or "contiguous"
+    - Contiguous: test at end, val before test (production-realistic)
+    - Split strategy: Train 1993-Sept2024, Val Oct-Dec2024, Test 2025
   - ⏳ Task 2: Interpolate H2 architectures from H1/H3
   - ⏳ Task 3: Implement best checkpoint saving in Trainer
   - ⏳ Task 4: Create final training script template
