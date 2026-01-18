@@ -276,14 +276,14 @@
   - ⏳ Task 6: Update runner script comments (optional)
   - Ready to commit and start production HPO
   - 📝 HPO Logging Infrastructure: deferred (plan in `docs/hpo_logging_plan.md`)
-- ✅ **Supplementary Scripts Rewrite** (2025-12-31)
+- 🔄 **Supplementary Scripts Rewrite** (2025-12-31)
   - All 10 scripts REWRITTEN with correct API (ExperimentConfig, PatchTSTConfig, ChunkSplitter, Trainer)
-  - Plan: `docs/supplementary_scripts_rewrite_plan.md`
+  - Plan archived: `docs/archive/supplementary_scripts_rewrite_plan.md`
   - ✅ Task A: Fixed runner script pipefail
   - ✅ Task B: Wrote ONE template script (`train_h1_d64_L32_h2_drop010.py`)
   - ✅ Task C: Generated remaining 9 scripts from template
   - ✅ All 10 scripts pass syntax check (py_compile) and parameter verification
-  - ⏳ **Next**: Validate ONE runs end-to-end, then run all 10 via `scripts/run_supplementary_2M.sh`
+  - ⏳ **PENDING**: End-to-end validation not yet run (scripts written but untested)
   - Memory: `Supplementary_Scripts_Rewrite_Plan`, `Lesson_VerifyAPIBeforeGenerating`
 - 🔄 **HPO Analysis Stage** (2026-01-10)
   - Plan: `docs/hpo_analysis_data_plan.md`

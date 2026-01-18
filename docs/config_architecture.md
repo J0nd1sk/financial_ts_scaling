@@ -520,12 +520,14 @@ model = PatchTST(..., dropout=0.15)
 | 2M | ✅ Complete | 50 trials × 3 horizons (h1, h3, h5) |
 | 20M | ✅ Complete | 50 trials × 3 horizons |
 | 200M | ✅ Complete | 50 trials × 3 horizons |
-| 2B | 🔄 In Progress | Smoke test passed (3 trials), full HPO pending |
+| 2B | ✅ Complete | 50 trials × 3 horizons; 14 diverged trials (L≥180 instability) |
 
-**Key findings from 200M HPO:**
+**Key findings from HPO:**
 - h1/h3 prefer wide-medium architectures (d=768-1024, L=12-24)
 - h5 prefers narrow-deep architectures (d=256, L=256)
 - n_heads=16 optimal across all horizons; n_heads=8 underperforms
+- 2B scale showed NO improvement over smaller models (data-limited regime)
+- All 14 diverged trials had L≥180 at 2B scale (training instability)
 
 ---
 
@@ -555,7 +557,7 @@ For experiment progress, see `.claude/context/phase_tracker.md`.*
 
 ---
 
-*Document Version: 2.0*
+*Document Version: 2.1*
 *Author: Claude + Alex*
-*Approved: 2025-12-29*
-*Supersedes: v1.0 (2025-12-08)*
+*Updated: 2026-01-18 (2B HPO complete, findings added)*
+*Supersedes: v2.0 (2025-12-29)*
