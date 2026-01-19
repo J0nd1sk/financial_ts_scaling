@@ -314,7 +314,11 @@
     - `scripts/generate_final_training_scripts.py` generator (~120 lines)
     - `experiments/phase6a_final/train_{budget}_h{horizon}.py` (16 scripts)
     - Full parameter validation: all 16 verified against HPO tables
-  - ⏳ Task 6: Create runner script with thermal monitoring
+  - ✅ Task 6: Create runner script with thermal monitoring (2026-01-19)
+    - `scripts/run_phase6a_final.sh` (347 lines)
+    - Features: pre-flight checks, hardware monitor, graceful stop, --start-from
+    - Verification: bash -n OK, --help works, 16 scripts exist
+  - **🚀 READY TO RUN**: All tasks complete, `./scripts/run_phase6a_final.sh` in tmux
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)
   - Funnel/hourglass/bottleneck designs

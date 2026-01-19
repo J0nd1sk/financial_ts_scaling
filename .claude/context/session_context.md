@@ -1,15 +1,15 @@
-# Session Handoff - 2026-01-19 ~12:00 UTC
+# Session Handoff - 2026-01-19 ~20:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `27018ad` - feat: generate 16 final training scripts for Phase 6A
+- **Last commit**: `fa94dc6` - feat: add runner script for Phase 6A final training
 - **Uncommitted changes**: none (clean working tree)
-- **Ahead of origin**: 4 commits (unpushed)
+- **Ahead of origin**: 1 commit (unpushed)
 
 ### Task Status
-**Phase 6A Final Training** - Tasks 0-5 COMPLETE, Task 6 pending
+**Phase 6A Final Training** - ALL TASKS COMPLETE ✅
 
 ## Test Status
 - Last `make test`: 2026-01-19
@@ -19,22 +19,23 @@
 ## Completed This Session
 
 1. **Session restore**: Verified environment, read context files, confirmed priorities
-2. **Task 5 COMPLETE**: Generate 16 final training scripts
+2. **Task 6 COMPLETE**: Create runner script with thermal monitoring
    - Planning session with Memory MCP integration
-   - Created `scripts/generate_final_training_scripts.py` (~120 lines)
-   - Generated 16 scripts in `experiments/phase6a_final/`
-   - Full parameter validation: all 16 scripts verified against HPO tables
-   - Commit: `27018ad`
+   - Created `scripts/run_phase6a_final.sh` (347 lines)
+   - Features: pre-flight checks, hardware monitor, graceful stop, --start-from
+   - Verification: bash -n OK, --help works, 16 scripts exist
+   - Commit: `fa94dc6`
 
 ## Key Decisions
 
-- **Full validation requested**: User required validation of ALL 16 scripts, not just spot-checks. Created systematic verification script comparing every parameter against source tables.
+- **Runner script pattern**: Adapted proven `run_phase6a_hpo.sh` pattern (370 lines) for final training
+- **Stop file**: `STOP_FINAL` (distinct from `STOP_HPO`) for graceful shutdown
 
 ---
 
 ## Implementation Plan Context
 
-### Phase 6A Final Training Plan (16 experiments)
+### Phase 6A Final Training Plan (16 experiments) — READY TO RUN
 
 **Data Split Strategy (Contiguous Mode)**:
 - Train: 1993 — Sept 2024 (~7,700 days)
@@ -50,7 +51,7 @@
 4. ✅ Task 3: Implement best checkpoint saving in Trainer
 5. ✅ Task 4: Create final training script template
 6. ✅ Task 5: Generate 16 final training scripts
-7. ⏸️ Task 6: Create runner script with thermal monitoring
+7. ✅ Task 6: Create runner script with thermal monitoring
 
 ### Best Architectures from HPO (Appendix B.2) + H2 Interpolation
 | Budget | Horizon | d_model | n_layers | n_heads | val_loss | Notes |
@@ -84,9 +85,10 @@
 
 ## Next Session Should
 
-1. **Task 6**: Create runner script with thermal monitoring
-2. Optional: Push commits to origin (now 4 ahead)
-3. Begin final training runs
+1. **Push** 1 commit to origin (optional)
+2. **Start final training**: `./scripts/run_phase6a_final.sh` in tmux
+3. Monitor thermal status during 2B runs
+4. After completion: analyze results, update phase_tracker
 
 ## Data Version Snapshot
 
@@ -120,7 +122,7 @@
 
 ## Memory Entities Updated
 
-- `Phase6A_Task5_Generate16Scripts_Plan` (created): Planning decision for Task 5, marked COMPLETE with implementation details
+- `Phase6A_Task6_FinalRunnerScript_Plan` (created + completed): Planning and implementation of runner script
 
 ## Commands to Run First
 ```bash
@@ -156,4 +158,4 @@ make verify
 - Never summarize away important details
 - Maintain coherent, PRECISE history
 - Evidence > assumptions
-- **Full validation**: User expects complete verification, not spot-checks (as demonstrated this session)
+- **Full validation**: User expects complete verification, not spot-checks

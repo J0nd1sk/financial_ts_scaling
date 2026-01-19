@@ -13,10 +13,10 @@ import py_compile
 import sys
 from pathlib import Path
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# Add project root to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from experiments.templates import generate_final_training_script
+from src.experiments.templates import generate_final_training_script
 
 
 # Architecture table from HPO results (Appendix B.2 + H2 interpolation)

@@ -2,7 +2,7 @@
 """
 6A Final Training: 2B parameters, horizon=2
 Type: Final Evaluation (fixed architecture and training params from HPO)
-Generated: 2026-01-19T19:53:03.443624+00:00
+Generated: 2026-01-19T20:53:44.200235+00:00
 
 Architecture (from HPO):
     d_model=768, n_layers=256, n_heads=32, d_ff=3072
@@ -126,7 +126,7 @@ if __name__ == "__main__":
         d_model=D_MODEL,
         n_layers=N_LAYERS,
     )
-    print(f"✓ Batch config: batch_size={batch_config['batch_size']}, "
+    print(f"✓ Batch config: batch_size={batch_config['micro_batch']}, "
           f"accumulation={batch_config['accumulation_steps']}")
 
     # Create thermal callback
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     trainer = Trainer(
         experiment_config=experiment_config,
         model_config=model_config,
-        batch_size=batch_config["batch_size"],
+        batch_size=batch_config["micro_batch"],
         learning_rate=LEARNING_RATE,
         epochs=EPOCHS,
         device="mps",

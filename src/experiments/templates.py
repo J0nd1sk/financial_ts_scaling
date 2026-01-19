@@ -631,7 +631,7 @@ def generate_final_training_script(
                 d_model=D_MODEL,
                 n_layers=N_LAYERS,
             )
-            print(f"✓ Batch config: batch_size={{batch_config['batch_size']}}, "
+            print(f"✓ Batch config: batch_size={{batch_config['micro_batch']}}, "
                   f"accumulation={{batch_config['accumulation_steps']}}")
 
             # Create thermal callback
@@ -646,7 +646,7 @@ def generate_final_training_script(
             trainer = Trainer(
                 experiment_config=experiment_config,
                 model_config=model_config,
-                batch_size=batch_config["batch_size"],
+                batch_size=batch_config["micro_batch"],
                 learning_rate=LEARNING_RATE,
                 epochs=EPOCHS,
                 device="mps",
