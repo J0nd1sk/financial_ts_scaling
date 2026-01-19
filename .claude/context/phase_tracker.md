@@ -300,9 +300,16 @@
     - New `mode` parameter: "scattered" (default) or "contiguous"
     - Contiguous: test at end, val before test (production-realistic)
     - Split strategy: Train 1993-Sept2024, Val Oct-Dec2024, Test 2025
-  - ⏳ Task 2: Interpolate H2 architectures from H1/H3
-  - ⏳ Task 3: Implement best checkpoint saving in Trainer
-  - ⏳ Task 4: Create final training script template
+  - ✅ Task 2: Interpolate H2 architectures from H1/H3
+    - Decision: Use H3 architecture for H2 at each budget
+    - Rationale: H3 had best val_loss; no clear interpolation pattern
+  - ✅ Task 3: Implement best checkpoint saving in Trainer
+    - Added `_save_best_checkpoint()` method
+    - Saves checkpoint when val_loss improves
+  - ✅ Task 4: Create final training script template (2026-01-18)
+    - `generate_final_training_script()` in templates.py (~260 lines)
+    - Features: contiguous splits, fixed HPO architecture, thermal monitoring
+    - 5 new tests, 395 total passing
   - ⏳ Task 5: Generate 16 final training scripts
   - ⏳ Task 6: Create runner script with thermal monitoring
 - 📝 **Future Research Backlog**

@@ -1,43 +1,38 @@
-# Session Handoff - 2026-01-18 ~02:00 UTC
+# Session Handoff - 2026-01-18 ~15:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `ad06759` - docs: update data_splits_protocol for contiguous mode
+- **Last commit**: `6633421` - feat: add generate_final_training_script() template for Phase 6A
 - **Uncommitted changes**: none (clean working tree)
-- **Ahead of origin**: 10 commits (unpushed)
+- **Ahead of origin**: 2 commits (unpushed)
 
 ### Task Status
-**Phase 6A Final Training** - Tasks 0-3 COMPLETE, Tasks 4-6 pending
+**Phase 6A Final Training** - Tasks 0-4 COMPLETE, Tasks 5-6 pending
 
 ## Test Status
 - Last `make test`: 2026-01-18
-- Result: **390 passed**
+- Result: **395 passed**
 - Failing: none
 
 ## Completed This Session
 
 1. **Session restore**: Verified environment, read context files
-2. **Task 2 COMPLETE**: H2 architecture interpolation decision
-   - Decision: Use H3 architecture for H2 at each budget
-   - Rationale: H3 had best val_loss; no clear interpolation pattern
-   - HPO available as fallback if needed
-3. **Task 3 COMPLETE**: Best checkpoint saving in Trainer
-   - Added `_save_best_checkpoint()` method
-   - Modified `_check_early_stopping()` to save checkpoint when val_loss improves
-   - Save to `best_checkpoint.pt` (overwrites previous best)
-   - Without validation: legacy behavior (final checkpoint at end)
-   - 3 new tests added (TDD), 390 total passing
-4. **Documentation updates**:
-   - Archived HPO-era data_splits_protocol to `docs/archive/data_splits_protocol_hpo.md`
-   - Updated main protocol to cover both scattered and contiguous modes
-   - Multiple other docs reorganized (parallel work stream)
+2. **Planning session for Task 5**: Determined Option B (reusable template) is better for research publication
+3. **Replanned to Task 4 first**: Template function prerequisite for Task 5
+4. **Task 4 COMPLETE**: Create final training script template
+   - Planning session with Memory MCP integration
+   - API verification (Trainer, ExperimentConfig, PatchTSTConfig, ChunkSplitter)
+   - TDD: 5 tests written first (RED), then implementation (GREEN)
+   - `generate_final_training_script()` added to templates.py (~260 lines)
+   - Smoke test: script compiles, imports work, all key features present
+   - Commit: `6633421`
 
 ## Key Decisions
 
-- **H2 Interpolation (Task 2)**: Use H3 architecture for H2 at each budget. H3 had best val_loss across budgets; no clear interpolation pattern exists between horizons.
-- **Best checkpoint saving (Task 3)**: Only save checkpoint when val_loss improves. Simpler than saving both "best" and "final" - if val_loss improves, that IS the best model.
+- **Option B for Task 5**: Reusable template function better than one-off generation script for research publication. Template serves as executable documentation of methodology.
+- **Task 4 before Task 5**: Template function is prerequisite - generates scripts, Task 5 calls it 16 times.
 
 ---
 
@@ -57,7 +52,7 @@
 2. ✅ Task 1: Add contiguous split mode to ChunkSplitter
 3. ✅ Task 2: Interpolate H2 architectures (use H3 arch for H2)
 4. ✅ Task 3: Implement best checkpoint saving in Trainer
-5. ⏸️ Task 4: Create final training script template
+5. ✅ Task 4: Create final training script template
 6. ⏸️ Task 5: Generate 16 final training scripts
 7. ⏸️ Task 6: Create runner script with thermal monitoring
 
@@ -93,9 +88,9 @@
 
 ## Next Session Should
 
-1. **Task 4**: Create final training script template
-2. **Task 5**: Generate 16 final training scripts
-3. **Task 6**: Create runner script with thermal monitoring
+1. **Task 5**: Generate 16 final training scripts using `generate_final_training_script()`
+2. **Task 6**: Create runner script with thermal monitoring
+3. Optional: Push commits to origin
 
 ## Data Version Snapshot
 
@@ -129,8 +124,7 @@
 
 ## Memory Entities Updated
 
-- `Phase6A_H2_Interpolation_Decision` (created): Decision to use H3 architecture for H2 at each budget
-- `Phase6A_Task3_BestCheckpoint_Implementation` (created): Best checkpoint saving implementation details
+- `Phase6A_Task4_FinalTrainingTemplate_Plan` (updated): STATUS COMPLETE with implementation details
 
 ## Commands to Run First
 ```bash
@@ -160,6 +154,7 @@ make verify
 - Flat docs/ structure - no subdirectories except research_paper/ and archive/
 - Precision in language - never reduce fidelity of descriptions
 - **History vs Current**: History captures what we PLANNED, current docs capture what we're DOING
+- **Research publication**: Repository will be public appendix - prefer reusable templates over one-off scripts
 
 ### Communication Standards
 - Never summarize away important details
