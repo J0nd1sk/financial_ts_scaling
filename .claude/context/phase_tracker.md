@@ -310,7 +310,10 @@
     - `generate_final_training_script()` in templates.py (~260 lines)
     - Features: contiguous splits, fixed HPO architecture, thermal monitoring
     - 5 new tests, 395 total passing
-  - ⏳ Task 5: Generate 16 final training scripts
+  - ✅ Task 5: Generate 16 final training scripts (2026-01-19)
+    - `scripts/generate_final_training_scripts.py` generator (~120 lines)
+    - `experiments/phase6a_final/train_{budget}_h{horizon}.py` (16 scripts)
+    - Full parameter validation: all 16 verified against HPO tables
   - ⏳ Task 6: Create runner script with thermal monitoring
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)
