@@ -437,3 +437,265 @@ def generate_training_script(
     ''')
 
     return script
+
+
+def generate_final_training_script(
+    experiment: str,
+    phase: str,
+    budget: str,
+    horizon: int,
+    # Architecture (fixed from HPO)
+    d_model: int,
+    n_layers: int,
+    n_heads: int,
+    d_ff: int,
+    # Training params (fixed from HPO)
+    learning_rate: float,
+    dropout: float,
+    weight_decay: float,
+    warmup_steps: int,
+    epochs: int,
+    # Data
+    data_path: str,
+    feature_columns: list[str],
+    # Optional
+    early_stopping_patience: int = 10,
+    context_length: int = 60,
+    patch_length: int = 16,
+    stride: int = 8,
+) -> str:
+    """Generate final training experiment script from template.
+
+    Generates self-contained scripts for final model evaluation using:
+    - Fixed architecture parameters from HPO (d_model, n_layers, n_heads, d_ff)
+    - Fixed training parameters from HPO (learning_rate, dropout, etc.)
+    - Contiguous data splits (train→Sept 2024, val→Dec 2024, test→2025)
+    - Best checkpoint saving when validation loss improves
+
+    This template is designed for publication-quality reproducibility.
+    All parameters are visible inline in the generated script.
+
+    Args:
+        experiment: Full experiment name (e.g., "phase6a_final_2M_h1")
+        phase: Phase name (e.g., "phase6a")
+        budget: Parameter budget (e.g., "2M", "20M", "200M", "2B")
+        horizon: Prediction horizon in days (1, 2, 3, or 5)
+        d_model: Model dimension from HPO
+        n_layers: Number of transformer layers from HPO
+        n_heads: Number of attention heads from HPO
+        d_ff: Feedforward dimension from HPO
+        learning_rate: Learning rate from HPO
+        dropout: Dropout rate from HPO
+        weight_decay: Weight decay from HPO
+        warmup_steps: Warmup steps from HPO
+        epochs: Number of training epochs
+        data_path: Path to data parquet file
+        feature_columns: List of feature column names
+        early_stopping_patience: Epochs without improvement before stopping
+        context_length: Input sequence length (default 60)
+        patch_length: PatchTST patch length (default 16)
+        stride: PatchTST stride (default 8)
+
+    Returns:
+        Complete Python script as string.
+    """
+    timestamp = datetime.now(timezone.utc).isoformat()
+    feature_list_str = repr(feature_columns)
+
+    script = dedent(f'''\
+        #!/usr/bin/env python3
+        """
+        {phase.upper()} Final Training: {budget} parameters, horizon={horizon}
+        Type: Final Evaluation (fixed architecture and training params from HPO)
+        Generated: {timestamp}
+
+        Architecture (from HPO):
+            d_model={d_model}, n_layers={n_layers}, n_heads={n_heads}, d_ff={d_ff}
+
+        Training params (from HPO):
+            lr={learning_rate}, dropout={dropout}, weight_decay={weight_decay}
+
+        Data splits (contiguous mode):
+            Train: 1993 - Sept 2024
+            Val: Oct - Dec 2024 (early stopping)
+            Test: 2025 (final evaluation)
+        """
+        import sys
+        import time
+        from pathlib import Path
+
+        PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+        sys.path.insert(0, str(PROJECT_ROOT))
+
+        import pandas as pd
+        from src.config.experiment import ExperimentConfig
+        from src.models.patchtst import PatchTSTConfig
+        from src.models.arch_grid import get_memory_safe_batch_config
+        from src.data.dataset import ChunkSplitter
+        from src.training.trainer import Trainer
+        from src.training.thermal import ThermalCallback
+        from src.experiments.runner import update_experiment_log
+
+        # ============================================================
+        # EXPERIMENT CONFIGURATION (all parameters visible)
+        # ============================================================
+
+        EXPERIMENT = "{experiment}"
+        PHASE = "{phase}"
+        BUDGET = "{budget}"
+        HORIZON = {horizon}
+        DATA_PATH = "{data_path}"
+        FEATURE_COLUMNS = {feature_list_str}
+
+        # Architecture (fixed from HPO)
+        D_MODEL = {d_model}
+        N_LAYERS = {n_layers}
+        N_HEADS = {n_heads}
+        D_FF = {d_ff}
+
+        # Training params (fixed from HPO)
+        LEARNING_RATE = {learning_rate}
+        DROPOUT = {dropout}
+        WEIGHT_DECAY = {weight_decay}
+        WARMUP_STEPS = {warmup_steps}
+        EPOCHS = {epochs}
+
+        # Model params
+        CONTEXT_LENGTH = {context_length}
+        PATCH_LENGTH = {patch_length}
+        STRIDE = {stride}
+
+        # Early stopping
+        EARLY_STOPPING_PATIENCE = {early_stopping_patience}
+
+        # ============================================================
+        # DATA VALIDATION
+        # ============================================================
+
+        def validate_data():
+            """Validate data file before running experiment."""
+            df = pd.read_parquet(PROJECT_ROOT / DATA_PATH)
+            assert len(df) > 1000, f"Insufficient data: {{len(df)}} rows"
+            assert all(col in df.columns for col in FEATURE_COLUMNS), "Missing feature columns"
+            print(f"✓ Data validated: {{len(df)}} rows, {{len(FEATURE_COLUMNS)}} features")
+            return df
+
+        # ============================================================
+        # MAIN
+        # ============================================================
+
+        if __name__ == "__main__":
+            start_time = time.time()
+
+            # Validate data
+            df = validate_data()
+
+            # Create contiguous splits (production-realistic)
+            splitter = ChunkSplitter(
+                total_days=len(df),
+                context_length=CONTEXT_LENGTH,
+                horizon=HORIZON,
+                val_ratio=0.15,
+                test_ratio=0.15,
+                mode="contiguous",
+            )
+            split_indices = splitter.split()
+            print(f"✓ Contiguous splits: train={{len(split_indices.train_indices)}}, "
+                  f"val={{len(split_indices.val_indices)}}, test={{len(split_indices.test_indices)}}")
+
+            # Create experiment config
+            experiment_config = ExperimentConfig(
+                data_path=str(PROJECT_ROOT / DATA_PATH),
+                task="threshold_1pct",
+                timescale="daily",
+                horizon=HORIZON,
+                context_length=CONTEXT_LENGTH,
+            )
+
+            # Create model config (fixed architecture from HPO)
+            model_config = PatchTSTConfig(
+                num_features=len(FEATURE_COLUMNS),
+                context_length=CONTEXT_LENGTH,
+                patch_length=PATCH_LENGTH,
+                stride=STRIDE,
+                d_model=D_MODEL,
+                n_layers=N_LAYERS,
+                n_heads=N_HEADS,
+                d_ff=D_FF,
+                dropout=DROPOUT,
+                head_dropout=0.0,
+            )
+
+            # Get memory-safe batch config
+            batch_config = get_memory_safe_batch_config(
+                d_model=D_MODEL,
+                n_layers=N_LAYERS,
+            )
+            print(f"✓ Batch config: batch_size={{batch_config['batch_size']}}, "
+                  f"accumulation={{batch_config['accumulation_steps']}}")
+
+            # Create thermal callback
+            thermal_callback = ThermalCallback()
+            print("✓ Thermal monitoring enabled")
+
+            # Output directory
+            output_dir = PROJECT_ROOT / "outputs" / "final_training" / EXPERIMENT
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create trainer
+            trainer = Trainer(
+                experiment_config=experiment_config,
+                model_config=model_config,
+                batch_size=batch_config["batch_size"],
+                learning_rate=LEARNING_RATE,
+                epochs=EPOCHS,
+                device="mps",
+                checkpoint_dir=output_dir,
+                thermal_callback=thermal_callback,
+                split_indices=split_indices,
+                accumulation_steps=batch_config["accumulation_steps"],
+                early_stopping_patience=EARLY_STOPPING_PATIENCE,
+            )
+
+            # Train
+            print(f"\\nStarting final training: {{EXPERIMENT}}")
+            print(f"  Architecture: d_model={{D_MODEL}}, n_layers={{N_LAYERS}}, n_heads={{N_HEADS}}")
+            print(f"  Training: lr={{LEARNING_RATE}}, epochs={{EPOCHS}}, dropout={{DROPOUT}}")
+            result = trainer.train(verbose=True)
+
+            duration = time.time() - start_time
+
+            # Log to experiment CSV
+            log_result = {{
+                "experiment": EXPERIMENT,
+                "phase": PHASE,
+                "budget": BUDGET,
+                "task": "threshold_1pct",
+                "horizon": HORIZON,
+                "timescale": "daily",
+                "script_path": __file__,
+                "run_type": "final_training",
+                "status": "success" if result.get("val_loss") is not None else "completed",
+                "val_loss": result.get("val_loss"),
+                "duration_seconds": duration,
+                "d_model": D_MODEL,
+                "n_layers": N_LAYERS,
+                "n_heads": N_HEADS,
+                "d_ff": D_FF,
+                "hyperparameters": {{
+                    "learning_rate": LEARNING_RATE,
+                    "dropout": DROPOUT,
+                    "weight_decay": WEIGHT_DECAY,
+                    "warmup_steps": WARMUP_STEPS,
+                    "epochs": EPOCHS,
+                }},
+            }}
+            update_experiment_log(log_result, PROJECT_ROOT / "docs" / "experiment_results.csv")
+
+            print(f"\\n✓ Final training complete in {{duration/60:.1f}} min")
+            print(f"  Val loss: {{result.get('val_loss', 'N/A')}}")
+            print(f"  Stopped early: {{result.get('stopped_early', False)}}")
+            print(f"  Checkpoint: {{output_dir / 'best_checkpoint.pt'}}")
+    ''')
+
+    return script

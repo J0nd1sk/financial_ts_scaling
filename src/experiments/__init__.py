@@ -7,6 +7,7 @@ from src.experiments.runner import (
     regenerate_results_report,
 )
 from src.experiments.templates import (
+    generate_final_training_script,
     generate_hpo_script,
     generate_training_script,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "run_training_experiment",
     "update_experiment_log",
     "regenerate_results_report",
+    "generate_final_training_script",
     "generate_hpo_script",
     "generate_training_script",
 ]

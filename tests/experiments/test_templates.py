@@ -19,6 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.experiments.templates import (
+    generate_final_training_script,
     generate_hpo_script,
     generate_training_script,
 )
@@ -60,6 +61,33 @@ def training_params():
         "feature_columns": ["Open", "High", "Low", "Close", "Volume", "RSI_14"],
         "hyperparameters": {"learning_rate": 0.001, "epochs": 50, "batch_size": 32},
         "borrowed_from": None,
+    }
+
+
+@pytest.fixture
+def final_training_params():
+    """Standard parameters for final training script generation."""
+    return {
+        "experiment": "phase6a_final_2M_h1",
+        "phase": "phase6a",
+        "budget": "2M",
+        "horizon": 1,
+        # Architecture (fixed from HPO)
+        "d_model": 64,
+        "n_layers": 48,
+        "n_heads": 2,
+        "d_ff": 256,  # 4 * d_model
+        # Training params (fixed from HPO)
+        "learning_rate": 0.0008,
+        "dropout": 0.12,
+        "weight_decay": 0.001,
+        "warmup_steps": 100,
+        "epochs": 50,
+        # Data
+        "data_path": "data/processed/v1/SPY_dataset_a20.parquet",
+        "feature_columns": ["Open", "High", "Low", "Close", "Volume", "RSI_14"],
+        # Optional
+        "early_stopping_patience": 10,
     }
 
 
@@ -270,3 +298,72 @@ class TestGenerateHpoScriptThermal:
 
         # Should pass both thermal and incremental logging callbacks to optimize
         assert "callbacks=[thermal_check_callback, incremental_logging_callback]" in script
+
+
+# =============================================================================
+# Test: generate_final_training_script - Basic
+# =============================================================================
+
+
+class TestGenerateFinalTrainingScriptBasic:
+    """Tests for generate_final_training_script functionality.
+
+    Final training scripts use fixed architecture and training parameters
+    from HPO, with contiguous splits for production-realistic evaluation.
+    """
+
+    def test_generate_final_training_script_returns_string(self, final_training_params):
+        """Test that generate_final_training_script returns a non-empty string."""
+        result = generate_final_training_script(**final_training_params)
+
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_generate_final_training_script_compiles(self, final_training_params):
+        """Test that generated final training script is valid Python syntax."""
+        script = generate_final_training_script(**final_training_params)
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write(script)
+            temp_path = f.name
+
+        try:
+            py_compile.compile(temp_path, doraise=True)
+        finally:
+            Path(temp_path).unlink()
+
+
+# =============================================================================
+# Test: generate_final_training_script - Content
+# =============================================================================
+
+
+class TestGenerateFinalTrainingScriptContent:
+    """Tests for final training script content."""
+
+    def test_generate_final_training_script_contains_experiment_name(
+        self, final_training_params
+    ):
+        """Test that script contains experiment name as visible constant."""
+        script = generate_final_training_script(**final_training_params)
+
+        assert 'EXPERIMENT = "phase6a_final_2M_h1"' in script
+
+    def test_generate_final_training_script_contains_architecture_params(
+        self, final_training_params
+    ):
+        """Test that script contains fixed architecture parameters from HPO."""
+        script = generate_final_training_script(**final_training_params)
+
+        # Architecture params should be visible (either as kwargs or constants)
+        assert "d_model=64" in script or "D_MODEL = 64" in script
+        assert "n_layers=48" in script or "N_LAYERS = 48" in script
+        assert "n_heads=2" in script or "N_HEADS = 2" in script
+
+    def test_generate_final_training_script_uses_contiguous_mode(
+        self, final_training_params
+    ):
+        """Test that script uses contiguous split mode for production-realistic evaluation."""
+        script = generate_final_training_script(**final_training_params)
+
+        assert 'mode="contiguous"' in script
