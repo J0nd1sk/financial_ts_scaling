@@ -1,86 +1,143 @@
-# Session Handoff - 2026-01-19 ~14:00 UTC
+# Session Handoff - 2026-01-19 ~18:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `c816e4f` feat: add Z-score feature normalization to fix distribution shift
-- **Uncommitted changes**: None (clean)
-- **Ahead of origin**: 9 commits (not pushed)
+- **Last commit**: `0c15642` docs: session handoff with normalization fix complete
+- **Uncommitted changes**: 7 files (mix of both terminals' work)
+  - Modified: session_context.md, phase6a_implementation_audit.md, patchtst.py, trainer.py, test_patchtst.py
+  - New: phase6a_best_practices_audit.md, phase6a_research_gap_analysis.md, test_revin_comparison.py
+- **Ahead of origin**: 10 commits (not pushed)
 
 ### Task Status
-- **Feature Normalization**: ✅ COMPLETE AND VALIDATED
-- **Next action**: Integrate normalization into HPO scripts OR re-run Phase 6A
+- **Pipeline Validation Terminal**: ChunkSplitter bug identified, SimpleSplitter approved
+- **RevIN Terminal**: Working on architecture alignment (RevIN, layer count, etc.)
+- **Status**: Foundation fixes in progress across both terminals
 
 ---
 
-## COMPLETED THIS SESSION
+## CRITICAL DISCOVERY: ChunkSplitter Bug (19 Validation Samples!)
 
-### Z-Score Feature Normalization Implementation
+### The Problem
+ChunkSplitter gives **only 19 validation samples**, not ~500 as expected!
 
-**Files changed:**
-- `src/data/dataset.py`: +118 lines
-  - `BOUNDED_FEATURES` constant (RSI, StochRSI, ADX, BB%B)
-  - `compute_normalization_params(df, train_end_row)` → dict of (mean, std)
-  - `normalize_dataframe(df, norm_params)` → normalized DataFrame
-- `src/training/trainer.py`: +17 lines
-  - Added `norm_params` parameter to `__init__`
-  - Apply normalization in `_create_dataloader()` and `_create_split_dataloaders()`
-  - Save `norm_params` in checkpoints
-- `tests/test_dataset.py`: +166 lines (8 new tests)
-- `scripts/validate_normalization.py`: validation script (new)
+| What We Expected | What Actually Happens |
+|------------------|----------------------|
+| 15% of ~8000 rows for val | 15% of 132 chunks = 19 chunks |
+| ~500+ val samples | **19 val samples** (1 per chunk) |
+| Reliable HPO decisions | High variance, unreliable HPO |
 
-**Validation Results:**
-- AUC-ROC: 0.6488 (real discrimination)
-- Prediction range: [0.059, 0.306] (was [0.518, 0.524])
-- Mean: 0.1089 (matches ~22% positive rate)
-- All 425 tests passing
+**Root Cause**: Design gives 1 sample per chunk. Training uses sliding window (~5700 samples) but val/test get only ONE sample per non-overlapping chunk.
+
+**Impact**: All previous HPO decisions were based on 19 samples - unreliable!
+
+### Approved Fix: SimpleSplitter
+- Simple time-based contiguous splits
+- Sliding window for ALL splits (train, val, test)
+- Strict containment: sample valid only if entire span within region
+- Implementation: ~50 lines, clean and verifiable
+
+---
+
+## Research Findings: Official PatchTST vs Ours
+
+| Parameter | Official | Ours | Gap |
+|-----------|----------|------|-----|
+| **RevIN** | Always enabled | Missing | 🔴 CRITICAL |
+| **n_layers** | 2-4 | 12-256 | 🔴 8-85x more |
+| **context_length** | 336-512 | 60 | 🟠 5-8x shorter |
+| **pos_encoding init** | std=0.02 | std=1.0 | 🟡 50x larger |
+| **dropout** | 0.2 | 0.1-0.3 | OK |
+
+Sources:
+- https://github.com/yuqinie98/PatchTST
+- https://context7.com/yuqinie98/patchtst
+- https://openreview.net/pdf?id=cGDAkQo1C0p (RevIN paper)
+
+---
+
+## User Preferences for Experiments
+
+### Data Split Preference (IMPORTANT)
+- **Train**: Maximize - everything before 2023 (~7,476 samples, 90.8%)
+- **Val**: 2023-2024 (~442 samples, 6.0%) - for early stopping only
+- **Test**: 2025+ (~201 samples, 3.1%) - backtest on most recent data
+
+**Rationale**: Limited training data, so maximize it. Most recent data for realistic backtesting.
+
+### Architecture Experiments (Future - Don't Assume Official Is Best)
+User explicitly stated:
+> "I'm not sure reducing the layers is necessarily better, but I would like to experiment with the difference between wide and shallow (e.g., layers constrained to 2-6) and what long but more narrow."
+
+> "How would increasing context length impact training? We don't have a long length of data right now. Maybe we just double or triple the context length?"
+
+**Action**: After fixing foundation (splits, RevIN), run controlled experiments:
+1. Wide/shallow (2-6 layers) vs narrow/deep
+2. Context length: 60 → 120 → 180 (double/triple)
+3. Empirical validation, not just copying official config
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-19
+- Last `make test`: 2026-01-19 (start of session)
 - Result: **425 passed**
 
 ---
 
-## Next Session Should
+## Completed This Session (Pipeline Terminal)
+1. Session restore and context review
+2. Research into official PatchTST configuration (Context7, web search)
+3. **Critical**: Identified ChunkSplitter 19-sample bug
+4. Designed SimpleSplitter replacement (user approved)
+5. Created Memory entities for findings
 
-### Option A: Quick Re-validation of Phase 6A
-1. Update ONE HPO script to use normalization
-2. Run a few trials to confirm improved results
-3. If successful, regenerate all 12 HPO scripts
-
-### Option B: Full HPO Script Update
-1. Modify `src/training/hpo.py` to compute and use norm_params
-2. Regenerate all 12 HPO scripts
-3. Re-run Phase 6A experiments from scratch
-
-### How to Use Normalization (for next session):
-```python
-from src.data.dataset import compute_normalization_params, normalize_dataframe
-
-# 1. Load data
-df = pd.read_parquet(data_path)
-
-# 2. Compute params from training portion (e.g., first 70%)
-train_end = int(len(df) * 0.70)
-norm_params = compute_normalization_params(df, train_end)
-
-# 3. Normalize all data
-df_norm = normalize_dataframe(df, norm_params)
-
-# 4. Pass to Trainer
-trainer = Trainer(..., norm_params=norm_params)
-```
+## Completed by Other Terminal
+1. Z-score normalization (AUC improved to 0.6488)
+2. Implementation audit (docs/phase6a_implementation_audit.md)
+3. Gap analysis (docs/phase6a_research_gap_analysis.md)
+4. Working on RevIN implementation
 
 ---
 
-## Memory Entities Updated
+## Next Session Priorities
 
-- `Plan_ZScoreNormalization` - Implementation plan (completed)
-- `Bug_FeatureNormalization_Phase6A` - Root cause (from previous session)
-- `Solution_FeatureNormalization_Options` - Options (Option A implemented)
+### Immediate (Pipeline Terminal)
+1. **Implement SimpleSplitter** with strict containment (TDD)
+   - Date-based contiguous splits
+   - Sliding window for ALL splits
+   - Expected: Train ~7476, Val ~442, Test ~201 samples
+
+### Coordinate with RevIN Terminal
+2. Check RevIN progress
+3. Review uncommitted changes
+4. Merge foundation fixes
+
+### After Foundation Fixed
+5. Re-run HPO with proper splits + RevIN + normalization
+6. Architecture experiments (wide/shallow vs narrow/deep)
+7. Context length experiments
+
+---
+
+## Memory Entities Updated This Session
+- `Bug_ChunkSplitter_19Samples` (created): Critical finding - val has only 19 samples
+- `Solution_SimpleSplitter_Design` (created): Approved fix design
+- `Research_PatchTST_Official_Config` (created): Official hyperparameters
+- `Research_Architecture_Experiments_Pending` (created): User's experiment preferences
+
+## Memory Entities from Previous Sessions
+- `Bug_FeatureNormalization_Phase6A` - Root cause of distribution shift
+- `Plan_ZScoreNormalization` - Completed normalization fix
+- `Phase6A_DoubleSigmoidBug` - Earlier sigmoid issue
+- `Phase6A_PriorCollapse_RootCause` - Prior collapse analysis
+
+---
+
+## Data Versions
+- Raw manifest: SPY.parquet (8299 rows, 1993-2026)
+- Processed manifest: SPY_dataset_c.parquet in data/processed/v1/
+- Pending registrations: None
 
 ---
 
@@ -89,6 +146,7 @@ trainer = Trainer(..., norm_params=norm_params)
 source venv/bin/activate
 make test
 git status
+make verify
 ```
 
 ---
@@ -107,3 +165,14 @@ git status
 ### Documentation Philosophy
 - Flat docs/ structure (no subdirs except research_paper/, archive/)
 - Precision in language - never reduce fidelity
+- Consolidate rather than delete - preserve historical context
+
+### Communication Standards
+- Precision over brevity
+- Never summarize away important details
+- Evidence-based claims
+
+### Current Focus
+- Fix foundation before more experimentation
+- Validate empirically, don't assume official config is best
+- Maximize training data, minimize val/test

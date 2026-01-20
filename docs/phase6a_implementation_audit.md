@@ -133,6 +133,71 @@ RF achieves AUC 0.68-0.82 on same features → features ARE informative.
 
 ---
 
+### Audit 2: Diagnostics Run
+**Date:** 2026-01-20
+
+#### Diagnostic Results (Before Root Cause Found)
+
+**1. Signal-to-Noise Ratio (Untrained Model)**
+| Component | Std | L2 Norm |
+|-----------|-----|---------|
+| Patch embeddings | 0.58 | 4.63 |
+| Positional encoding | 1.04 | 8.26 |
+| **Ratio** | - | **0.56** |
+
+Initial concern: Positional encoding ~2x larger than content signal.
+
+**2. Trained Model Attention (Test Data)**
+| Layer | Entropy Ratio | Interpretation |
+|-------|---------------|----------------|
+| 0 | 0.9994 | ~Uniform |
+| 24 | 1.0000 | Exactly uniform |
+| 47 | 0.9999 | ~Uniform |
+
+All patches produce identical representations (variance = 0.000000).
+
+**3. Output Distribution**
+- Val data (2016-2021): mean=0.09, spread reasonable
+- Test data (2024-2026): mean=0.52, spread=0.03
+
+#### CRITICAL: Root Cause Found by Parallel Investigation
+
+**See: `docs/phase6a_feature_normalization_bug.md`**
+
+The uniform attention and collapsed outputs I observed on TEST data are **symptoms, not causes**. The actual root cause is:
+
+**FEATURES ARE NOT NORMALIZED**
+
+| Feature | Train (1994-2016) | Test (2024-2026) | Shift |
+|---------|-------------------|-------------------|-------|
+| Close | 88.57 | 575.89 | **6.5x** |
+| MACD | 0.20 | 3.23 | **16x** |
+| ATR | 1.23 | 6.64 | **5x** |
+| RSI | 54.41 | 58.32 | ~1x (bounded) |
+
+**What Actually Happened:**
+1. Model trained on Close ≈ 88, learned valid patterns
+2. Model sees Close ≈ 576 at test time - completely OOD
+3. OOD inputs cause model to default to "safe" uniform attention
+4. Model outputs sigmoid midpoint (~0.5) = "I don't know"
+
+**Evidence Model DID Learn:**
+- Val predictions: ~0.09 (correct for class prior ~0.10)
+- Val loss: 0.203 (much better than random 0.409)
+- Model works on training distribution!
+
+#### Audit Conclusions
+
+| Component | Status | Finding |
+|-----------|--------|---------|
+| PatchTST architecture | ✅ OK | Works correctly on in-distribution data |
+| Training loop | ✅ OK | Model learns, val_loss improves |
+| Loss function | ✅ OK | BCE works for this task |
+| **Data pipeline** | ❌ **BUG** | Features not normalized |
+| Positional encoding | ⚠️ Minor | Large but not root cause |
+
+---
+
 ## Key Questions to Answer
 
 1. What does an untrained model predict? (initialization bias?)
@@ -145,7 +210,23 @@ RF achieves AUC 0.68-0.82 on same features → features ARE informative.
 
 ## Resolution
 
-Once bug is found, document:
-- Root cause
-- Fix applied
-- Verification method
+### Root Cause
+**Feature normalization missing** - raw features (Close, MACD, ATR, etc.) have massive distribution shift between training (1994-2016) and test (2024-2026) periods. Model trained on Close≈88 cannot generalize to Close≈576.
+
+### Fix Required
+See `docs/phase6a_feature_normalization_bug.md` for detailed options:
+- **Option A (Recommended)**: Z-score normalization using training set statistics
+- **Option B**: Percent change features
+- **Option C**: Rolling window normalization
+- **Option D**: Use only bounded features (RSI, percentiles, etc.)
+- **Option E**: Hybrid approach
+
+### Verification Method
+1. Implement normalization (Option A first)
+2. Regenerate SPY_dataset_a20.parquet with normalized features
+3. Retrain one model (2M_h1)
+4. Check predictions on 2024-2026 data - should NOT be ~0.52
+5. If successful, re-run all Phase 6A experiments
+
+### Status
+**AUDIT COMPLETE** - Root cause identified. Implementation of fix pending.

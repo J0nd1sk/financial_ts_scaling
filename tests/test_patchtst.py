@@ -213,3 +213,114 @@ class TestPatchTSTDeterminism:
             f"Outputs should be identical with same seed. "
             f"Max diff: {(output1 - output2).abs().max()}"
         )
+
+
+class TestRevIN:
+    """Tests for RevIN (Reversible Instance Normalization) component."""
+
+    def test_revin_forward_shape_unchanged(self) -> None:
+        """RevIN normalize should preserve input shape."""
+        from src.models.patchtst import RevIN
+
+        revin = RevIN(num_features=20)
+        x = torch.randn(4, 60, 20)  # (batch, seq_len, features)
+
+        x_norm = revin.normalize(x)
+
+        assert x_norm.shape == x.shape, (
+            f"RevIN should preserve shape. Expected {x.shape}, got {x_norm.shape}"
+        )
+
+    def test_revin_normalize_denormalize_identity(self) -> None:
+        """Denormalize(normalize(x)) should approximately equal x."""
+        from src.models.patchtst import RevIN
+
+        revin = RevIN(num_features=20, affine=False)  # No affine for exact identity
+        x = torch.randn(4, 60, 20)
+
+        x_norm = revin.normalize(x)
+        x_reconstructed = revin.denormalize(x_norm)
+
+        assert torch.allclose(x, x_reconstructed, atol=1e-5), (
+            f"denorm(norm(x)) should equal x. Max diff: {(x - x_reconstructed).abs().max()}"
+        )
+
+    def test_revin_normalizes_to_zero_mean_unit_var(self) -> None:
+        """Normalized output should have mean≈0, std≈1 per instance."""
+        from src.models.patchtst import RevIN
+
+        revin = RevIN(num_features=20, affine=False)
+        x = torch.randn(4, 60, 20) * 10 + 50  # Shift and scale
+
+        x_norm = revin.normalize(x)
+
+        # Check per-instance statistics (mean over seq_len dimension)
+        instance_means = x_norm.mean(dim=1)  # (batch, features)
+        instance_stds = x_norm.std(dim=1)  # (batch, features)
+
+        assert torch.allclose(
+            instance_means, torch.zeros_like(instance_means), atol=1e-5
+        ), f"Normalized mean should be ~0. Got mean of means: {instance_means.mean()}"
+        assert torch.allclose(
+            instance_stds, torch.ones_like(instance_stds), atol=1e-1
+        ), f"Normalized std should be ~1. Got mean of stds: {instance_stds.mean()}"
+
+    def test_revin_handles_batch_dimension(self) -> None:
+        """Different batch items should get different normalization stats."""
+        from src.models.patchtst import RevIN
+
+        revin = RevIN(num_features=20, affine=False)
+
+        # Create batch with very different scales
+        x = torch.zeros(2, 60, 20)
+        x[0] = torch.randn(60, 20) * 1 + 0  # mean≈0, std≈1
+        x[1] = torch.randn(60, 20) * 100 + 500  # mean≈500, std≈100
+
+        x_norm = revin.normalize(x)
+
+        # Both should be normalized to similar scale
+        std_0 = x_norm[0].std()
+        std_1 = x_norm[1].std()
+
+        assert torch.allclose(std_0, std_1, atol=0.2), (
+            f"Both batch items should have similar std after normalization. "
+            f"Got {std_0:.3f} vs {std_1:.3f}"
+        )
+
+    def test_revin_handles_zero_variance(self) -> None:
+        """RevIN should handle constant input (zero variance) without NaN."""
+        from src.models.patchtst import RevIN
+
+        revin = RevIN(num_features=20)
+        x = torch.ones(2, 60, 20) * 5.0  # Constant input
+
+        x_norm = revin.normalize(x)
+
+        assert not torch.isnan(x_norm).any(), (
+            "RevIN should not produce NaN for constant input"
+        )
+        assert not torch.isinf(x_norm).any(), (
+            "RevIN should not produce Inf for constant input"
+        )
+
+
+class TestPatchTSTWithRevIN:
+    """Tests for PatchTST model with RevIN enabled."""
+
+    def test_patchtst_with_revin_forward_pass(
+        self, default_config: PatchTSTConfig
+    ) -> None:
+        """PatchTST with use_revin=True should produce valid output."""
+        model = PatchTST(default_config, use_revin=True)
+        model.eval()
+
+        x = torch.randn(4, default_config.context_length, default_config.num_features)
+
+        with torch.no_grad():
+            output = model(x)
+
+        assert output.shape == (4, 1), f"Expected shape (4, 1), got {output.shape}"
+        assert torch.all(output >= 0.0) and torch.all(output <= 1.0), (
+            "Output should be in [0, 1] range"
+        )
+        assert not torch.isnan(output).any(), "Output should not contain NaN"

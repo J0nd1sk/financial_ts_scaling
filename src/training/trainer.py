@@ -88,6 +88,7 @@ class Trainer:
         early_stopping_metric: str = "val_loss",
         criterion: nn.Module | None = None,
         norm_params: dict[str, tuple[float, float]] | None = None,
+        use_revin: bool = False,
     ) -> None:
         """Initialize the trainer.
 
@@ -116,6 +117,8 @@ class Trainer:
             norm_params: Optional normalization parameters from compute_normalization_params.
                 If provided, applies Z-score normalization to features before training.
                 Format: {feature_name: (mean, std), ...}
+            use_revin: If True, enables RevIN (Reversible Instance Normalization) in
+                the PatchTST model. RevIN normalizes per-instance at input. Default False.
         """
         # Validate early_stopping_metric
         valid_metrics = ("val_loss", "val_auc")
@@ -138,6 +141,7 @@ class Trainer:
         self.early_stopping_min_delta = early_stopping_min_delta
         self.early_stopping_metric = early_stopping_metric
         self.norm_params = norm_params
+        self.use_revin = use_revin
 
         # Set random seeds for reproducibility
         self._set_seeds(experiment_config.seed)
@@ -155,7 +159,7 @@ class Trainer:
         self.model_config = self._adjust_model_config(model_config)
 
         # Create model
-        self.model = PatchTST(self.model_config).to(self.device)
+        self.model = PatchTST(self.model_config, use_revin=self.use_revin).to(self.device)
 
         # Create optimizer
         self.optimizer = torch.optim.Adam(

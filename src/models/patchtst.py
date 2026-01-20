@@ -19,6 +19,82 @@ import torch
 import torch.nn as nn
 
 
+class RevIN(nn.Module):
+    """Reversible Instance Normalization for non-stationary time series.
+
+    Normalizes input per-instance (per sample in batch) using instance statistics,
+    then can denormalize output using the same statistics. This handles distribution
+    shift elegantly by adapting to each input's scale.
+
+    Reference: https://openreview.net/forum?id=cGDAkQo1C0p
+
+    Args:
+        num_features: Number of features in the input.
+        eps: Small constant for numerical stability.
+        affine: If True, adds learnable affine parameters (gamma, beta).
+    """
+
+    def __init__(
+        self, num_features: int, eps: float = 1e-5, affine: bool = True
+    ) -> None:
+        super().__init__()
+        self.num_features = num_features
+        self.eps = eps
+        self.affine = affine
+
+        if self.affine:
+            # Learnable affine parameters
+            self.gamma = nn.Parameter(torch.ones(num_features))
+            self.beta = nn.Parameter(torch.zeros(num_features))
+
+        # Store statistics for denormalization (set during normalize)
+        self.mean: torch.Tensor | None = None
+        self.std: torch.Tensor | None = None
+
+    def normalize(self, x: torch.Tensor) -> torch.Tensor:
+        """Normalize input using per-instance statistics.
+
+        Args:
+            x: Input tensor of shape (batch, seq_len, num_features)
+
+        Returns:
+            Normalized tensor of same shape.
+        """
+        # Compute mean and std over sequence dimension (dim=1)
+        self.mean = x.mean(dim=1, keepdim=True)  # (batch, 1, features)
+        self.std = x.std(dim=1, keepdim=True) + self.eps  # (batch, 1, features)
+
+        # Normalize
+        x_norm = (x - self.mean) / self.std
+
+        # Apply affine transformation if enabled
+        if self.affine:
+            x_norm = x_norm * self.gamma + self.beta
+
+        return x_norm
+
+    def denormalize(self, x: torch.Tensor) -> torch.Tensor:
+        """Denormalize output using stored statistics from normalize().
+
+        Args:
+            x: Normalized tensor of shape (batch, seq_len, num_features)
+
+        Returns:
+            Denormalized tensor of same shape.
+        """
+        if self.mean is None or self.std is None:
+            raise RuntimeError("Must call normalize() before denormalize()")
+
+        # Reverse affine transformation if enabled
+        if self.affine:
+            x = (x - self.beta) / self.gamma
+
+        # Denormalize
+        x_denorm = x * self.std + self.mean
+
+        return x_denorm
+
+
 @dataclass
 class PatchTSTConfig:
     """Configuration for PatchTST model."""
@@ -229,9 +305,14 @@ class PatchTST(nn.Module):
     4. PredictionHead: (batch, num_patches, d_model) -> (batch, num_classes)
     """
 
-    def __init__(self, config: PatchTSTConfig) -> None:
+    def __init__(self, config: PatchTSTConfig, use_revin: bool = False) -> None:
         super().__init__()
         self.config = config
+        self.use_revin = use_revin
+
+        # RevIN layer (optional)
+        if self.use_revin:
+            self.revin = RevIN(num_features=config.num_features)
 
         # Model components
         self.patch_embed = PatchEmbedding(config)
@@ -263,6 +344,10 @@ class PatchTST(nn.Module):
         Returns:
             Output tensor of shape (batch_size, num_classes) with sigmoid activation
         """
+        # Apply RevIN normalization if enabled
+        if self.use_revin:
+            x = self.revin.normalize(x)
+
         # Patch embedding: (batch, seq_len, features) -> (batch, num_patches, d_model)
         x = self.patch_embed(x)
 

@@ -332,10 +332,19 @@
   - Validation: AUC 0.6488, prediction range [0.06, 0.31] (was [0.518, 0.524])
   - 8 new tests, 425 total passing
   - Commit: `c816e4f`
-- 🔄 **Next: HPO Integration** (pending)
-  - Need to update `hpo.py` to compute and pass norm_params
-  - Need to regenerate 12 HPO scripts with normalization
-  - Then re-run Phase 6A experiments
+- 🔴 **CRITICAL: ChunkSplitter Bug Discovered** (2026-01-19)
+  - ChunkSplitter gives only 19 val samples (1 per chunk), not ~500!
+  - Training uses sliding window (~5700 samples) but val/test don't
+  - All previous HPO decisions were based on 19 samples - unreliable
+  - **Fix approved**: SimpleSplitter with strict containment
+  - User preference: Train<2023, Val=2023-2024, Test=2025+
+  - Expected: Train ~7476, Val ~442, Test ~201 samples
+- 🔄 **Next: Foundation Fixes** (pending)
+  - [ ] Implement SimpleSplitter (TDD)
+  - [ ] Integrate Z-score normalization into HPO
+  - [ ] Add RevIN layer (other terminal working on this)
+  - [ ] Fix architecture params (layers, context length)
+  - [ ] Re-run Phase 6A experiments with all fixes
 - ✅ **Research Paper Analysis Stage** (2026-01-19)
   - ✅ Comprehensive Phase 6A analysis document
   - ✅ Statistical analysis appendix (ANOVA, effect sizes)
