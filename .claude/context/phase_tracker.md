@@ -356,7 +356,14 @@
     - zscore_only: AUC 0.476 (was 0.716)
     - **Finding**: RevIN alone (per-instance norm) outperforms global Z-score
   - ⏳ Update HPO scripts to use SimpleSplitter + RevIN only
-  - ⏳ Architecture experiments (layers, context length)
+  - ✅ **Context Length Ablation** (2026-01-20, commits 67d057e, c5182cc)
+    - Tested: 60, 80, 90, 120, 180, 252 days (ctx336 excluded - test region too small)
+    - **WINNER: 80 days** (AUC 0.6945, +15.5% over 60-day baseline)
+    - Sweet spot: 80-120 days (~4-6 months)
+    - Longer contexts hurt: 180+ days worse than baseline
+    - Scripts: `experiments/context_length_ablation/`
+    - Docs: `docs/context_length_ablation_results.md`
+  - ⏳ Architecture experiments (layers) - context length DONE
   - ⏳ Re-run Phase 6A experiments with all fixes
 - ✅ **Research Paper Analysis Stage** (2026-01-19)
   - ✅ Comprehensive Phase 6A analysis document
