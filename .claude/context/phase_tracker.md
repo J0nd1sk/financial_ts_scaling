@@ -315,10 +315,14 @@
     - AUC-ROC 0.53-0.65 (signal exists but compressed)
   - Results: `outputs/results/phase6a_backtest_2025.csv`
   - Analysis: `docs/phase6a_backtest_analysis.md`
-- 🔄 **Calibration Investigation Stage** (pending next session)
-  - ⏳ Task 1: Investigate raw logits (pre-sigmoid variation)
-  - ⏳ Task 2: Analyze training dynamics
-  - ⏳ Task 3: Evaluate fixes (temperature scaling, focal loss, Platt scaling)
+- 🔄 **Loss Function Investigation Stage** (2026-01-20)
+  - ✅ Task 1: Implement SoftAUCLoss (TDD, 11 tests, commit 7f65bba)
+  - ✅ Task 2: Add criterion parameter to Trainer
+  - ✅ Task 3: Initial validation - 7.8x spread improvement
+  - ⏳ Task 4: AUC comparison on 2025 test data (BCE vs SoftAUC)
+  - ⏳ Task 5: Implement AUC-based early stopping
+  - ⏳ Task 6: Look-ahead bias audit
+  - Plan: `.claude/context/soft_auc_validation_plan.md`
 - ✅ **Research Paper Analysis Stage** (2026-01-19)
   - ✅ Comprehensive Phase 6A analysis document
   - ✅ Statistical analysis appendix (ANOVA, effect sizes)
