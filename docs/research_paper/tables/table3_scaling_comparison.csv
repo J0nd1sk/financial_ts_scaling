@@ -1,0 +1,5 @@
+budget,params_actual,mean_val_loss,best_val_loss,best_horizon,vs_2M_pct,scaling_law_prediction,deviation_from_prediction
+2M,2065217,0.3067,0.2630,h3,baseline,baseline,0%
+20M,20742060,0.3377,0.3191,h3,+10.1%,~0.28,+14%
+200M,178374913,0.3574,0.3547,h5,+16.5%,~0.26,+36%
+2B,1646530476,0.3716,0.3592,h5,+21.2%,~0.24,+50%

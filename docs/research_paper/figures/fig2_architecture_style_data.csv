@@ -1,0 +1,14 @@
+# Figure 2: Architecture Style Performance by Budget
+# Style definitions: narrow-deep (L/d > 0.5), balanced (0.15-0.5), wide-shallow (< 0.15)
+budget,style,best_val_loss,top10_mean,top10_std,n_trials
+2M,balanced,0.2630,0.2669,0.003,24
+2M,narrow-deep,0.2694,0.3117,0.021,32
+2M,wide-shallow,0.3396,0.3496,0.004,94
+20M,wide-shallow,0.3191,0.3400,0.008,98
+20M,narrow-deep,0.3245,0.3477,0.008,39
+20M,balanced,0.3497,0.3587,0.010,13
+200M,wide-shallow,0.3547,0.3603,0.003,90
+200M,balanced,0.3564,0.3575,0.001,49
+200M,narrow-deep,0.3603,0.3821,0.018,11
+2B,balanced,0.3592,0.3612,0.001,62
+2B,wide-shallow,0.3608,0.3628,0.002,88

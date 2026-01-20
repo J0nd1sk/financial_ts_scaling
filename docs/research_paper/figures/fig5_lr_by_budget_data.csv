@@ -1,0 +1,7 @@
+# Figure 5: Optimal Learning Rate by Budget
+# Shows inverse relationship between model size and learning rate
+budget,params_M,optimal_lr_min,optimal_lr_max,best_trial_lr
+2M,2.07,0.0007,0.0010,0.000683
+20M,20.74,0.0005,0.0006,0.000526
+200M,178.37,0.0005,0.0008,0.000580
+2B,1646.53,0.0001,0.0004,0.000404

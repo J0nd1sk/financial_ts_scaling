@@ -1,0 +1,7 @@
+# Figure 4: Final Training Results (Full Training Data)
+# Validation loss after training on 100% of training data (vs 30% during HPO)
+budget,h1_val_loss,h2_val_loss,h3_val_loss,h5_val_loss,h1_epochs,h2_epochs,h3_epochs,h5_epochs
+2M,0.237,0.515,0.597,0.647,6,4,7,7
+20M,0.243,0.517,0.596,0.633,5,4,14,3
+200M,0.244,0.515,0.600,0.631,4,4,11,3
+2B,0.232,0.517,0.581,0.715,17,4,4,12

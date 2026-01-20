@@ -291,34 +291,41 @@
   - ⏳ Task 2: Generate analysis data files
   - ⏳ Task 3: Deep analysis (architecture patterns, training dynamics, horizon effects)
   - ⏳ Task 4: Diverged trials analysis (14 trials, all 2B scale)
-- 🔄 **Final Training Stage** (2026-01-17)
+- ✅ **Final Training Stage COMPLETE** (2026-01-19)
   - ✅ Task 0: Refresh SPY data (download + features + combined dataset)
-    - Fixed date normalization bug in download_ohlcv.py and build_dataset_combined.py
-    - SPY data: 8,299 raw rows, 8,100 processed rows (through 2026-01-16)
-    - 250 rows for 2025 test set, 11 rows for 2026
   - ✅ Task 1: Add contiguous split mode to ChunkSplitter
-    - New `mode` parameter: "scattered" (default) or "contiguous"
-    - Contiguous: test at end, val before test (production-realistic)
-    - Split strategy: Train 1993-Sept2024, Val Oct-Dec2024, Test 2025
   - ✅ Task 2: Interpolate H2 architectures from H1/H3
-    - Decision: Use H3 architecture for H2 at each budget
-    - Rationale: H3 had best val_loss; no clear interpolation pattern
   - ✅ Task 3: Implement best checkpoint saving in Trainer
-    - Added `_save_best_checkpoint()` method
-    - Saves checkpoint when val_loss improves
-  - ✅ Task 4: Create final training script template (2026-01-18)
-    - `generate_final_training_script()` in templates.py (~260 lines)
-    - Features: contiguous splits, fixed HPO architecture, thermal monitoring
-    - 5 new tests, 395 total passing
-  - ✅ Task 5: Generate 16 final training scripts (2026-01-19)
-    - `scripts/generate_final_training_scripts.py` generator (~120 lines)
-    - `experiments/phase6a_final/train_{budget}_h{horizon}.py` (16 scripts)
-    - Full parameter validation: all 16 verified against HPO tables
-  - ✅ Task 6: Create runner script with thermal monitoring (2026-01-19)
-    - `scripts/run_phase6a_final.sh` (347 lines)
-    - Features: pre-flight checks, hardware monitor, graceful stop, --start-from
-    - Verification: bash -n OK, --help works, 16 scripts exist
-  - **🚀 READY TO RUN**: All tasks complete, `./scripts/run_phase6a_final.sh` in tmux
+  - ✅ Task 4: Create final training script template
+  - ✅ Task 5: Generate 16 final training scripts
+  - ✅ Task 6: Create runner script with thermal monitoring
+  - ✅ Task 7: Bug fix - batch_config key mismatch (commit e7ac3ed)
+  - ✅ **ALL 16 MODELS TRAINED** - checkpoints in `outputs/final_training/`
+  - Val loss results (NOT test accuracy):
+    - h1: 0.232-0.244 (best: 2B)
+    - h2-h5: 0.515-0.647 (harder horizons)
+- ✅ **Backtest Evaluation Stage COMPLETE** (2026-01-19)
+  - ✅ Task 1: Create `scripts/evaluate_final_models.py` (315 lines, 6 tests)
+  - ✅ Task 2: Run backtest on 2025 data (256-260 samples per model)
+  - ✅ Task 3: Analyze confidence-accuracy relationship
+  - **CRITICAL FINDING: Probability Collapse**
+    - All models output near-constant probabilities (<1% spread)
+    - 2M/h1: [0.518-0.524], 2B/h1: [0.519-0.520]
+    - Cannot filter by confidence - no variation exists
+    - AUC-ROC 0.53-0.65 (signal exists but compressed)
+  - Results: `outputs/results/phase6a_backtest_2025.csv`
+  - Analysis: `docs/phase6a_backtest_analysis.md`
+- 🔄 **Calibration Investigation Stage** (pending next session)
+  - ⏳ Task 1: Investigate raw logits (pre-sigmoid variation)
+  - ⏳ Task 2: Analyze training dynamics
+  - ⏳ Task 3: Evaluate fixes (temperature scaling, focal loss, Platt scaling)
+- ✅ **Research Paper Analysis Stage** (2026-01-19)
+  - ✅ Comprehensive Phase 6A analysis document
+  - ✅ Statistical analysis appendix (ANOVA, effect sizes)
+  - ✅ Figure data files (5 CSVs)
+  - ✅ Table files (3 CSVs + LaTeX)
+  - ✅ Discussion draft and conclusions documents
+  - Core finding: **Inverse scaling** - 2M outperforms 2B by 21%
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)
   - Funnel/hourglass/bottleneck designs

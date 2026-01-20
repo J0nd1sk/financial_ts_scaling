@@ -1,0 +1,8 @@
+# Figure 1: Scaling Curve Data
+# Shows validation loss vs parameter count for all budgets and horizons
+# Use log scale on x-axis for parameter count
+budget,params_M,h1_val_loss,h3_val_loss,h5_val_loss,mean_val_loss
+2M,2.07,0.3199,0.2630,0.3371,0.3067
+20M,20.74,0.3483,0.3191,0.3458,0.3377
+200M,178.37,0.3564,0.3612,0.3547,0.3574
+2B,1646.53,0.3609,0.3948,0.3592,0.3716

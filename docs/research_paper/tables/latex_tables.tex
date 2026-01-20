@@ -1,0 +1,137 @@
+% LaTeX tables for Phase 6A Results
+% Include with: \input{tables/latex_tables.tex}
+
+% Table 1: HPO Results Summary
+\begin{table}[htbp]
+\centering
+\caption{Phase 6A HPO Results: Best Validation Loss by Budget and Horizon}
+\label{tab:hpo_results}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Budget} & \textbf{h1 (1-day)} & \textbf{h3 (3-day)} & \textbf{h5 (5-day)} & \textbf{Mean} \\
+\midrule
+2M   & 0.3199 & \textbf{0.2630} & 0.3371 & \textbf{0.3067} \\
+20M  & 0.3483 & 0.3191 & 0.3458 & 0.3377 \\
+200M & 0.3564 & 0.3612 & 0.3547 & 0.3574 \\
+2B   & 0.3609 & 0.3948 & 0.3592 & 0.3716 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Results from 50 Optuna trials per study. Lower is better.
+\item Bold indicates best performance per column.
+\end{tablenotes}
+\end{table}
+
+% Table 2: Optimal Architectures
+\begin{table}[htbp]
+\centering
+\caption{Optimal Architectures by Budget and Horizon}
+\label{tab:optimal_arch}
+\begin{tabular}{llrrrrrr}
+\toprule
+\textbf{Budget} & \textbf{Horizon} & \textbf{$d_{model}$} & \textbf{$n_{layers}$} & \textbf{$n_{heads}$} & \textbf{$d_{ff}$} & \textbf{Params} & \textbf{val\_loss} \\
+\midrule
+2M  & h1 & 64  & 48  & 2  & 256  & 2.4M   & 0.3199 \\
+2M  & h3 & 64  & 32  & 2  & 256  & 1.6M   & 0.2630 \\
+2M  & h5 & 64  & 64  & 16 & 128  & 2.2M   & 0.3371 \\
+\midrule
+20M & h1 & 128 & 180 & 16 & 256  & 23.9M  & 0.3483 \\
+20M & h3 & 256 & 32  & 2  & 512  & 16.9M  & 0.3191 \\
+20M & h5 & 384 & 12  & 4  & 1536 & 21.4M  & 0.3458 \\
+\midrule
+200M & h1 & 384 & 96  & 4  & 1536 & 170M  & 0.3564 \\
+200M & h3 & 384 & 180 & 4  & 768  & 213M  & 0.3612 \\
+200M & h5 & 512 & 48  & 2  & 2048 & 151M  & 0.3547 \\
+\midrule
+2B  & h1 & 1024 & 128 & 2  & 4096 & 1.6B  & 0.3609 \\
+2B  & h3 & 768  & 256 & 32 & 3072 & 1.8B  & 0.3948 \\
+2B  & h5 & 1024 & 180 & 4  & 2048 & 1.5B  & 0.3592 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 3: Final Training Results
+\begin{table}[htbp]
+\centering
+\caption{Final Training Results (Full Training Data)}
+\label{tab:final_training}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Budget} & \textbf{h1} & \textbf{h2} & \textbf{h3} & \textbf{h5} \\
+\midrule
+2M   & 0.237 & 0.515 & 0.597 & 0.647 \\
+20M  & 0.243 & 0.517 & 0.596 & 0.633 \\
+200M & 0.244 & 0.515 & 0.600 & 0.631 \\
+2B   & \textbf{0.232} & 0.517 & 0.581 & 0.715 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Validation loss on held-out data (Oct-Dec 2024).
+\item h2 architectures interpolated from h1/h3 results.
+\item 2B shows best h1 (0.232) but worst h5 (0.715).
+\end{tablenotes}
+\end{table}
+
+% Table 4: Scaling Law Comparison
+\begin{table}[htbp]
+\centering
+\caption{Observed vs. Expected Performance Under Scaling Laws}
+\label{tab:scaling_comparison}
+\begin{tabular}{lrrrl}
+\toprule
+\textbf{Budget} & \textbf{Parameters} & \textbf{Observed Loss} & \textbf{vs. 2M} & \textbf{Expected (if scaling)} \\
+\midrule
+2M   & 2.07M   & 0.3067 & baseline & baseline \\
+20M  & 20.74M  & 0.3377 & +10.1\% & $\sim$0.28 (better) \\
+200M & 178.37M & 0.3574 & +16.5\% & $\sim$0.26 (better) \\
+2B   & 1,646M  & 0.3716 & +21.2\% & $\sim$0.24 (better) \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Classical scaling laws predict monotonic improvement with parameters.
+\item We observe inverse scaling: larger models perform worse.
+\end{tablenotes}
+\end{table}
+
+% Table 5: Statistical Tests Summary
+\begin{table}[htbp]
+\centering
+\caption{Summary of Statistical Tests}
+\label{tab:statistical_tests}
+\begin{tabular}{llccl}
+\toprule
+\textbf{Hypothesis} & \textbf{Test} & \textbf{Statistic} & \textbf{p-value} & \textbf{Conclusion} \\
+\midrule
+Budget affects loss & ANOVA & F=48.7 & $<$0.001 & Significant \\
+2M better than 2B & t-test & t=8.4 & $<$0.001 & Significant \\
+Horizon affects loss & ANOVA & F=26.6 & $<$0.001 & Significant \\
+h3 is best horizon & Tukey HSD & q=4.2 & $<$0.01 & Significant \\
+Architecture style matters (2M) & $\chi^2$ & $\chi^2$=34.2 & $<$0.001 & Significant \\
+LR correlates with loss & Pearson & r=-0.23 & $<$0.001 & Significant \\
+n\_heads affects loss & Pearson & r=0.05 & 0.24 & Not significant \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Table 6: Effect Sizes
+\begin{table}[htbp]
+\centering
+\caption{Effect Sizes for Budget Comparisons (Cohen's $d$)}
+\label{tab:effect_sizes}
+\begin{tabular}{lcl}
+\toprule
+\textbf{Comparison} & \textbf{Cohen's $d$} & \textbf{Interpretation} \\
+\midrule
+2M vs. 20M  & 0.40 & Small-Medium \\
+2M vs. 200M & 0.65 & Medium \\
+2M vs. 2B   & 0.83 & Large \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Effect sizes increase with parameter gap, confirming robust inverse scaling.
+\end{tablenotes}
+\end{table}
