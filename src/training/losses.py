@@ -61,9 +61,9 @@ class SoftAUCLoss(nn.Module):
         pos_preds = predictions[pos_mask]
         neg_preds = predictions[neg_mask]
 
-        # Handle degenerate cases
+        # Handle degenerate cases (maintain computation graph for gradient flow)
         if len(pos_preds) == 0 or len(neg_preds) == 0:
-            return torch.tensor(0.5, device=predictions.device, dtype=predictions.dtype)
+            return predictions.mean() * 0 + 0.5
 
         # Compute all pairwise differences: diff[i,j] = neg[j] - pos[i]
         # Shape: (n_pos, n_neg)
