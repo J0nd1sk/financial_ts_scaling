@@ -17,6 +17,7 @@ import torch
 from src.data.dataset import (
     FinancialDataset,
     ChunkSplitter,
+    SimpleSplitter,
     SplitIndices,
     compute_normalization_params,
     normalize_dataframe,
@@ -815,6 +816,287 @@ class TestChunkSplitterContiguousMode:
 
         np.testing.assert_array_equal(splits1.val_indices, splits2.val_indices)
         np.testing.assert_array_equal(splits1.test_indices, splits2.test_indices)
+
+
+# ============================================================
+# SimpleSplitter Tests - Date-based contiguous splits
+# ============================================================
+
+
+class TestSimpleSplitterReturnsDataclass:
+    """Test that SimpleSplitter returns correct SplitIndices dataclass."""
+
+    def test_returns_split_indices(self):
+        """SimpleSplitter should return SplitIndices dataclass."""
+        dates = pd.date_range("2020-01-01", periods=500, freq="D")
+
+        splitter = SimpleSplitter(
+            dates=dates,
+            context_length=60,
+            horizon=1,
+            val_start="2020-10-01",
+            test_start="2020-12-01",
+        )
+        splits = splitter.split()
+
+        assert isinstance(splits, SplitIndices)
+        assert hasattr(splits, "train_indices")
+        assert hasattr(splits, "val_indices")
+        assert hasattr(splits, "test_indices")
+
+    def test_indices_are_numpy_arrays(self):
+        """All indices should be numpy arrays."""
+        dates = pd.date_range("2020-01-01", periods=500, freq="D")
+
+        splitter = SimpleSplitter(
+            dates=dates,
+            context_length=60,
+            horizon=1,
+            val_start="2020-10-01",
+            test_start="2020-12-01",
+        )
+        splits = splitter.split()
+
+        assert isinstance(splits.train_indices, np.ndarray)
+        assert isinstance(splits.val_indices, np.ndarray)
+        assert isinstance(splits.test_indices, np.ndarray)
+
+
+class TestSimpleSplitterStrictContainment:
+    """Test that samples are strictly contained within their date regions."""
+
+    def test_train_samples_end_before_val_start(self):
+        """All train samples should end before val_start date."""
+        dates = pd.date_range("2020-01-01", periods=500, freq="D")
+        context_length = 60
+        horizon = 1
+        chunk_size = context_length + horizon
+
+        splitter = SimpleSplitter(
+            dates=dates,
+            context_length=context_length,
+            horizon=horizon,
+            val_start="2020-10-01",
+            test_start="2020-12-01",
+        )
+        splits = splitter.split()
+
+        val_start_idx = dates.get_loc(pd.Timestamp("2020-10-01"))
+
+        # Every train sample's end (start + chunk_size) must be <= val_start_idx
+        for train_start in splits.train_indices:
+            sample_end = train_start + chunk_size
+            assert sample_end <= val_start_idx, (
+                f"Train sample at {train_start} extends to {sample_end} "
+                f"which is >= val_start_idx {val_start_idx}"
+            )
+
+    def test_val_samples_within_val_region(self):
+        """All val samples should be strictly within [val_start, test_start)."""
+        dates = pd.date_range("2020-01-01", periods=500, freq="D")
+        context_length = 60
+        horizon = 1
+        chunk_size = context_length + horizon
+
+        splitter = SimpleSplitter(
+            dates=dates,
+            context_length=context_length,
+            horizon=horizon,
+            val_start="2020-10-01",
+            test_start="2020-12-01",
+        )
+        splits = splitter.split()
+
+        val_start_idx = dates.get_loc(pd.Timestamp("2020-10-01"))
+        test_start_idx = dates.get_loc(pd.Timestamp("2020-12-01"))
+
+        for val_start in splits.val_indices:
+            assert val_start >= val_start_idx, (
+                f"Val sample starts at {val_start} which is < val_start_idx {val_start_idx}"
+            )
+            sample_end = val_start + chunk_size
+            assert sample_end <= test_start_idx, (
+                f"Val sample at {val_start} extends to {sample_end} "
+                f"which is >= test_start_idx {test_start_idx}"
+            )
+
+    def test_test_samples_within_test_region(self):
+        """All test samples should start >= test_start and fit within data."""
+        dates = pd.date_range("2020-01-01", periods=500, freq="D")
+        context_length = 60
+        horizon = 1
+        chunk_size = context_length + horizon
+
+        splitter = SimpleSplitter(
+            dates=dates,
+            context_length=context_length,
+            horizon=horizon,
+            val_start="2020-10-01",
+            test_start="2020-12-01",
+        )
+        splits = splitter.split()
+
+        test_start_idx = dates.get_loc(pd.Timestamp("2020-12-01"))
+
+        for test_start in splits.test_indices:
+            assert test_start >= test_start_idx, (
+                f"Test sample starts at {test_start} which is < test_start_idx {test_start_idx}"
+            )
+            sample_end = test_start + chunk_size
+            assert sample_end <= len(dates), (
+                f"Test sample at {test_start} extends beyond data length {len(dates)}"
+            )
+
+
+class TestSimpleSplitterSlidingWindow:
+    """Test that SimpleSplitter uses sliding window for all splits."""
+
+    def test_val_has_sliding_window_samples(self):
+        """Val should have sliding window samples, not 1 per chunk."""
+        # Create data similar to real scenario: 500 days
+        dates = pd.date_range("2020-01-01", periods=500, freq="D")
+        context_length = 60
+        horizon = 1
+        chunk_size = context_length + horizon  # 61
+
+        splitter = SimpleSplitter(
+            dates=dates,
+            context_length=context_length,
+            horizon=horizon,
+            val_start="2020-10-01",  # ~274 days in
+            test_start="2020-12-01",  # ~335 days in
+        )
+        splits = splitter.split()
+
+        # Val region is ~61 days (Oct 1 to Dec 1)
+        # With sliding window, we should get region_size - chunk_size + 1 samples
+        val_region_days = 61  # Oct 1 to Dec 1 is ~61 days
+        expected_min_val_samples = max(1, val_region_days - chunk_size + 1)
+
+        assert len(splits.val_indices) >= expected_min_val_samples, (
+            f"Val should have at least {expected_min_val_samples} samples with sliding window, "
+            f"got {len(splits.val_indices)}"
+        )
+
+    def test_realistic_sample_counts(self):
+        """Test with realistic data matching SPY dataset structure."""
+        # Simulate ~8100 days like SPY dataset (1993 to 2016)
+        dates = pd.date_range("1993-11-01", periods=8100, freq="D")
+        context_length = 60
+        horizon = 1
+
+        # Use dates within the actual range (ends around 2016-01-04)
+        splitter = SimpleSplitter(
+            dates=dates,
+            context_length=context_length,
+            horizon=horizon,
+            val_start="2014-01-01",  # ~2 years before end
+            test_start="2015-06-01",  # ~6 months of test data
+        )
+        splits = splitter.split()
+
+        # Val region is ~1.5 years = ~547 days
+        # Expected val samples = 547 - 61 + 1 = 487 (approximately)
+        # Should be WAY more than 19 (the ChunkSplitter bug)
+        assert len(splits.val_indices) > 100, (
+            f"Val should have >100 samples with sliding window, "
+            f"got {len(splits.val_indices)} (ChunkSplitter bug gave only 19)"
+        )
+
+        # Train should have many more samples
+        assert len(splits.train_indices) > len(splits.val_indices), (
+            f"Train ({len(splits.train_indices)}) should have more samples than val ({len(splits.val_indices)})"
+        )
+
+
+class TestSimpleSplitterNoOverlap:
+    """Test that there's no overlap between train, val, and test."""
+
+    def test_no_index_overlap_between_splits(self):
+        """No sample index should appear in multiple splits."""
+        dates = pd.date_range("2020-01-01", periods=500, freq="D")
+
+        splitter = SimpleSplitter(
+            dates=dates,
+            context_length=60,
+            horizon=1,
+            val_start="2020-10-01",
+            test_start="2020-12-01",
+        )
+        splits = splitter.split()
+
+        train_set = set(splits.train_indices)
+        val_set = set(splits.val_indices)
+        test_set = set(splits.test_indices)
+
+        assert len(train_set & val_set) == 0, "Train and val indices overlap"
+        assert len(train_set & test_set) == 0, "Train and test indices overlap"
+        assert len(val_set & test_set) == 0, "Val and test indices overlap"
+
+
+class TestSimpleSplitterReproducibility:
+    """Test that SimpleSplitter is deterministic."""
+
+    def test_same_dates_produce_same_splits(self):
+        """Same inputs should produce identical splits."""
+        dates = pd.date_range("2020-01-01", periods=500, freq="D")
+        kwargs = dict(
+            dates=dates,
+            context_length=60,
+            horizon=1,
+            val_start="2020-10-01",
+            test_start="2020-12-01",
+        )
+
+        splits1 = SimpleSplitter(**kwargs).split()
+        splits2 = SimpleSplitter(**kwargs).split()
+
+        np.testing.assert_array_equal(splits1.train_indices, splits2.train_indices)
+        np.testing.assert_array_equal(splits1.val_indices, splits2.val_indices)
+        np.testing.assert_array_equal(splits1.test_indices, splits2.test_indices)
+
+
+class TestSimpleSplitterEdgeCases:
+    """Test edge cases for SimpleSplitter."""
+
+    def test_raises_on_insufficient_val_region(self):
+        """Should raise if val region is smaller than context+horizon."""
+        dates = pd.date_range("2020-01-01", periods=500, freq="D")
+
+        with pytest.raises(ValueError, match="val"):
+            SimpleSplitter(
+                dates=dates,
+                context_length=60,
+                horizon=1,
+                val_start="2020-12-01",  # Only ~30 days before test_start
+                test_start="2020-12-15",
+            )
+
+    def test_raises_on_insufficient_test_region(self):
+        """Should raise if test region is smaller than context+horizon."""
+        dates = pd.date_range("2020-01-01", periods=365, freq="D")  # 1 year
+
+        with pytest.raises(ValueError, match="test"):
+            SimpleSplitter(
+                dates=dates,
+                context_length=60,
+                horizon=1,
+                val_start="2020-10-01",
+                test_start="2020-12-20",  # Only ~12 days of test data
+            )
+
+    def test_raises_on_date_not_in_data(self):
+        """Should raise if val_start or test_start not in dates."""
+        dates = pd.date_range("2020-01-01", periods=100, freq="D")
+
+        with pytest.raises(ValueError, match="not found"):
+            SimpleSplitter(
+                dates=dates,
+                context_length=60,
+                horizon=1,
+                val_start="2025-01-01",  # Not in data
+                test_start="2025-06-01",
+            )
 
 
 # ============================================================

@@ -24,7 +24,7 @@ from sklearn.metrics import roc_auc_score
 
 from src.config.experiment import ExperimentConfig
 from src.data.dataset import (
-    ChunkSplitter,
+    SimpleSplitter,
     FinancialDataset,
     compute_normalization_params,
     normalize_dataframe,
@@ -82,13 +82,19 @@ def load_data():
 
 
 def get_split_indices(df):
-    """Create train/val split indices."""
-    splitter = ChunkSplitter(
-        total_days=len(df),
+    """Create train/val/test split indices using SimpleSplitter.
+
+    Uses date-based contiguous splits:
+    - Train: before 2023 (maximize training data)
+    - Val: 2023-2024 (for validation/early stopping)
+    - Test: 2025+ (most recent for backtesting)
+    """
+    splitter = SimpleSplitter(
+        dates=df["Date"],
         context_length=60,
         horizon=HORIZON,
-        val_ratio=0.15,
-        test_ratio=0.15,
+        val_start="2023-01-01",
+        test_start="2025-01-01",
     )
     return splitter.split()
 

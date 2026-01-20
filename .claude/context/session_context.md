@@ -1,143 +1,110 @@
-# Session Handoff - 2026-01-19 ~18:00 UTC
+# Session Handoff - 2026-01-20 ~14:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `0c15642` docs: session handoff with normalization fix complete
-- **Uncommitted changes**: 7 files (mix of both terminals' work)
-  - Modified: session_context.md, phase6a_implementation_audit.md, patchtst.py, trainer.py, test_patchtst.py
-  - New: phase6a_best_practices_audit.md, phase6a_research_gap_analysis.md, test_revin_comparison.py
-- **Ahead of origin**: 10 commits (not pushed)
+- **Last commit**: `a777426` feat: add RevIN (Reversible Instance Normalization) to PatchTST
+- **Uncommitted changes**: 4 files (both terminals' work in progress)
+  - `src/data/dataset.py` - SimpleSplitter implementation (other terminal)
+  - `tests/test_dataset.py` - SimpleSplitter tests (other terminal)
+  - `scripts/test_revin_comparison.py` - Minor fix (this terminal)
+  - `outputs/revin_comparison/comparison_results.csv` - Results file
+- **Ahead of origin**: 11 commits (not pushed)
 
 ### Task Status
-- **Pipeline Validation Terminal**: ChunkSplitter bug identified, SimpleSplitter approved
-- **RevIN Terminal**: Working on architecture alignment (RevIN, layer count, etc.)
-- **Status**: Foundation fixes in progress across both terminals
+- **RevIN Implementation**: ✅ COMPLETE (this terminal)
+- **SimpleSplitter**: 🔄 IN PROGRESS (other terminal)
+- **Next**: Re-run RevIN comparison with SimpleSplitter
 
 ---
 
-## CRITICAL DISCOVERY: ChunkSplitter Bug (19 Validation Samples!)
+## COMPLETED THIS SESSION (RevIN Terminal)
 
-### The Problem
-ChunkSplitter gives **only 19 validation samples**, not ~500 as expected!
+### 1. RevIN Implementation
+- Added `RevIN` class to `src/models/patchtst.py` (~70 lines)
+- Added `use_revin` parameter to `PatchTST` and `Trainer`
+- 6 new unit tests, 431 total tests passing
+- Commit: `a777426`
 
-| What We Expected | What Actually Happens |
-|------------------|----------------------|
-| 15% of ~8000 rows for val | 15% of 132 chunks = 19 chunks |
-| ~500+ val samples | **19 val samples** (1 per chunk) |
-| Reliable HPO decisions | High variance, unreliable HPO |
+### 2. RevIN Comparison Test (with ChunkSplitter - 19 val samples)
 
-**Root Cause**: Design gives 1 sample per chunk. Training uses sliding window (~5700 samples) but val/test get only ONE sample per non-overlapping chunk.
+| Config | Z-score | RevIN | Val Loss | AUC | Spread |
+|--------|---------|-------|----------|-----|--------|
+| zscore_only | ✅ | ❌ | 0.762 | 0.716 | 0.700 |
+| revin_only | ❌ | ✅ | 0.382 | **0.471** | 0.124 |
+| **zscore_revin** | ✅ | ✅ | 0.707 | **0.739** | 0.247 |
 
-**Impact**: All previous HPO decisions were based on 19 samples - unreliable!
+**Key Findings (need validation with larger sample):**
+- zscore_revin wins by AUC (0.739) - +3.2% over zscore_only
+- revin_only FAILS (AUC 0.471 < random) - RevIN needs pre-normalized inputs
+- Combining Z-score + RevIN is best approach
 
-### Approved Fix: SimpleSplitter
-- Simple time-based contiguous splits
+**⚠️ CAVEAT**: Only 19 validation samples! Results need re-validation with SimpleSplitter.
+
+### 3. Memory Entities Created
+- `Plan_RevIN_Comparison_Test` - Planning decision
+- `RevIN_Comparison_Results` - Experiment results
+
+---
+
+## IN PROGRESS (Other Terminal)
+
+### SimpleSplitter Implementation
+- Tests written: ~280 lines of TDD tests
+- Implementation: In progress in `src/data/dataset.py`
+- Expected val samples: ~670 (vs 19 with ChunkSplitter)
+
+**SimpleSplitter Design:**
+- Date-based contiguous splits (val_start, test_start)
 - Sliding window for ALL splits (train, val, test)
 - Strict containment: sample valid only if entire span within region
-- Implementation: ~50 lines, clean and verifiable
-
----
-
-## Research Findings: Official PatchTST vs Ours
-
-| Parameter | Official | Ours | Gap |
-|-----------|----------|------|-----|
-| **RevIN** | Always enabled | Missing | 🔴 CRITICAL |
-| **n_layers** | 2-4 | 12-256 | 🔴 8-85x more |
-| **context_length** | 336-512 | 60 | 🟠 5-8x shorter |
-| **pos_encoding init** | std=0.02 | std=1.0 | 🟡 50x larger |
-| **dropout** | 0.2 | 0.1-0.3 | OK |
-
-Sources:
-- https://github.com/yuqinie98/PatchTST
-- https://context7.com/yuqinie98/patchtst
-- https://openreview.net/pdf?id=cGDAkQo1C0p (RevIN paper)
-
----
-
-## User Preferences for Experiments
-
-### Data Split Preference (IMPORTANT)
-- **Train**: Maximize - everything before 2023 (~7,476 samples, 90.8%)
-- **Val**: 2023-2024 (~442 samples, 6.0%) - for early stopping only
-- **Test**: 2025+ (~201 samples, 3.1%) - backtest on most recent data
-
-**Rationale**: Limited training data, so maximize it. Most recent data for realistic backtesting.
-
-### Architecture Experiments (Future - Don't Assume Official Is Best)
-User explicitly stated:
-> "I'm not sure reducing the layers is necessarily better, but I would like to experiment with the difference between wide and shallow (e.g., layers constrained to 2-6) and what long but more narrow."
-
-> "How would increasing context length impact training? We don't have a long length of data right now. Maybe we just double or triple the context length?"
-
-**Action**: After fixing foundation (splits, RevIN), run controlled experiments:
-1. Wide/shallow (2-6 layers) vs narrow/deep
-2. Context length: 60 → 120 → 180 (double/triple)
-3. Empirical validation, not just copying official config
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-19 (start of session)
-- Result: **425 passed**
+- Last `make test`: 2026-01-20
+- Result: **431 passed** (after RevIN commit)
+- Note: SimpleSplitter tests will fail until implementation complete
 
 ---
 
-## Completed This Session (Pipeline Terminal)
-1. Session restore and context review
-2. Research into official PatchTST configuration (Context7, web search)
-3. **Critical**: Identified ChunkSplitter 19-sample bug
-4. Designed SimpleSplitter replacement (user approved)
-5. Created Memory entities for findings
+## Next Session Should
 
-## Completed by Other Terminal
-1. Z-score normalization (AUC improved to 0.6488)
-2. Implementation audit (docs/phase6a_implementation_audit.md)
-3. Gap analysis (docs/phase6a_research_gap_analysis.md)
-4. Working on RevIN implementation
+### Immediate
+1. **Wait for SimpleSplitter** to be committed by other terminal
+2. **Run `make test`** to verify SimpleSplitter passes
+3. **Update `test_revin_comparison.py`** to use SimpleSplitter instead of ChunkSplitter
+4. **Re-run RevIN comparison** with ~670 val samples
+5. **Analyze results** - confirm or revise findings
+
+### After Validation
+6. **Update HPO scripts** if zscore_revin confirmed as best
+7. **Consider architecture experiments** (layers, context length)
 
 ---
 
-## Next Session Priorities
+## Files to Review
 
-### Immediate (Pipeline Terminal)
-1. **Implement SimpleSplitter** with strict containment (TDD)
-   - Date-based contiguous splits
-   - Sliding window for ALL splits
-   - Expected: Train ~7476, Val ~442, Test ~201 samples
-
-### Coordinate with RevIN Terminal
-2. Check RevIN progress
-3. Review uncommitted changes
-4. Merge foundation fixes
-
-### After Foundation Fixed
-5. Re-run HPO with proper splits + RevIN + normalization
-6. Architecture experiments (wide/shallow vs narrow/deep)
-7. Context length experiments
+| File | Status | Owner |
+|------|--------|-------|
+| `src/data/dataset.py` | Modified (SimpleSplitter) | Other terminal |
+| `tests/test_dataset.py` | Modified (SimpleSplitter tests) | Other terminal |
+| `scripts/test_revin_comparison.py` | Ready to update | This terminal |
+| `src/models/patchtst.py` | ✅ Committed | This terminal |
+| `src/training/trainer.py` | ✅ Committed | This terminal |
 
 ---
 
 ## Memory Entities Updated This Session
-- `Bug_ChunkSplitter_19Samples` (created): Critical finding - val has only 19 samples
-- `Solution_SimpleSplitter_Design` (created): Approved fix design
-- `Research_PatchTST_Official_Config` (created): Official hyperparameters
-- `Research_Architecture_Experiments_Pending` (created): User's experiment preferences
+- `Plan_RevIN_Comparison_Test` (created): Planning for RevIN implementation
+- `RevIN_Comparison_Results` (created): Comparison results (19 samples, need revalidation)
 
 ## Memory Entities from Previous Sessions
+- `Bug_ChunkSplitter_19Samples` - Critical finding about val sample count
+- `Solution_SimpleSplitter_Design` - Approved SimpleSplitter design
 - `Bug_FeatureNormalization_Phase6A` - Root cause of distribution shift
 - `Plan_ZScoreNormalization` - Completed normalization fix
-- `Phase6A_DoubleSigmoidBug` - Earlier sigmoid issue
-- `Phase6A_PriorCollapse_RootCause` - Prior collapse analysis
-
----
-
-## Data Versions
-- Raw manifest: SPY.parquet (8299 rows, 1993-2026)
-- Processed manifest: SPY_dataset_c.parquet in data/processed/v1/
-- Pending registrations: None
 
 ---
 
@@ -146,7 +113,6 @@ User explicitly stated:
 source venv/bin/activate
 make test
 git status
-make verify
 ```
 
 ---
@@ -175,4 +141,4 @@ make verify
 ### Current Focus
 - Fix foundation before more experimentation
 - Validate empirically, don't assume official config is best
-- Maximize training data, minimize val/test
+- SimpleSplitter will enable reliable validation of RevIN findings

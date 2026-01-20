@@ -339,12 +339,20 @@
   - **Fix approved**: SimpleSplitter with strict containment
   - User preference: Train<2023, Val=2023-2024, Test=2025+
   - Expected: Train ~7476, Val ~442, Test ~201 samples
-- 🔄 **Next: Foundation Fixes** (pending)
-  - [ ] Implement SimpleSplitter (TDD)
-  - [ ] Integrate Z-score normalization into HPO
-  - [ ] Add RevIN layer (other terminal working on this)
-  - [ ] Fix architecture params (layers, context length)
-  - [ ] Re-run Phase 6A experiments with all fixes
+- 🔄 **Foundation Fixes Stage** (2026-01-20)
+  - 🔄 SimpleSplitter implementation (other terminal, TDD in progress)
+  - ✅ **RevIN layer added** (commit a777426)
+    - RevIN class in patchtst.py (~70 lines)
+    - use_revin parameter in PatchTST and Trainer
+    - 6 new tests, 431 total passing
+    - Preliminary comparison (19 val samples - needs revalidation):
+      - zscore_revin: AUC 0.739 (best)
+      - zscore_only: AUC 0.716
+      - revin_only: AUC 0.471 (fails without Z-score)
+  - ⏳ Re-run RevIN comparison with SimpleSplitter (~670 val samples)
+  - ⏳ Integrate Z-score + RevIN into HPO scripts
+  - ⏳ Architecture experiments (layers, context length)
+  - ⏳ Re-run Phase 6A experiments with all fixes
 - ✅ **Research Paper Analysis Stage** (2026-01-19)
   - ✅ Comprehensive Phase 6A analysis document
   - ✅ Statistical analysis appendix (ANOVA, effect sizes)

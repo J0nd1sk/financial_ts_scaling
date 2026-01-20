@@ -390,6 +390,154 @@ class ChunkSplitter:
         return np.sort(selected_indices)
 
 
+class SimpleSplitter:
+    """Simple date-based contiguous splitter with sliding window for all splits.
+
+    Creates train/val/test splits based on date boundaries with sliding window
+    sampling for ALL regions (not just train). This fixes the ChunkSplitter bug
+    where val/test only got 1 sample per chunk.
+
+    Key properties:
+    - Train: all samples where entire span (context+horizon) < val_start
+    - Val: all samples where entire span is within [val_start, test_start)
+    - Test: all samples where entire span >= test_start and fits in data
+    - Strict containment: sample included only if ENTIRE span within region
+
+    Example:
+        >>> dates = pd.date_range("2020-01-01", periods=1000, freq="D")
+        >>> splitter = SimpleSplitter(
+        ...     dates=dates,
+        ...     context_length=60,
+        ...     horizon=1,
+        ...     val_start="2020-10-01",
+        ...     test_start="2020-12-01",
+        ... )
+        >>> splits = splitter.split()
+        >>> len(splits.val_indices)  # Sliding window, not 1 per chunk!
+        ~60
+    """
+
+    def __init__(
+        self,
+        dates: pd.Series | pd.DatetimeIndex,
+        context_length: int,
+        horizon: int,
+        val_start: str,
+        test_start: str,
+    ) -> None:
+        """Initialize the simple splitter.
+
+        Args:
+            dates: Date column from DataFrame (must be sorted chronologically).
+            context_length: Number of days in input sequence (e.g., 60).
+            horizon: Number of days to predict ahead (e.g., 1).
+            val_start: Start date for validation region (e.g., "2023-01-01").
+            test_start: Start date for test region (e.g., "2025-01-01").
+
+        Raises:
+            ValueError: If dates not found in data or regions too small.
+        """
+        # Convert to DatetimeIndex if needed
+        if isinstance(dates, pd.Series):
+            dates = pd.DatetimeIndex(dates)
+        self.dates = dates
+        self.context_length = context_length
+        self.horizon = horizon
+        self.chunk_size = context_length + horizon
+
+        # Parse and validate date boundaries
+        self.val_start_date = pd.Timestamp(val_start)
+        self.test_start_date = pd.Timestamp(test_start)
+
+        self._validate_inputs()
+
+    def _validate_inputs(self) -> None:
+        """Validate initialization parameters.
+
+        Raises:
+            ValueError: If parameters are invalid.
+        """
+        # Check that val_start is in data
+        if self.val_start_date not in self.dates:
+            # Try to find closest date
+            if self.val_start_date < self.dates.min() or self.val_start_date > self.dates.max():
+                raise ValueError(
+                    f"val_start {self.val_start_date.date()} not found in data. "
+                    f"Data range: {self.dates.min().date()} to {self.dates.max().date()}"
+                )
+            # Find first date >= val_start
+            mask = self.dates >= self.val_start_date
+            if not mask.any():
+                raise ValueError(f"val_start {self.val_start_date.date()} not found in data")
+            self.val_start_date = self.dates[mask][0]
+
+        # Check that test_start is in data
+        if self.test_start_date not in self.dates:
+            if self.test_start_date < self.dates.min() or self.test_start_date > self.dates.max():
+                raise ValueError(
+                    f"test_start {self.test_start_date.date()} not found in data. "
+                    f"Data range: {self.dates.min().date()} to {self.dates.max().date()}"
+                )
+            mask = self.dates >= self.test_start_date
+            if not mask.any():
+                raise ValueError(f"test_start {self.test_start_date.date()} not found in data")
+            self.test_start_date = self.dates[mask][0]
+
+        # Get index positions
+        self.val_start_idx = self.dates.get_loc(self.val_start_date)
+        self.test_start_idx = self.dates.get_loc(self.test_start_date)
+
+        # Check region sizes
+        val_region_size = self.test_start_idx - self.val_start_idx
+        if val_region_size < self.chunk_size:
+            raise ValueError(
+                f"val region too small: {val_region_size} days, "
+                f"need at least {self.chunk_size} (context={self.context_length} + horizon={self.horizon})"
+            )
+
+        test_region_size = len(self.dates) - self.test_start_idx
+        if test_region_size < self.chunk_size:
+            raise ValueError(
+                f"test region too small: {test_region_size} days, "
+                f"need at least {self.chunk_size} (context={self.context_length} + horizon={self.horizon})"
+            )
+
+        train_region_size = self.val_start_idx
+        if train_region_size < self.chunk_size:
+            raise ValueError(
+                f"train region too small: {train_region_size} days, "
+                f"need at least {self.chunk_size} (context={self.context_length} + horizon={self.horizon})"
+            )
+
+    def split(self) -> SplitIndices:
+        """Compute train/val/test split indices with sliding window.
+
+        Returns:
+            SplitIndices containing arrays of start indices for each split.
+        """
+        # Train: samples where entire span < val_start_idx
+        # A sample at index t spans [t, t + chunk_size)
+        # For train: t + chunk_size <= val_start_idx, so t <= val_start_idx - chunk_size
+        train_max_start = self.val_start_idx - self.chunk_size
+        train_indices = np.arange(0, train_max_start + 1, dtype=np.int64)
+
+        # Val: samples where entire span is in [val_start_idx, test_start_idx)
+        # Start >= val_start_idx AND t + chunk_size <= test_start_idx
+        val_max_start = self.test_start_idx - self.chunk_size
+        val_indices = np.arange(self.val_start_idx, val_max_start + 1, dtype=np.int64)
+
+        # Test: samples where start >= test_start_idx AND fits in data
+        test_max_start = len(self.dates) - self.chunk_size
+        test_indices = np.arange(self.test_start_idx, test_max_start + 1, dtype=np.int64)
+
+        return SplitIndices(
+            train_indices=train_indices,
+            val_indices=val_indices,
+            test_indices=test_indices,
+            chunk_size=self.chunk_size,
+        )
+
+
 class FinancialDataset(Dataset):
     """PyTorch Dataset for financial time-series with binary threshold targets.
 
