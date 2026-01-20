@@ -1,7 +1,8 @@
 # SoftAUC Validation Plan
 
 **Created:** 2026-01-19
-**Status:** Pending validation
+**Updated:** 2026-01-20
+**Status:** Test 1 COMPLETE - Negative result
 **Purpose:** Ensure SoftAUCLoss improves actual model performance, not just prediction spread
 
 ---
@@ -114,12 +115,86 @@ SoftAUCLoss was implemented to address prior collapse where BCE causes models to
 
 ---
 
-## Next Steps (Priority Order)
+## Test 1 Results (2026-01-20)
 
-1. **Test 1:** Run AUC comparison (BCE vs SoftAUC on 2025 test data)
-2. **Test 2:** Implement AUC-based early stopping
-3. **Test 3:** Quick look-ahead bias audit
-4. **Decision:** Based on results, decide whether to proceed with HPO re-run
+### Experiment
+- Script: `experiments/compare_bce_vs_soft_auc.py`
+- Architecture: 2M_h1 (d_model=64, n_layers=48, n_heads=2)
+- Training: lr=0.0008, dropout=0.12, epochs=50, early_stopping_patience=10
+- Data: SPY_dataset_a20.parquet, contiguous splits
+
+### Results
+
+| Model | Test AUC-ROC | Spread | Prediction Range | Val Loss | Epochs |
+|-------|--------------|--------|------------------|----------|--------|
+| BCE | **0.5707** | 2.59% | [0.072, 0.098] | 0.203 | 6 |
+| SoftAUC | 0.5374 | 2.26% | [0.045, 0.068] | 0.459 | 5 |
+
+**Key Finding: SoftAUC HURT performance**
+- AUC-ROC decreased by 5.8% (0.5707 → 0.5374)
+- Spread did NOT improve (both ~2.5%)
+- Both models exhibit prior collapse (predictions near class prior ~10%)
+
+### Possible Explanations
+
+1. **BCE hyperparams not suited for SoftAUC**: lr, dropout, weight_decay were tuned for BCE
+2. **Small validation set (19 samples)**: ChunkSplitter in contiguous mode gives sparse val set
+3. **Early stopping on val_loss suboptimal**: SoftAUC loss doesn't correlate well with AUC-ROC
+4. **SoftAUC overfits ranking on train but doesn't generalize**
+5. **Problem isn't prior collapse but weak signal**: AUC 0.57 suggests limited predictive power
+
+### Conclusion
+
+**SoftAUCLoss alone does NOT solve the problem.** The spread improvement seen in validation (~7.8x) did not translate to better ranking on test data.
+
+---
+
+## Test 2 Results (2026-01-20)
+
+### Experiment
+- Added `early_stopping_metric="val_auc"` parameter to Trainer
+- Re-ran comparison with AUC-based early stopping for SoftAUC
+
+### Results
+
+| Model | Test AUC-ROC | Spread | Val AUC | Epochs |
+|-------|--------------|--------|---------|--------|
+| BCE (val_loss stopping) | **0.5707** | 2.59% | N/A | 6 |
+| SoftAUC (val_auc stopping) | 0.4867 | 0.06% | 1.0 | 1 |
+
+**Key Finding: AUC-based stopping made things WORSE**
+- Val AUC hit 1.0 after just 1 epoch (on 19 samples!)
+- Model stopped training immediately
+- Test AUC dropped to 0.4867 (worse than random)
+- Prediction spread collapsed to 0.06%
+
+### Root Cause
+**Validation set too small (19 samples)** - ChunkSplitter in contiguous mode uses non-overlapping windows, resulting in only 19 validation samples. This is:
+- Insufficient for reliable val_loss early stopping
+- Catastrophic for AUC-based early stopping (instantly achieves perfect score)
+
+### Conclusion
+The small validation set is the fundamental blocker. AUC-based early stopping is a valid feature but cannot help until the validation set issue is addressed.
+
+---
+
+## Next Steps (Revised Again)
+
+~~1. **Test 1:** Run AUC comparison~~ ✅ COMPLETE - Negative result
+~~2. **Test 2:** AUC-based early stopping~~ ✅ COMPLETE - Made things worse due to small val set
+
+**CRITICAL BLOCKER: Small validation set (19 samples)**
+
+Must address before any further loss function experiments:
+- Option A: Increase `val_ratio` in ChunkSplitter (e.g., 0.30 instead of 0.15)
+- Option B: Change ChunkSplitter mode from "contiguous" to allow overlapping val samples
+- Option C: Use time-based splits instead of ratio-based
+
+3. **Test 3:** Look-ahead bias audit (still valid regardless of loss function)
+4. **After fixing val set size:**
+   - Re-test BCE vs SoftAUC with proper validation
+   - Consider class weighting in BCE (pos_weight parameter)
+5. **Decision:** The underlying signal may be weak (AUC ~0.57), but we can't draw conclusions until validation is fixed
 
 ---
 

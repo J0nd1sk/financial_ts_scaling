@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
+from sklearn.metrics import roc_auc_score
 from torch.utils.data import DataLoader, Subset
 
 from src.config.experiment import ExperimentConfig
@@ -84,6 +85,7 @@ class Trainer:
         accumulation_steps: int = 1,
         early_stopping_patience: int | None = None,
         early_stopping_min_delta: float = 0.001,
+        early_stopping_metric: str = "val_loss",
         criterion: nn.Module | None = None,
     ) -> None:
         """Initialize the trainer.
@@ -104,11 +106,20 @@ class Trainer:
                 Effective batch size = batch_size × accumulation_steps.
             early_stopping_patience: Number of epochs without improvement before
                 stopping. None (default) disables early stopping.
-            early_stopping_min_delta: Minimum improvement in val_loss to count
+            early_stopping_min_delta: Minimum improvement in metric to count
                 as an improvement. Default 0.001.
+            early_stopping_metric: Metric for early stopping ("val_loss" or "val_auc").
+                Default "val_loss". Use "val_auc" when optimizing for ranking (e.g., SoftAUCLoss).
             criterion: Loss function to use. If None (default), uses BCELoss.
                 Can pass custom loss like SoftAUCLoss for better calibration.
         """
+        # Validate early_stopping_metric
+        valid_metrics = ("val_loss", "val_auc")
+        if early_stopping_metric not in valid_metrics:
+            raise ValueError(
+                f"early_stopping_metric must be one of {valid_metrics}, "
+                f"got '{early_stopping_metric}'"
+            )
         self.experiment_config = experiment_config
         self.batch_size = batch_size
         self.learning_rate = learning_rate
@@ -121,6 +132,7 @@ class Trainer:
         self.accumulation_steps = accumulation_steps
         self.early_stopping_patience = early_stopping_patience
         self.early_stopping_min_delta = early_stopping_min_delta
+        self.early_stopping_metric = early_stopping_metric
 
         # Set random seeds for reproducibility
         self._set_seeds(experiment_config.seed)
@@ -327,22 +339,44 @@ class Trainer:
 
         raise RuntimeError("Dataloader is empty")
 
-    def _check_early_stopping(self, val_loss: float, epoch: int) -> bool:
+    def _check_early_stopping(
+        self, val_loss: float, val_auc: float | None, epoch: int
+    ) -> bool:
         """Check if training should stop early and save best checkpoint.
 
-        Returns True if val_loss hasn't improved by min_delta for patience epochs.
-        When val_loss improves, saves a checkpoint (best_checkpoint.pt).
+        Uses self.early_stopping_metric to determine which metric to monitor:
+        - "val_loss": lower is better (default)
+        - "val_auc": higher is better
+
+        When the metric improves, saves a checkpoint (best_checkpoint.pt).
 
         Args:
             val_loss: Current epoch's validation loss.
+            val_auc: Current epoch's validation AUC (None if single class).
             epoch: Current epoch number.
 
         Returns:
             True if training should stop, False otherwise.
         """
-        if val_loss < self._best_val_loss - self.early_stopping_min_delta:
+        # Determine which metric to use and whether improvement is up or down
+        if self.early_stopping_metric == "val_auc":
+            # AUC: higher is better
+            if val_auc is None:
+                # Fallback to loss if AUC undefined (single class in val set)
+                current_metric = -val_loss  # Negate so "higher is better" logic works
+            else:
+                current_metric = val_auc
+            # Check if current > best + delta (improvement = increase)
+            improved = current_metric > self._best_metric + self.early_stopping_min_delta
+        else:
+            # Loss: lower is better
+            current_metric = val_loss
+            # Check if current < best - delta (improvement = decrease)
+            improved = current_metric < self._best_metric - self.early_stopping_min_delta
+
+        if improved:
             # Meaningful improvement - save best checkpoint and reset counter
-            self._best_val_loss = val_loss
+            self._best_metric = current_metric
             self._best_epoch = epoch
             self._save_best_checkpoint(val_loss, epoch)
             self._epochs_without_improvement = 0
@@ -391,10 +425,15 @@ class Trainer:
         stop_reason = None
         epoch_loss = 0.0
         val_loss: float | None = None
+        val_auc: float | None = None
         learning_curve: list[dict[str, Any]] = []
 
         # Initialize early stopping and best checkpoint state
-        self._best_val_loss = float("inf")
+        # For val_auc (higher-is-better), start at -inf; for val_loss, start at +inf
+        if self.early_stopping_metric == "val_auc":
+            self._best_metric = float("-inf")
+        else:
+            self._best_metric = float("inf")
         self._best_epoch = -1
         self._epochs_without_improvement = 0
 
@@ -408,16 +447,23 @@ class Trainer:
                         "train_loss", epoch_loss, step=epoch
                     )
 
-                # Compute validation loss if splits are provided
+                # Compute validation metrics if splits are provided
                 if self.val_dataloader is not None:
-                    val_loss = self._evaluate_val()
+                    val_metrics = self._evaluate_val()
+                    val_loss = val_metrics["loss"]
+                    val_auc = val_metrics["auc"]
+
                     if self.tracking_manager:
                         self.tracking_manager.log_metric(
                             "val_loss", val_loss, step=epoch
                         )
+                        if val_auc is not None:
+                            self.tracking_manager.log_metric(
+                                "val_auc", val_auc, step=epoch
+                            )
 
                     # Check early stopping and save best checkpoint (only when validation set exists)
-                    if self._check_early_stopping(val_loss, epoch):
+                    if self._check_early_stopping(val_loss, val_auc, epoch):
                         stopped_early = True
                         stop_reason = "early_stopping"
                         break
@@ -428,6 +474,7 @@ class Trainer:
                         "epoch": epoch,
                         "train_loss": epoch_loss,
                         "val_loss": val_loss,
+                        "val_auc": val_auc,
                     })
 
                 # Check thermal status
@@ -450,6 +497,7 @@ class Trainer:
         result: dict[str, Any] = {
             "train_loss": epoch_loss,
             "val_loss": val_loss,
+            "val_auc": val_auc,
             "stopped_early": stopped_early,
             "stop_reason": stop_reason,
         }
@@ -529,14 +577,14 @@ class Trainer:
 
         return total_loss / max(num_batches, 1)
 
-    def _evaluate_val(self) -> float:
+    def _evaluate_val(self) -> dict[str, float | None]:
         """Evaluate model on validation set.
 
         Returns:
-            Average validation loss.
+            Dict with 'loss' (float) and 'auc' (float or None if single class).
         """
         metrics = self._evaluate_detailed(self.val_dataloader)
-        return metrics["loss"]
+        return {"loss": metrics["loss"], "auc": metrics.get("auc")}
 
     def _evaluate_detailed(
         self,
@@ -600,9 +648,20 @@ class Trainer:
 
             accuracy = (tp + tn) / max(tp + tn + fp + fn, 1)
 
+            # Compute AUC-ROC (requires both classes present)
+            auc: float | None = None
+            unique_classes = np.unique(target_binary)
+            if len(unique_classes) == 2:
+                try:
+                    auc = float(roc_auc_score(target_binary, preds))
+                except ValueError:
+                    # Edge case: sklearn may still fail
+                    auc = None
+
             return {
                 "loss": avg_loss,
                 "accuracy": accuracy,
+                "auc": auc,
                 "confusion_matrix": {
                     "tp": tp,
                     "tn": tn,
@@ -612,7 +671,7 @@ class Trainer:
                 "n_samples": len(preds),
             }
 
-        return {"loss": avg_loss, "accuracy": 0.0}
+        return {"loss": avg_loss, "accuracy": 0.0, "auc": None}
 
     def _save_checkpoint(self, epoch: int) -> None:
         """Save model checkpoint (legacy - used when no validation set).

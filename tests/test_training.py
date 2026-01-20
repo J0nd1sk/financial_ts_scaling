@@ -1100,3 +1100,188 @@ class TestEarlyStopping:
         # Should NOT stop early since there's no validation set
         assert result["stopped_early"] is False
         assert result.get("stop_reason") is None
+
+    def test_early_stopping_metric_defaults_to_val_loss(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Test that early_stopping_metric defaults to 'val_loss'."""
+        from src.data.dataset import ChunkSplitter
+
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        trainer = Trainer(
+            experiment_config=split_experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.001,
+            epochs=2,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            split_indices=splits,
+        )
+
+        assert trainer.early_stopping_metric == "val_loss"
+
+    def test_early_stopping_metric_accepts_val_auc(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Test that early_stopping_metric='val_auc' is accepted."""
+        from src.data.dataset import ChunkSplitter
+
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        trainer = Trainer(
+            experiment_config=split_experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.001,
+            epochs=2,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            split_indices=splits,
+            early_stopping_metric="val_auc",
+        )
+
+        assert trainer.early_stopping_metric == "val_auc"
+
+    def test_early_stopping_metric_rejects_invalid_value(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Test that invalid early_stopping_metric raises ValueError."""
+        from src.data.dataset import ChunkSplitter
+
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        with pytest.raises(ValueError, match="early_stopping_metric"):
+            Trainer(
+                experiment_config=split_experiment_config,
+                model_config=model_config,
+                batch_size=8,
+                learning_rate=0.001,
+                epochs=2,
+                device="cpu",
+                checkpoint_dir=tmp_path,
+                thermal_callback=mock_thermal_normal,
+                split_indices=splits,
+                early_stopping_metric="invalid_metric",
+            )
+
+    def test_early_stopping_with_val_auc_completes_training(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Test that training completes with val_auc early stopping metric."""
+        from src.data.dataset import ChunkSplitter
+
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        trainer = Trainer(
+            experiment_config=split_experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.001,
+            epochs=3,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            split_indices=splits,
+            early_stopping_metric="val_auc",
+            early_stopping_patience=2,
+        )
+
+        result = trainer.train()
+
+        # Should complete without error
+        assert "val_loss" in result
+        # val_auc should be computed (may be None if single class)
+        assert "val_auc" in result
+
+    def test_early_stopping_val_auc_triggers_on_no_improvement(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Test that AUC-based early stopping triggers when AUC doesn't improve."""
+        from src.data.dataset import ChunkSplitter
+
+        splitter = ChunkSplitter(
+            total_days=500,
+            context_length=10,
+            horizon=3,
+            val_ratio=0.15,
+            test_ratio=0.15,
+            seed=42,
+        )
+        splits = splitter.split()
+
+        trainer = Trainer(
+            experiment_config=split_experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.0,  # Zero LR = no learning = AUC won't improve
+            epochs=10,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            split_indices=splits,
+            early_stopping_metric="val_auc",
+            early_stopping_patience=2,
+            early_stopping_min_delta=0.001,
+        )
+
+        result = trainer.train()
+
+        # Should have stopped early due to AUC not improving
+        assert result["stopped_early"] is True
+        assert result["stop_reason"] == "early_stopping"
