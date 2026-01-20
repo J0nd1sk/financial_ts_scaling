@@ -1,102 +1,86 @@
-# Session Handoff - 2026-01-20 ~06:30 UTC
+# Session Handoff - 2026-01-19 ~14:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `c179b96` docs: document feature normalization bug as root cause
+- **Last commit**: `c816e4f` feat: add Z-score feature normalization to fix distribution shift
 - **Uncommitted changes**: None (clean)
-- **Ahead of origin**: 7 commits (not pushed)
+- **Ahead of origin**: 9 commits (not pushed)
 
 ### Task Status
-- **Phase 6A Investigation**: ROOT CAUSE FOUND AND DOCUMENTED
-- **Next action**: Implement feature normalization fix
+- **Feature Normalization**: ✅ COMPLETE AND VALIDATED
+- **Next action**: Integrate normalization into HPO scripts OR re-run Phase 6A
 
 ---
 
-## CRITICAL FINDING
+## COMPLETED THIS SESSION
 
-### THE BUG: Features Not Normalized
+### Z-Score Feature Normalization Implementation
 
-Models appeared to show "prior collapse" (~0.52 predictions) on 2024-2025 data. Investigation revealed:
+**Files changed:**
+- `src/data/dataset.py`: +118 lines
+  - `BOUNDED_FEATURES` constant (RSI, StochRSI, ADX, BB%B)
+  - `compute_normalization_params(df, train_end_row)` → dict of (mean, std)
+  - `normalize_dataframe(df, norm_params)` → normalized DataFrame
+- `src/training/trainer.py`: +17 lines
+  - Added `norm_params` parameter to `__init__`
+  - Apply normalization in `_create_dataloader()` and `_create_split_dataloaders()`
+  - Save `norm_params` in checkpoints
+- `tests/test_dataset.py`: +166 lines (8 new tests)
+- `scripts/validate_normalization.py`: validation script (new)
 
-1. Models output ~0.09 on val data (2016-2021) - **correct for 14% positive rate**
-2. Models output ~0.52 on recent data (2024-2026) - **out-of-distribution confusion**
-3. **Root cause**: Massive feature distribution shift due to no normalization
-
-### Feature Distribution Shift
-
-| Feature | Train (1994-2016) | Recent (2024-2026) | Shift |
-|---------|-------------------|---------------------|-------|
-| Close | 88.57 | 575.89 | **6.5x** |
-| OBV | 4.0B | 16.6B | **4x** |
-| ATR | 1.23 | 6.64 | **5x** |
-| MACD | 0.20 | 3.23 | **16x** |
-| RSI | 54.41 | 58.32 | ~1x (bounded) |
-
-### Implications
-- Model DID learn on training distribution (val_loss=0.203 is valid)
-- All Phase 6A "failures" were measuring preprocessing failure
-- The 19-sample val set issue was a distraction
-- RSI stability confirms normalization is the root cause
-
----
-
-## Documentation Created
-
-- `docs/phase6a_feature_normalization_bug.md` - Comprehensive root cause analysis
-- Memory: `Bug_FeatureNormalization_Phase6A`, `Solution_FeatureNormalization_Options`
+**Validation Results:**
+- AUC-ROC: 0.6488 (real discrimination)
+- Prediction range: [0.059, 0.306] (was [0.518, 0.524])
+- Mean: 0.1089 (matches ~22% positive rate)
+- All 425 tests passing
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-20
-- Result: **417 passed**
+- Last `make test`: 2026-01-19
+- Result: **425 passed**
 
 ---
 
 ## Next Session Should
 
-### Immediate Priority
-1. **Implement Option A: Z-score normalization**
-   ```python
-   train_mean = X_train.mean(axis=0)
-   train_std = X_train.std(axis=0)
-   X_normalized = (X - train_mean) / (train_std + epsilon)
-   ```
-2. **Regenerate dataset** with normalized features
-3. **Validate fix** - re-run 2M_h1, check predictions on 2025 data
+### Option A: Quick Re-validation of Phase 6A
+1. Update ONE HPO script to use normalization
+2. Run a few trials to confirm improved results
+3. If successful, regenerate all 12 HPO scripts
 
-### If Successful
-4. Plan re-run of Phase 6A experiments with normalized features
-5. Consider Option E (hybrid) for production
+### Option B: Full HPO Script Update
+1. Modify `src/training/hpo.py` to compute and use norm_params
+2. Regenerate all 12 HPO scripts
+3. Re-run Phase 6A experiments from scratch
 
-### Deprioritized (Until Normalization Fixed)
-- Validation set size improvements (ChunkSplitter changes)
-- Loss function experiments (SoftAUC vs BCE)
-- Look-ahead bias audit
+### How to Use Normalization (for next session):
+```python
+from src.data.dataset import compute_normalization_params, normalize_dataframe
+
+# 1. Load data
+df = pd.read_parquet(data_path)
+
+# 2. Compute params from training portion (e.g., first 70%)
+train_end = int(len(df) * 0.70)
+norm_params = compute_normalization_params(df, train_end)
+
+# 3. Normalize all data
+df_norm = normalize_dataframe(df, norm_params)
+
+# 4. Pass to Trainer
+trainer = Trainer(..., norm_params=norm_params)
+```
 
 ---
 
-## Solution Options (Documented in docs/phase6a_feature_normalization_bug.md)
+## Memory Entities Updated
 
-| Option | Approach | Effort | Notes |
-|--------|----------|--------|-------|
-| A | Z-score normalization | ~50 lines | **Recommended first** |
-| D | Bounded features only | Medium | Most robust, requires re-engineering |
-| E | Hybrid | High | Best for production |
-
----
-
-## Memory Entities
-
-### This Session
-- `Bug_FeatureNormalization_Phase6A` - Root cause details
-- `Solution_FeatureNormalization_Options` - Fix options
-
-### Previous
-- `Test1_BCE_vs_SoftAUC_Plan` - Results (invalid due to bug)
-- `Test2_AUC_Early_Stopping_Plan` - Results (invalid due to bug)
+- `Plan_ZScoreNormalization` - Implementation plan (completed)
+- `Bug_FeatureNormalization_Phase6A` - Root cause (from previous session)
+- `Solution_FeatureNormalization_Options` - Options (Option A implemented)
 
 ---
 

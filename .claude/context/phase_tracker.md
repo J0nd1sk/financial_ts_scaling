@@ -324,16 +324,18 @@
   - ⏳ Task 6: Look-ahead bias audit (still valid, doesn't depend on val size)
   - **ROOT CAUSE FOUND**: ChunkSplitter contiguous mode = only 19 val samples
   - **All loss function tests need re-run after validation fix**
-- 🔄 **Validation Exploration Stage** (2026-01-20)
-  - Plan: `docs/phase6a_validation_exploration_plan.md`
-  - Tracker: `.claude/context/phase6a_exploration_tracker.md`
-  - ⏳ Phase 1: Validation strategy sweep (4 options: 19/38/500/125 samples)
-  - ⏳ Phase 2: Loss function sweep (5 options: BCE/pos_weight/Focal/SoftAUC/combo)
-  - ⏳ Phase 3: Early stopping sweep (val_loss vs val_auc)
-  - ⏳ Phase 4: Scale validation (2M/20M)
-  - ⏳ Full factorial: 40 experiments after sequential (~3-4 hours)
-  - **Code needed**: Time-based splitter, rolling splitter, FocalLoss, combined loss
-  - **Success criteria**: AUC >0.60, spread >10%, val/test correlation >0.7
+- ✅ **Feature Normalization Fix** (2026-01-19)
+  - Root cause: Features not normalized, causing 6-2657x distribution shift
+  - Solution: Z-score normalization with train-only stats
+  - Implementation: `compute_normalization_params()`, `normalize_dataframe()` in dataset.py
+  - Trainer modified to accept `norm_params`, saved in checkpoints
+  - Validation: AUC 0.6488, prediction range [0.06, 0.31] (was [0.518, 0.524])
+  - 8 new tests, 425 total passing
+  - Commit: `c816e4f`
+- 🔄 **Next: HPO Integration** (pending)
+  - Need to update `hpo.py` to compute and pass norm_params
+  - Need to regenerate 12 HPO scripts with normalization
+  - Then re-run Phase 6A experiments
 - ✅ **Research Paper Analysis Stage** (2026-01-19)
   - ✅ Comprehensive Phase 6A analysis document
   - ✅ Statistical analysis appendix (ANOVA, effect sizes)
