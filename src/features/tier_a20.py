@@ -106,6 +106,10 @@ def _compute_weekly_indicators(df: pd.DataFrame) -> pd.DataFrame:
         },
         index=weekly.index,
     )
+    # Shift forward by 1 week to eliminate look-ahead bias.
+    # Without this shift, Monday's indicator uses data from the current week (Mon-Fri),
+    # which is look-ahead bias. After shift, Monday of week N sees RSI from week N-1.
+    weekly_features = weekly_features.shift(1)
     daily_index = df["Date"]
     weekly_features = weekly_features.reindex(daily_index).ffill()
     # Align index with daily RangeIndex to avoid index union when concatenating features.
