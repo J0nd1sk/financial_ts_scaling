@@ -1,52 +1,153 @@
-# Session Handoff - 2026-01-20 ~04:30 UTC
+# Session Handoff - 2026-01-20 ~06:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `3c50b0a` (unchanged from session start)
-- **Uncommitted changes**: YES - need to commit
-- **Ahead of origin**: 5 commits (not pushed)
+- **Last commit**: `620eb59` feat: add AUC-based early stopping metric option
+- **Uncommitted changes**: YES - new doc file (see below)
+- **Ahead of origin**: 6 commits (not pushed)
 
-### What Was Done This Session
+### Task Status
+- **Phase 6A Investigation**: **TRUE ROOT CAUSE FOUND** - Feature normalization bug
+- **Previous hypotheses**: Prior collapse, small val set, loss function - all secondary issues
 
-1. **Test 1: BCE vs SoftAUC comparison** - SoftAUC WORSE (-5.8% AUC)
-2. **Test 2: AUC-based early stopping** - Made things WORSE (stopped at epoch 1)
-3. **Root cause identified**: Val set only 19 samples (ChunkSplitter contiguous mode)
+---
 
-### Files Modified (UNCOMMITTED)
+## CRITICAL DISCOVERY (This Session)
 
-| File | Change |
-|------|--------|
-| `src/training/trainer.py` | Added `early_stopping_metric` param, AUC computation |
-| `tests/test_training.py` | 5 new tests for AUC early stopping |
-| `experiments/compare_bce_vs_soft_auc.py` | NEW - comparison script |
-| `.claude/context/soft_auc_validation_plan.md` | Updated with Test 1 & 2 results |
+### THE ACTUAL BUG: Features Not Normalized
+
+**Discovery path**:
+1. Investigated why models output ~0.52 on 2025 data
+2. Found models output ~0.09 on 2016-2021 val data (correct for 14% positive rate!)
+3. Checked feature distributions across time periods
+4. **FOUND**: Massive distribution shift in unnormalized features
+
+### Feature Distribution Shift
+
+| Feature | Train (1994-2016) | Recent (2024-2026) | Shift |
+|---------|-------------------|---------------------|-------|
+| Close | 88.57 | 575.89 | **6.5x** |
+| OBV | 4.0B | 16.6B | **4x** |
+| ATR | 1.23 | 6.64 | **5x** |
+| MACD | 0.20 | 3.23 | **16x** |
+| RSI | 54.41 | 58.32 | ~1x (bounded) |
+
+### What This Means
+- Model DID learn on training distribution (val_loss=0.203 is valid)
+- Model outputs "I don't know" (0.52) for out-of-distribution inputs
+- All Phase 6A "failures" were measuring preprocessing failure, not model failure
+- The 19-sample val set was a distraction from the real bug
+- RSI stability (naturally 0-100 bounded) confirms normalization is the issue
+
+### Documented In
+- `docs/phase6a_feature_normalization_bug.md` (NEW - comprehensive analysis)
+- Memory: `Bug_FeatureNormalization_Phase6A`, `Solution_FeatureNormalization_Options`
+
+---
+
+## Previous Findings (Now Secondary)
+
+### 1. Double-Sigmoid Bug (FIXED earlier)
+- Location: `scripts/evaluate_final_models.py:256-258`
+- Model outputs probabilities, script applied sigmoid again
+
+### 2. Validation Set Too Small (19 samples)
+- ChunkSplitter contiguous mode issue
+- Now deprioritized - fix normalization first
+
+### 3. Prior Collapse Hypothesis
+- Was wrong interpretation - model learned fine on training distribution
+- "Collapse" is actually out-of-distribution behavior
+
+---
 
 ## Test Status
 - Last `make test`: 2026-01-20
 - Result: **417 passed**
 
-## CRITICAL BLOCKER
+---
 
-**Validation set too small (19 samples)** - ChunkSplitter contiguous mode issue
+## Files Modified/Created This Session
 
-Options to fix:
-- A: Increase val_ratio (0.30 vs 0.15)
-- B: Change ChunkSplitter mode for overlapping val samples
-- C: Time-based splits
+### New Files (Untracked)
+```
+docs/phase6a_feature_normalization_bug.md      # ROOT CAUSE DOCUMENTATION (NEW)
+docs/phase6a_gap_analysis.md
+docs/phase6a_validation_exploration_plan.md
+.claude/context/phase6a_gap_checklist.md
+.claude/context/phase6a_exploration_tracker.md
+experiments/compare_bce_vs_soft_auc.py
+```
 
-## Next Session Should
+### Modified Files (Committed)
+```
+src/training/trainer.py                         # AUC early stopping
+tests/test_training.py                          # 5 new tests
+.claude/context/soft_auc_validation_plan.md     # Test results
+```
 
-1. **Commit changes** (417 tests pass, clean implementation)
-2. **Investigate ChunkSplitter** to understand why contiguous mode gives 19 val samples
-3. **Fix val set size** before any more loss function experiments
-4. Test 3: Look-ahead bias audit (still pending)
+---
 
 ## Memory Entities Updated
 
-- `Test1_BCE_vs_SoftAUC_Plan` - Results added
-- `Test2_AUC_Early_Stopping_Plan` - Results added
+### Created This Session
+- `Bug_FeatureNormalization_Phase6A` - TRUE root cause
+- `Solution_FeatureNormalization_Options` - Proposed fixes
+
+### From Earlier This Session
+- `Test1_BCE_vs_SoftAUC_Plan` - Results (now known to be invalid)
+- `Test2_AUC_Early_Stopping_Plan` - Results (now known to be invalid)
+
+---
+
+## Next Session Should
+
+### Immediate Priority
+1. **Commit doc changes** (normalization bug documentation)
+2. **Implement Option A: Z-score normalization** (~50 lines)
+3. **Regenerate dataset** with normalized features
+4. **Validate fix** - re-run one model, check predictions on 2025 data
+
+### Then
+5. **If successful** - plan re-run of Phase 6A experiments
+6. **Consider Option E (hybrid)** for production
+
+### Deprioritized (Until Normalization Fixed)
+- Validation set size improvements
+- Loss function experiments (SoftAUC vs BCE)
+- Look-ahead bias audit
+
+---
+
+## Proposed Solutions (Priority Order)
+
+### Option A: Z-Score Normalization (RECOMMENDED FIRST)
+```python
+train_mean = X_train.mean(axis=0)
+train_std = X_train.std(axis=0)
+X_normalized = (X - train_mean) / (train_std + epsilon)
+```
+Simple, standard practice, ~50 lines of code
+
+### Option D: Bounded Features Only
+Replace raw prices with RSI, %B, percentiles, z-scores
+No normalization params needed, requires feature re-engineering
+
+### Option E: Hybrid (PRODUCTION)
+Percent changes for prices, z-scores for indicators, keep oscillators as-is
+
+---
+
+## Commands to Run First
+```bash
+source venv/bin/activate
+make test
+git status
+```
+
+---
 
 ## User Preferences (Authoritative)
 
@@ -62,3 +163,4 @@ Options to fix:
 ### Documentation Philosophy
 - Flat docs/ structure (no subdirs except research_paper/, archive/)
 - Precision in language - never reduce fidelity
+- Mark temporary docs clearly (will archive after use)

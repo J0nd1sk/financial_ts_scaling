@@ -315,14 +315,25 @@
     - AUC-ROC 0.53-0.65 (signal exists but compressed)
   - Results: `outputs/results/phase6a_backtest_2025.csv`
   - Analysis: `docs/phase6a_backtest_analysis.md`
-- 🔄 **Loss Function Investigation Stage** (2026-01-20)
-  - ✅ Task 1: Implement SoftAUCLoss (TDD, 11 tests, commit 7f65bba)
+- ✅ **Loss Function Investigation Stage** (2026-01-20) - BLOCKED BY VALIDATION SIZE
+  - ✅ Task 1: Implement SoftAUCLoss (TDD, 11 tests)
   - ✅ Task 2: Add criterion parameter to Trainer
   - ✅ Task 3: Initial validation - 7.8x spread improvement
-  - ⏳ Task 4: AUC comparison on 2025 test data (BCE vs SoftAUC)
-  - ⏳ Task 5: Implement AUC-based early stopping
-  - ⏳ Task 6: Look-ahead bias audit
-  - Plan: `.claude/context/soft_auc_validation_plan.md`
+  - ✅ Task 4: Test 1 - BCE vs SoftAUC → SoftAUC -5.8% worse (INVALID - 19 sample val)
+  - ✅ Task 5: Test 2 - AUC early stopping → Stopped epoch 1 (INVALID - 19 sample val)
+  - ⏳ Task 6: Look-ahead bias audit (still valid, doesn't depend on val size)
+  - **ROOT CAUSE FOUND**: ChunkSplitter contiguous mode = only 19 val samples
+  - **All loss function tests need re-run after validation fix**
+- 🔄 **Validation Exploration Stage** (2026-01-20)
+  - Plan: `docs/phase6a_validation_exploration_plan.md`
+  - Tracker: `.claude/context/phase6a_exploration_tracker.md`
+  - ⏳ Phase 1: Validation strategy sweep (4 options: 19/38/500/125 samples)
+  - ⏳ Phase 2: Loss function sweep (5 options: BCE/pos_weight/Focal/SoftAUC/combo)
+  - ⏳ Phase 3: Early stopping sweep (val_loss vs val_auc)
+  - ⏳ Phase 4: Scale validation (2M/20M)
+  - ⏳ Full factorial: 40 experiments after sequential (~3-4 hours)
+  - **Code needed**: Time-based splitter, rolling splitter, FocalLoss, combined loss
+  - **Success criteria**: AUC >0.60, spread >10%, val/test correlation >0.7
 - ✅ **Research Paper Analysis Stage** (2026-01-19)
   - ✅ Comprehensive Phase 6A analysis document
   - ✅ Statistical analysis appendix (ANOVA, effect sizes)
