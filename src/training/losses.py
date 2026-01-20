@@ -76,3 +76,134 @@ class SoftAUCLoss(nn.Module):
         loss = torch.sigmoid(self.gamma * diff).mean()
 
         return loss
+
+
+class FocalLoss(nn.Module):
+    """Focal Loss for binary classification with class imbalance.
+
+    Focal Loss down-weights easy examples and focuses learning on hard examples.
+    This addresses class imbalance by reducing the contribution of well-classified
+    samples to the total loss.
+
+    Formula: FL(p_t) = -α_t * (1 - p_t)^γ * log(p_t)
+
+    Where:
+        p_t = p if y=1, else 1-p (probability of correct class)
+        α_t = α if y=1, else 1-α (class weight)
+        γ = focusing parameter (higher = more focus on hard examples)
+
+    Reference: Lin et al. "Focal Loss for Dense Object Detection" (2017)
+
+    Args:
+        gamma: Focusing parameter. Higher values down-weight easy examples more.
+            γ=0 is equivalent to weighted BCE. Default 2.0 is standard.
+        alpha: Weight for positive class. α=0.25 is common for imbalanced data.
+            α=0.5 gives equal weight to both classes. Default 0.25.
+        eps: Small constant for numerical stability. Default 1e-7.
+
+    Example:
+        >>> loss_fn = FocalLoss(gamma=2.0, alpha=0.25)
+        >>> predictions = torch.tensor([0.9, 0.8, 0.2, 0.1])
+        >>> targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+        >>> loss = loss_fn(predictions, targets)
+    """
+
+    def __init__(
+        self, gamma: float = 2.0, alpha: float = 0.25, eps: float = 1e-7
+    ) -> None:
+        super().__init__()
+        self.gamma = gamma
+        self.alpha = alpha
+        self.eps = eps
+
+    def forward(self, predictions: Tensor, targets: Tensor) -> Tensor:
+        """Compute focal loss.
+
+        Args:
+            predictions: Model predictions (probabilities), shape (N,) or (N, 1).
+            targets: Binary targets (0 or 1), shape (N,) or (N, 1).
+
+        Returns:
+            Scalar loss tensor.
+        """
+        # Flatten to 1D
+        predictions = predictions.view(-1)
+        targets = targets.view(-1)
+
+        # Clamp predictions for numerical stability
+        predictions = predictions.clamp(self.eps, 1 - self.eps)
+
+        # Compute p_t (probability of correct class)
+        # p_t = p if y=1, else 1-p
+        p_t = predictions * targets + (1 - predictions) * (1 - targets)
+
+        # Compute α_t (class weight)
+        # α_t = α if y=1, else 1-α
+        alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
+
+        # Focal term: (1 - p_t)^γ
+        # Down-weights easy examples (high p_t) and up-weights hard examples (low p_t)
+        focal_weight = (1 - p_t) ** self.gamma
+
+        # Cross-entropy term: -log(p_t)
+        ce = -torch.log(p_t)
+
+        # Combine: α_t * (1 - p_t)^γ * (-log(p_t))
+        loss = alpha_t * focal_weight * ce
+
+        return loss.mean()
+
+
+class LabelSmoothingBCELoss(nn.Module):
+    """Binary Cross-Entropy with Label Smoothing.
+
+    Label smoothing prevents overconfident predictions by softening the target
+    labels. Instead of hard 0/1 targets, uses soft targets that are slightly
+    pulled toward 0.5.
+
+    For target y and smoothing parameter ε:
+        - y=1 becomes 1-ε (e.g., 0.9 for ε=0.1)
+        - y=0 becomes ε (e.g., 0.1 for ε=0.1)
+
+    This encourages the model to be less certain, which can improve calibration
+    and reduce overfitting.
+
+    Args:
+        epsilon: Smoothing parameter in [0, 1]. ε=0 is standard BCE.
+            Typical values are 0.1 or 0.2. Default 0.1.
+
+    Example:
+        >>> loss_fn = LabelSmoothingBCELoss(epsilon=0.1)
+        >>> predictions = torch.tensor([0.9, 0.8, 0.2, 0.1])
+        >>> targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+        >>> loss = loss_fn(predictions, targets)
+    """
+
+    def __init__(self, epsilon: float = 0.1) -> None:
+        super().__init__()
+        if not 0.0 <= epsilon <= 1.0:
+            raise ValueError(f"epsilon must be in [0, 1], got {epsilon}")
+        self.epsilon = epsilon
+
+    def forward(self, predictions: Tensor, targets: Tensor) -> Tensor:
+        """Compute label-smoothed BCE loss.
+
+        Args:
+            predictions: Model predictions (probabilities), shape (N,) or (N, 1).
+            targets: Binary targets (0 or 1), shape (N,) or (N, 1).
+
+        Returns:
+            Scalar loss tensor.
+        """
+        # Flatten to 1D
+        predictions = predictions.view(-1)
+        targets = targets.view(-1)
+
+        # Apply label smoothing
+        # y=1 -> 1-ε, y=0 -> ε
+        smoothed_targets = targets * (1 - self.epsilon) + (1 - targets) * self.epsilon
+
+        # Standard BCE with smoothed targets
+        loss = nn.functional.binary_cross_entropy(predictions, smoothed_targets)
+
+        return loss

@@ -279,3 +279,271 @@ class TestTrainerWithCustomCriterion:
         )
 
         assert isinstance(trainer.criterion, nn.BCELoss)
+
+
+# =============================================================================
+# FocalLoss Tests
+# =============================================================================
+
+
+class TestFocalLossBasic:
+    """Basic functionality tests for FocalLoss."""
+
+    def test_focal_loss_balanced_data_returns_moderate_loss(self):
+        """Test FocalLoss returns reasonable value for balanced random data."""
+        from src.training.losses import FocalLoss
+
+        torch.manual_seed(42)
+        loss_fn = FocalLoss(gamma=2.0, alpha=0.25)
+
+        # 50/50 positive/negative, random predictions
+        predictions = torch.rand(100)
+        targets = torch.cat([torch.ones(50), torch.zeros(50)])
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert loss.item() > 0, "Loss should be positive"
+
+    def test_focal_loss_perfect_separation_near_zero(self):
+        """Test loss is low when predictions are confident and correct."""
+        from src.training.losses import FocalLoss
+
+        loss_fn = FocalLoss(gamma=2.0, alpha=0.25)
+
+        # High confidence correct predictions
+        predictions = torch.tensor([0.95, 0.90, 0.92, 0.05, 0.08, 0.03])
+        targets = torch.tensor([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+
+        # Focal loss should be very small for confident correct predictions
+        assert loss.item() < 0.1, f"Expected loss < 0.1 for perfect separation, got {loss.item()}"
+
+    def test_focal_loss_reversed_separation_high_loss(self):
+        """Test loss is high when predictions are confidently wrong."""
+        from src.training.losses import FocalLoss
+
+        loss_fn = FocalLoss(gamma=2.0, alpha=0.25)
+
+        # High confidence WRONG predictions
+        predictions = torch.tensor([0.05, 0.08, 0.03, 0.95, 0.90, 0.92])
+        targets = torch.tensor([1.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+
+        # Should be much higher than perfect separation
+        assert loss.item() > 0.5, f"Expected loss > 0.5 for wrong predictions, got {loss.item()}"
+
+    def test_focal_loss_focuses_on_hard_examples(self):
+        """Test that hard examples contribute more to loss than easy ones."""
+        from src.training.losses import FocalLoss
+
+        loss_fn = FocalLoss(gamma=2.0, alpha=0.5)  # alpha=0.5 for balanced weighting
+
+        # Easy example: high confidence correct
+        easy_pred = torch.tensor([0.95])
+        easy_target = torch.tensor([1.0])
+        easy_loss = loss_fn(easy_pred, easy_target)
+
+        # Hard example: low confidence (near 0.5)
+        hard_pred = torch.tensor([0.55])
+        hard_target = torch.tensor([1.0])
+        hard_loss = loss_fn(hard_pred, hard_target)
+
+        # Hard example should have higher loss
+        assert hard_loss.item() > easy_loss.item(), \
+            f"Hard example loss ({hard_loss.item()}) should exceed easy ({easy_loss.item()})"
+
+
+class TestFocalLossGamma:
+    """Tests for gamma parameter behavior."""
+
+    def test_focal_loss_gamma_zero_proportional_to_bce(self):
+        """Test that gamma=0 removes focal modulation (proportional to BCE)."""
+        from src.training.losses import FocalLoss
+
+        torch.manual_seed(42)
+        predictions = torch.rand(50)
+        targets = torch.cat([torch.ones(25), torch.zeros(25)])
+
+        # Focal loss with gamma=0, alpha=0.5 (balanced class weighting)
+        # With alpha=0.5, FL = 0.5 * (-log(p_t)), so FL = BCE * 0.5
+        focal_loss_fn = FocalLoss(gamma=0.0, alpha=0.5)
+        focal_loss = focal_loss_fn(predictions, targets)
+
+        # Standard BCE
+        bce_loss_fn = nn.BCELoss()
+        bce_loss = bce_loss_fn(predictions, targets)
+
+        # With alpha=0.5, focal loss should be exactly half of BCE
+        expected_ratio = 0.5
+        actual_ratio = focal_loss.item() / bce_loss.item()
+
+        assert abs(actual_ratio - expected_ratio) < 0.01, \
+            f"gamma=0, alpha=0.5 should give FL/BCE = 0.5, got {actual_ratio:.4f}"
+
+
+class TestFocalLossEdgeCases:
+    """Edge case tests for FocalLoss."""
+
+    def test_focal_loss_no_positive_handles_gracefully(self):
+        """Test loss handles batch with no positive samples."""
+        from src.training.losses import FocalLoss
+
+        loss_fn = FocalLoss(gamma=2.0, alpha=0.25)
+
+        predictions = torch.tensor([0.3, 0.4, 0.5])
+        targets = torch.tensor([0.0, 0.0, 0.0])  # All negative
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+    def test_focal_loss_no_negative_handles_gracefully(self):
+        """Test loss handles batch with no negative samples."""
+        from src.training.losses import FocalLoss
+
+        loss_fn = FocalLoss(gamma=2.0, alpha=0.25)
+
+        predictions = torch.tensor([0.7, 0.8, 0.9])
+        targets = torch.tensor([1.0, 1.0, 1.0])  # All positive
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+
+class TestFocalLossGradient:
+    """Gradient flow tests for FocalLoss."""
+
+    def test_focal_loss_gradient_flows(self):
+        """Test gradients propagate through FocalLoss."""
+        from src.training.losses import FocalLoss
+
+        loss_fn = FocalLoss(gamma=2.0, alpha=0.25)
+
+        predictions = torch.tensor([0.7, 0.6, 0.3, 0.2], requires_grad=True)
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+        loss.backward()
+
+        assert predictions.grad is not None, "Gradients should flow to predictions"
+        assert not torch.all(predictions.grad == 0), "Gradients should be non-zero"
+
+
+# =============================================================================
+# LabelSmoothingBCELoss Tests
+# =============================================================================
+
+
+class TestLabelSmoothingBCELossBasic:
+    """Basic functionality tests for LabelSmoothingBCELoss."""
+
+    def test_label_smoothing_returns_tensor(self):
+        """Test LabelSmoothingBCELoss returns a scalar tensor."""
+        from src.training.losses import LabelSmoothingBCELoss
+
+        torch.manual_seed(42)
+        loss_fn = LabelSmoothingBCELoss(epsilon=0.1)
+
+        predictions = torch.rand(100)
+        targets = torch.cat([torch.ones(50), torch.zeros(50)])
+
+        loss = loss_fn(predictions, targets)
+
+        assert isinstance(loss, torch.Tensor), "Loss should be a tensor"
+        assert loss.dim() == 0, "Loss should be a scalar"
+        assert not torch.isnan(loss), "Loss should not be NaN"
+
+    def test_label_smoothing_epsilon_zero_equals_bce(self):
+        """Test that epsilon=0 produces standard BCE."""
+        from src.training.losses import LabelSmoothingBCELoss
+
+        torch.manual_seed(42)
+        predictions = torch.rand(50)
+        targets = torch.cat([torch.ones(25), torch.zeros(25)])
+
+        # Label smoothing with epsilon=0 (no smoothing)
+        smooth_loss_fn = LabelSmoothingBCELoss(epsilon=0.0)
+        smooth_loss = smooth_loss_fn(predictions, targets)
+
+        # Standard BCE
+        bce_loss_fn = nn.BCELoss()
+        bce_loss = bce_loss_fn(predictions, targets)
+
+        assert abs(smooth_loss.item() - bce_loss.item()) < 1e-6, \
+            f"epsilon=0 should match BCE: smooth={smooth_loss.item()}, bce={bce_loss.item()}"
+
+    def test_label_smoothing_reduces_confidence_penalty(self):
+        """Test that label smoothing reduces penalty for moderate confidence."""
+        from src.training.losses import LabelSmoothingBCELoss
+
+        # Confident prediction that matches target
+        predictions = torch.tensor([0.99])
+        targets = torch.tensor([1.0])
+
+        # Without smoothing: BCE penalizes being "too confident" less
+        bce_loss = nn.BCELoss()(predictions, targets)
+
+        # With smoothing: target becomes 0.9, so p=0.99 is slightly overconfident
+        smooth_loss = LabelSmoothingBCELoss(epsilon=0.1)(predictions, targets)
+
+        # Smoothed loss should be higher for very confident predictions
+        # because the smoothed target is 0.9, not 1.0
+        assert smooth_loss.item() > bce_loss.item(), \
+            f"Label smoothing should penalize overconfidence: smooth={smooth_loss.item()}, bce={bce_loss.item()}"
+
+
+class TestLabelSmoothingBCELossEdgeCases:
+    """Edge case tests for LabelSmoothingBCELoss."""
+
+    def test_label_smoothing_no_positive_handles_gracefully(self):
+        """Test loss handles batch with no positive samples."""
+        from src.training.losses import LabelSmoothingBCELoss
+
+        loss_fn = LabelSmoothingBCELoss(epsilon=0.1)
+
+        predictions = torch.tensor([0.3, 0.4, 0.5])
+        targets = torch.tensor([0.0, 0.0, 0.0])  # All negative
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+    def test_label_smoothing_no_negative_handles_gracefully(self):
+        """Test loss handles batch with no negative samples."""
+        from src.training.losses import LabelSmoothingBCELoss
+
+        loss_fn = LabelSmoothingBCELoss(epsilon=0.1)
+
+        predictions = torch.tensor([0.7, 0.8, 0.9])
+        targets = torch.tensor([1.0, 1.0, 1.0])  # All positive
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+
+class TestLabelSmoothingBCELossGradient:
+    """Gradient flow tests for LabelSmoothingBCELoss."""
+
+    def test_label_smoothing_gradient_flows(self):
+        """Test gradients propagate through LabelSmoothingBCELoss."""
+        from src.training.losses import LabelSmoothingBCELoss
+
+        loss_fn = LabelSmoothingBCELoss(epsilon=0.1)
+
+        predictions = torch.tensor([0.7, 0.6, 0.3, 0.2], requires_grad=True)
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+        loss.backward()
+
+        assert predictions.grad is not None, "Gradients should flow to predictions"
+        assert not torch.all(predictions.grad == 0), "Gradients should be non-zero"
