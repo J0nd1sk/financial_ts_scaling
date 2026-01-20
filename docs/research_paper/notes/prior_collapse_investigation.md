@@ -119,12 +119,17 @@ self.criterion = nn.BCELoss()  # No pos_weight
 3. **Add discrimination objective**: Margin-based, contrastive, or AUC loss
 4. **Post-hoc calibration**: Temperature scaling or Platt scaling
 
-### Loss Functions Under Investigation
+### Loss Functions Tested
 
-Currently testing (parallel terminal):
-- **AUC loss**: Directly optimizes ranking (what we actually care about)
-- **Margin-based loss**: Forces separation between positive/negative samples
-- **Contrastive loss**: Learns discriminative embeddings
+**RESULT (2026-01-20): Soft AUC loss WINS**
+
+| Loss Function | Result |
+|---------------|--------|
+| **Soft AUC** | **WINNER** - directly optimizes ranking |
+| Margin-based | Tested |
+| Contrastive | Tested |
+
+Soft AUC directly optimizes what we care about (ranking/discrimination) rather than calibration. This addresses the core problem: BCE-family losses don't require discrimination.
 
 ---
 
@@ -152,10 +157,11 @@ The "inverse scaling" measured speed of convergence to a degenerate solution (pr
 
 ## Next Steps
 
-1. Complete loss function experiments (running in parallel terminal)
-2. Select best loss function based on AUC and prediction spread
-3. Decide: Post-hoc calibration vs. full retraining
-4. If retraining: Consider re-running HPO with new loss
+1. ~~Complete loss function experiments~~ **DONE - Soft AUC wins**
+2. ~~Select best loss function~~ **DONE - Soft AUC**
+3. Decide: Post-hoc calibration vs. full retraining with Soft AUC
+4. If retraining: Implement Soft AUC loss in trainer, re-run HPO
+5. Consider: Should paper include the BCE failure + Soft AUC fix narrative?
 
 ---
 

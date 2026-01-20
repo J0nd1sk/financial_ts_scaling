@@ -140,4 +140,21 @@ Small positive correlations exist but are unexploitable due to the narrow predic
 
 ## Conclusion
 
-The Phase 6A models learned meaningful predictive signal (AUC-ROC > 0.5), but suffer from severe probability collapse that makes them practically unusable for confidence-filtered trading strategies. Investigation into raw logits and calibration methods is the critical next step.
+~~The Phase 6A models learned meaningful predictive signal (AUC-ROC > 0.5), but suffer from severe probability collapse that makes them practically unusable for confidence-filtered trading strategies.~~
+
+**UPDATED (2026-01-19)**: Root cause identified as **prior collapse** - models learn to predict the class prior for all samples. This is a mathematically correct but practically useless solution that BCE loss allows.
+
+Investigation ongoing into alternative loss functions:
+- Margin-based loss (forces separation)
+- AUC loss (directly optimizes ranking)
+- Post-hoc calibration (temperature/Platt scaling)
+
+See: `docs/research_paper/notes/prior_collapse_investigation.md`
+
+## Memory Entities
+
+- `Phase6A_DoubleSigmoidBug`
+- `Phase6A_PriorCollapse_RootCause`
+- `Phase6A_ArchitecturalIssues`
+- `Phase6A_FixesAttempted`
+- `Phase6A_ProposedFixes`

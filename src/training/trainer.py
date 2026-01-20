@@ -84,6 +84,7 @@ class Trainer:
         accumulation_steps: int = 1,
         early_stopping_patience: int | None = None,
         early_stopping_min_delta: float = 0.001,
+        criterion: nn.Module | None = None,
     ) -> None:
         """Initialize the trainer.
 
@@ -105,6 +106,8 @@ class Trainer:
                 stopping. None (default) disables early stopping.
             early_stopping_min_delta: Minimum improvement in val_loss to count
                 as an improvement. Default 0.001.
+            criterion: Loss function to use. If None (default), uses BCELoss.
+                Can pass custom loss like SoftAUCLoss for better calibration.
         """
         self.experiment_config = experiment_config
         self.batch_size = batch_size
@@ -142,8 +145,8 @@ class Trainer:
             self.model.parameters(), lr=learning_rate
         )
 
-        # Loss function (BCE for binary classification)
-        self.criterion = nn.BCELoss()
+        # Loss function (default BCE for binary classification)
+        self.criterion = criterion if criterion is not None else nn.BCELoss()
 
         # Create dataloaders (with seeded generator for reproducibility)
         if split_indices is not None:
