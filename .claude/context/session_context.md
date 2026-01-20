@@ -1,110 +1,100 @@
-# Session Handoff - 2026-01-20 ~14:00 UTC
+# Session Handoff - 2026-01-20 ~10:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `a777426` feat: add RevIN (Reversible Instance Normalization) to PatchTST
-- **Uncommitted changes**: 4 files (both terminals' work in progress)
-  - `src/data/dataset.py` - SimpleSplitter implementation (other terminal)
-  - `tests/test_dataset.py` - SimpleSplitter tests (other terminal)
-  - `scripts/test_revin_comparison.py` - Minor fix (this terminal)
-  - `outputs/revin_comparison/comparison_results.csv` - Results file
-- **Ahead of origin**: 11 commits (not pushed)
+- **Last commit**: `40ca9f9` feat: add SimpleSplitter to fix 19-sample validation bug
+- **Uncommitted changes**: None (clean)
+- **Ahead of origin**: 12 commits (not pushed)
 
 ### Task Status
-- **RevIN Implementation**: ✅ COMPLETE (this terminal)
-- **SimpleSplitter**: 🔄 IN PROGRESS (other terminal)
-- **Next**: Re-run RevIN comparison with SimpleSplitter
+- **Status**: SimpleSplitter + RevIN validation COMPLETE
+- **All tests passing**: 443 tests
 
 ---
 
-## COMPLETED THIS SESSION (RevIN Terminal)
+## Completed This Session
 
-### 1. RevIN Implementation
-- Added `RevIN` class to `src/models/patchtst.py` (~70 lines)
-- Added `use_revin` parameter to `PatchTST` and `Trainer`
-- 6 new unit tests, 431 total tests passing
-- Commit: `a777426`
-
-### 2. RevIN Comparison Test (with ChunkSplitter - 19 val samples)
-
-| Config | Z-score | RevIN | Val Loss | AUC | Spread |
-|--------|---------|-------|----------|-----|--------|
-| zscore_only | ✅ | ❌ | 0.762 | 0.716 | 0.700 |
-| revin_only | ❌ | ✅ | 0.382 | **0.471** | 0.124 |
-| **zscore_revin** | ✅ | ✅ | 0.707 | **0.739** | 0.247 |
-
-**Key Findings (need validation with larger sample):**
-- zscore_revin wins by AUC (0.739) - +3.2% over zscore_only
-- revin_only FAILS (AUC 0.471 < random) - RevIN needs pre-normalized inputs
-- Combining Z-score + RevIN is best approach
-
-**⚠️ CAVEAT**: Only 19 validation samples! Results need re-validation with SimpleSplitter.
-
-### 3. Memory Entities Created
-- `Plan_RevIN_Comparison_Test` - Planning decision
-- `RevIN_Comparison_Results` - Experiment results
-
----
-
-## IN PROGRESS (Other Terminal)
-
-### SimpleSplitter Implementation
-- Tests written: ~280 lines of TDD tests
-- Implementation: In progress in `src/data/dataset.py`
-- Expected val samples: ~670 (vs 19 with ChunkSplitter)
-
-**SimpleSplitter Design:**
-- Date-based contiguous splits (val_start, test_start)
-- Sliding window for ALL splits (train, val, test)
+### 1. SimpleSplitter Implementation (TDD)
+- Added `SimpleSplitter` class to `src/data/dataset.py` (~120 lines)
+- Date-based contiguous splits with sliding window for ALL regions
 - Strict containment: sample valid only if entire span within region
+- 11 new tests in `tests/test_dataset.py`
+
+### 2. RevIN Validation Re-run
+- Updated `scripts/test_revin_comparison.py` to use SimpleSplitter
+- Re-ran comparison with 442 val samples (was 19!)
+
+---
+
+## CRITICAL FINDING: RevIN Validation Results Reversed
+
+Previous conclusions with 19 samples were **completely wrong**:
+
+| Config | Old AUC (19 samples) | New AUC (442 samples) | Verdict |
+|--------|---------------------|----------------------|---------|
+| zscore_only | 0.716 | **0.476** | Was "best", actually worst |
+| revin_only | 0.471 | **0.667** | Was "worst", actually BEST |
+| zscore_revin | 0.739 | **0.515** | Combination hurts |
+
+### Key Insight
+- **RevIN alone is best** (per-instance normalization adapts to current price scale)
+- **Z-score preprocessing hurts** when combined with RevIN
+- Global Z-score anchors to historical stats; RevIN adapts per-sample
+
+### Normalization Explained
+| Method | Mechanism | Best for |
+|--------|-----------|----------|
+| Z-score | Global: `(x - train_mean) / train_std` | Stationary data |
+| RevIN | Per-instance: each window normalized by its own mean/std | Non-stationary (prices trending over decades) |
 
 ---
 
 ## Test Status
 - Last `make test`: 2026-01-20
-- Result: **431 passed** (after RevIN commit)
-- Note: SimpleSplitter tests will fail until implementation complete
+- Result: **443 passed** (was 431)
+- New tests: 12 SimpleSplitter tests
 
 ---
 
-## Next Session Should
-
-### Immediate
-1. **Wait for SimpleSplitter** to be committed by other terminal
-2. **Run `make test`** to verify SimpleSplitter passes
-3. **Update `test_revin_comparison.py`** to use SimpleSplitter instead of ChunkSplitter
-4. **Re-run RevIN comparison** with ~670 val samples
-5. **Analyze results** - confirm or revise findings
-
-### After Validation
-6. **Update HPO scripts** if zscore_revin confirmed as best
-7. **Consider architecture experiments** (layers, context length)
-
----
-
-## Files to Review
-
-| File | Status | Owner |
-|------|--------|-------|
-| `src/data/dataset.py` | Modified (SimpleSplitter) | Other terminal |
-| `tests/test_dataset.py` | Modified (SimpleSplitter tests) | Other terminal |
-| `scripts/test_revin_comparison.py` | Ready to update | This terminal |
-| `src/models/patchtst.py` | ✅ Committed | This terminal |
-| `src/training/trainer.py` | ✅ Committed | This terminal |
+## Files Modified This Session
+- `src/data/dataset.py`: +120 lines (SimpleSplitter class)
+- `tests/test_dataset.py`: +180 lines (11 test methods)
+- `scripts/test_revin_comparison.py`: ~10 lines (splitter swap)
+- `outputs/revin_comparison/comparison_results.csv`: Updated results
 
 ---
 
 ## Memory Entities Updated This Session
-- `Plan_RevIN_Comparison_Test` (created): Planning for RevIN implementation
-- `RevIN_Comparison_Results` (created): Comparison results (19 samples, need revalidation)
+- `Plan_SimpleSplitter_RevIN_Validation` (created): Planning decision
+- `Finding_RevIN_Validation_442Samples` (created): Research finding with reversed conclusions
 
 ## Memory Entities from Previous Sessions
-- `Bug_ChunkSplitter_19Samples` - Critical finding about val sample count
-- `Solution_SimpleSplitter_Design` - Approved SimpleSplitter design
-- `Bug_FeatureNormalization_Phase6A` - Root cause of distribution shift
-- `Plan_ZScoreNormalization` - Completed normalization fix
+- `Bug_ChunkSplitter_19Samples` - The bug we just fixed
+- `Solution_SimpleSplitter_Design` - Approved design we implemented
+- `Research_PatchTST_Official_Config` - Official hyperparameters
+- `Bug_FeatureNormalization_Phase6A` - Earlier normalization discovery
+
+---
+
+## Next Session Priorities
+
+### Immediate
+1. **Update HPO scripts** to use SimpleSplitter + RevIN only (no Z-score)
+2. **Re-run HPO** with proper validation (442 samples)
+3. Update phase_tracker.md with SimpleSplitter completion
+
+### Architecture Experiments (after foundation solid)
+4. Wide/shallow (2-6 layers) vs narrow/deep experiments
+5. Context length experiments (60 → 120 → 180)
+
+---
+
+## Data Versions
+- Raw manifest: SPY.parquet (8299 rows, 1993-2026)
+- Processed manifest: SPY_dataset_a20.parquet (8100 rows)
+- SimpleSplitter splits: Train 7277, Val 442, Test 201 samples
 
 ---
 
@@ -113,6 +103,7 @@
 source venv/bin/activate
 make test
 git status
+make verify
 ```
 
 ---
@@ -138,7 +129,7 @@ git status
 - Never summarize away important details
 - Evidence-based claims
 
-### Current Focus
-- Fix foundation before more experimentation
+### Current Research Direction
+- RevIN alone (per-instance normalization) is best approach
+- No global Z-score preprocessing needed
 - Validate empirically, don't assume official config is best
-- SimpleSplitter will enable reliable validation of RevIN findings
