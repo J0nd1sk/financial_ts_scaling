@@ -1,0 +1,132 @@
+{
+  "experiment": "context_length_ablation",
+  "context_lengths_tested": [
+    60,
+    90,
+    180,
+    252
+  ],
+  "results": [
+    {
+      "experiment_name": "ctx_ablation_60",
+      "context_length": 60,
+      "architecture": {
+        "d_model": 64,
+        "n_layers": 4,
+        "n_heads": 4,
+        "d_ff": 256,
+        "dropout": 0.2,
+        "use_revin": true
+      },
+      "training": {
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "epochs": 50
+      },
+      "results": {
+        "val_auc": 0.6011198945981555,
+        "val_loss": 0.33356963843107224,
+        "train_loss": 0.3355989738514549,
+        "stopped_early": true,
+        "training_time_minutes": 0.2022203326225281
+      },
+      "splits": {
+        "train_samples": 7277,
+        "val_samples": 442,
+        "test_samples": 201
+      },
+      "timestamp": "2026-01-20T11:44:33.144203"
+    },
+    {
+      "experiment_name": "ctx_ablation_90",
+      "context_length": 90,
+      "architecture": {
+        "d_model": 64,
+        "n_layers": 4,
+        "n_heads": 4,
+        "d_ff": 256,
+        "dropout": 0.2,
+        "use_revin": true
+      },
+      "training": {
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "epochs": 50
+      },
+      "results": {
+        "val_auc": 0.6343629343629343,
+        "val_loss": 0.3292190954089165,
+        "train_loss": 0.31365740429936795,
+        "stopped_early": true,
+        "training_time_minutes": 0.237233833471934
+      },
+      "splits": {
+        "train_samples": 7247,
+        "val_samples": 412,
+        "test_samples": 171
+      },
+      "timestamp": "2026-01-20T11:44:49.457373"
+    },
+    {
+      "experiment_name": "ctx_ablation_180",
+      "context_length": 180,
+      "architecture": {
+        "d_model": 64,
+        "n_layers": 4,
+        "n_heads": 4,
+        "d_ff": 256,
+        "dropout": 0.2,
+        "use_revin": true
+      },
+      "training": {
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "epochs": 50
+      },
+      "results": {
+        "val_auc": 0.5489174836601307,
+        "val_loss": 0.3821421464284261,
+        "train_loss": 0.3540887529296534,
+        "stopped_early": true,
+        "training_time_minutes": 0.1758075475692749
+      },
+      "splits": {
+        "train_samples": 7157,
+        "val_samples": 322,
+        "test_samples": 81
+      },
+      "timestamp": "2026-01-20T11:45:02.030292"
+    },
+    {
+      "experiment_name": "ctx_ablation_252",
+      "context_length": 252,
+      "architecture": {
+        "d_model": 64,
+        "n_layers": 4,
+        "n_heads": 4,
+        "d_ff": 256,
+        "dropout": 0.2,
+        "use_revin": true
+      },
+      "training": {
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "epochs": 50
+      },
+      "results": {
+        "val_auc": 0.47682005494505497,
+        "val_loss": 0.3894802927970886,
+        "train_loss": 0.35264222882688046,
+        "stopped_early": true,
+        "training_time_minutes": 0.18611711661020916
+      },
+      "splits": {
+        "train_samples": 7085,
+        "val_samples": 250,
+        "test_samples": 9
+      },
+      "timestamp": "2026-01-20T11:45:15.378257"
+    }
+  ],
+  "timestamp": "2026-01-20T11:45:15.675837"
+}

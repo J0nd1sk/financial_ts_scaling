@@ -1,0 +1,30 @@
+{
+  "experiment_name": "ctx_ablation_90",
+  "context_length": 90,
+  "architecture": {
+    "d_model": 64,
+    "n_layers": 4,
+    "n_heads": 4,
+    "d_ff": 256,
+    "dropout": 0.2,
+    "use_revin": true
+  },
+  "training": {
+    "learning_rate": 0.001,
+    "batch_size": 128,
+    "epochs": 50
+  },
+  "results": {
+    "val_auc": 0.6343629343629343,
+    "val_loss": 0.3292190954089165,
+    "train_loss": 0.31365740429936795,
+    "stopped_early": true,
+    "training_time_minutes": 0.237233833471934
+  },
+  "splits": {
+    "train_samples": 7247,
+    "val_samples": 412,
+    "test_samples": 171
+  },
+  "timestamp": "2026-01-20T11:44:49.457373"
+}
