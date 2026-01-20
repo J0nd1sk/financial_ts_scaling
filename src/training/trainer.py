@@ -19,7 +19,7 @@ from sklearn.metrics import roc_auc_score
 from torch.utils.data import DataLoader, Subset
 
 from src.config.experiment import ExperimentConfig
-from src.data.dataset import FinancialDataset, SplitIndices
+from src.data.dataset import FinancialDataset, SplitIndices, normalize_dataframe
 from src.models.patchtst import PatchTST, PatchTSTConfig
 from src.training.thermal import ThermalCallback
 from src.training.tracking import TrackingManager
@@ -87,6 +87,7 @@ class Trainer:
         early_stopping_min_delta: float = 0.001,
         early_stopping_metric: str = "val_loss",
         criterion: nn.Module | None = None,
+        norm_params: dict[str, tuple[float, float]] | None = None,
     ) -> None:
         """Initialize the trainer.
 
@@ -112,6 +113,9 @@ class Trainer:
                 Default "val_loss". Use "val_auc" when optimizing for ranking (e.g., SoftAUCLoss).
             criterion: Loss function to use. If None (default), uses BCELoss.
                 Can pass custom loss like SoftAUCLoss for better calibration.
+            norm_params: Optional normalization parameters from compute_normalization_params.
+                If provided, applies Z-score normalization to features before training.
+                Format: {feature_name: (mean, std), ...}
         """
         # Validate early_stopping_metric
         valid_metrics = ("val_loss", "val_auc")
@@ -133,6 +137,7 @@ class Trainer:
         self.early_stopping_patience = early_stopping_patience
         self.early_stopping_min_delta = early_stopping_min_delta
         self.early_stopping_metric = early_stopping_metric
+        self.norm_params = norm_params
 
         # Set random seeds for reproducibility
         self._set_seeds(experiment_config.seed)
@@ -222,6 +227,10 @@ class Trainer:
         data_path = Path(self.experiment_config.data_path)
         df = pd.read_parquet(data_path)
 
+        # Apply normalization if norm_params provided
+        if self.norm_params is not None:
+            df = normalize_dataframe(df, self.norm_params)
+
         # Extract close prices
         close_prices = df["Close"].values
 
@@ -272,6 +281,10 @@ class Trainer:
         # Load data
         data_path = Path(self.experiment_config.data_path)
         df = pd.read_parquet(data_path)
+
+        # Apply normalization if norm_params provided
+        if self.norm_params is not None:
+            df = normalize_dataframe(df, self.norm_params)
 
         # Extract close prices
         close_prices = df["Close"].values
@@ -692,6 +705,7 @@ class Trainer:
                     "timescale": self.experiment_config.timescale,
                 },
                 "data_md5": self.data_md5,
+                "norm_params": self.norm_params,
             },
             checkpoint_path,
         )
@@ -719,6 +733,7 @@ class Trainer:
                     "timescale": self.experiment_config.timescale,
                 },
                 "data_md5": self.data_md5,
+                "norm_params": self.norm_params,
             },
             checkpoint_path,
         )

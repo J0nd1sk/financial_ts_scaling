@@ -10,6 +10,7 @@ Also provides ChunkSplitter for hybrid train/val/test splits:
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from typing import Literal
 
@@ -17,6 +18,123 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
+
+
+# Features that are naturally bounded and don't need normalization
+# RSI, StochRSI: 0-100 by construction
+# ADX: 0-100 by construction
+# Bollinger Band %B: typically 0-1 (can exceed in extreme moves)
+BOUNDED_FEATURES = frozenset({
+    "rsi_daily",
+    "rsi_weekly",
+    "stochrsi_daily",
+    "stochrsi_weekly",
+    "adx_14",
+    "bb_percent_b",
+})
+
+# Columns to exclude from normalization (metadata, not features)
+EXCLUDED_FROM_NORM = BOUNDED_FEATURES | {"Date"}
+
+
+def compute_normalization_params(
+    df: pd.DataFrame,
+    train_end_row: int,
+    exclude_features: set[str] | None = None,
+) -> dict[str, tuple[float, float]]:
+    """Compute mean/std for features using only training rows.
+
+    Computes Z-score normalization parameters from the first train_end_row
+    rows of the dataframe. Bounded features (RSI, etc.) and Date column
+    are automatically excluded.
+
+    Args:
+        df: DataFrame with feature columns.
+        train_end_row: Last row (exclusive) to use for computing stats.
+            Only rows 0 to train_end_row-1 are used.
+        exclude_features: Additional feature names to exclude from normalization.
+
+    Returns:
+        Dict mapping feature name to (mean, std) tuple.
+
+    Example:
+        >>> params = compute_normalization_params(df, train_end_row=5000)
+        >>> # params = {"Close": (150.5, 45.2), "Volume": (1e8, 5e7), ...}
+    """
+    if exclude_features is None:
+        exclude_features = set()
+
+    # Combine all exclusions
+    all_excluded = EXCLUDED_FROM_NORM | exclude_features
+
+    # Get numeric columns only
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+
+    # Filter to columns that should be normalized
+    cols_to_normalize = [c for c in numeric_cols if c not in all_excluded]
+
+    # Compute stats from training portion only
+    train_df = df.iloc[:train_end_row]
+
+    params = {}
+    for col in cols_to_normalize:
+        mean_val = float(train_df[col].mean())
+        std_val = float(train_df[col].std())
+
+        # Warn if std is zero (constant feature)
+        if std_val == 0 or np.isnan(std_val):
+            warnings.warn(
+                f"Feature '{col}' has zero std in training data. "
+                "Will normalize to 0.",
+                UserWarning,
+            )
+            std_val = 0.0
+
+        params[col] = (mean_val, std_val)
+
+    return params
+
+
+def normalize_dataframe(
+    df: pd.DataFrame,
+    norm_params: dict[str, tuple[float, float]],
+    epsilon: float = 1e-8,
+) -> pd.DataFrame:
+    """Apply Z-score normalization using pre-computed params.
+
+    Applies the transformation: (x - mean) / (std + epsilon) for each
+    feature in norm_params. Features not in norm_params are unchanged.
+
+    Args:
+        df: DataFrame to normalize.
+        norm_params: Dict from compute_normalization_params mapping
+            feature name to (mean, std) tuple.
+        epsilon: Small value added to std to prevent division by zero.
+
+    Returns:
+        New DataFrame with normalized features. Original df is not modified.
+
+    Example:
+        >>> params = compute_normalization_params(df, train_end_row=5000)
+        >>> df_norm = normalize_dataframe(df, params)
+    """
+    # Create copy to avoid modifying original
+    df_norm = df.copy()
+
+    for col, (mean_val, std_val) in norm_params.items():
+        if col not in df_norm.columns:
+            continue
+
+        # Get original dtype to preserve it
+        original_dtype = df_norm[col].dtype
+
+        # Apply Z-score: (x - mean) / (std + epsilon)
+        df_norm[col] = (df_norm[col] - mean_val) / (std_val + epsilon)
+
+        # Restore original dtype
+        df_norm[col] = df_norm[col].astype(original_dtype)
+
+    return df_norm
 
 
 @dataclass

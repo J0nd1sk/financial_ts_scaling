@@ -14,7 +14,14 @@ import pandas as pd
 import pytest
 import torch
 
-from src.data.dataset import FinancialDataset, ChunkSplitter, SplitIndices
+from src.data.dataset import (
+    FinancialDataset,
+    ChunkSplitter,
+    SplitIndices,
+    compute_normalization_params,
+    normalize_dataframe,
+    BOUNDED_FEATURES,
+)
 
 
 @pytest.fixture
@@ -808,3 +815,160 @@ class TestChunkSplitterContiguousMode:
 
         np.testing.assert_array_equal(splits1.val_indices, splits2.val_indices)
         np.testing.assert_array_equal(splits1.test_indices, splits2.test_indices)
+
+
+# ============================================================
+# Feature Normalization Tests - Z-score normalization
+# ============================================================
+
+
+class TestComputeNormalizationParams:
+    """Test compute_normalization_params function."""
+
+    def test_returns_dict_with_mean_std(self):
+        """Should return dict mapping feature names to (mean, std) tuples."""
+        df = pd.DataFrame({
+            "Date": pd.date_range("2020-01-01", periods=100, freq="D"),
+            "feature_1": np.random.randn(100) * 10 + 50,
+            "feature_2": np.random.randn(100) * 5 + 100,
+        })
+
+        params = compute_normalization_params(df, train_end_row=70)
+
+        assert isinstance(params, dict)
+        assert "feature_1" in params
+        assert "feature_2" in params
+
+        # Each value should be (mean, std) tuple
+        mean, std = params["feature_1"]
+        assert isinstance(mean, float)
+        assert isinstance(std, float)
+
+    def test_uses_only_train_rows(self):
+        """Stats should be computed only from rows 0:train_end_row."""
+        # Create data where first half has different distribution than second half
+        n = 100
+        df = pd.DataFrame({
+            "Date": pd.date_range("2020-01-01", periods=n, freq="D"),
+            "feature_1": np.concatenate([
+                np.ones(50) * 10,  # First 50 rows: mean=10
+                np.ones(50) * 1000,  # Last 50 rows: mean=1000
+            ]),
+        })
+
+        # Compute params using only first 50 rows
+        params = compute_normalization_params(df, train_end_row=50)
+
+        mean, std = params["feature_1"]
+        # Mean should be ~10, not ~505
+        assert abs(mean - 10.0) < 0.1, f"Mean should be ~10, got {mean}"
+
+    def test_excludes_bounded_features(self):
+        """Naturally bounded features (RSI, etc.) should be excluded."""
+        df = pd.DataFrame({
+            "Date": pd.date_range("2020-01-01", periods=100, freq="D"),
+            "Close": np.random.randn(100) * 100 + 500,  # Should be included
+            "rsi_daily": np.random.rand(100) * 100,  # Should be excluded
+            "stochrsi_weekly": np.random.rand(100) * 100,  # Should be excluded
+            "adx_14": np.random.rand(100) * 100,  # Should be excluded
+            "bb_percent_b": np.random.rand(100),  # Should be excluded
+        })
+
+        params = compute_normalization_params(df, train_end_row=70)
+
+        assert "Close" in params, "Close should be included"
+        assert "rsi_daily" not in params, "RSI should be excluded"
+        assert "stochrsi_weekly" not in params, "StochRSI should be excluded"
+        assert "adx_14" not in params, "ADX should be excluded"
+        assert "bb_percent_b" not in params, "BB %B should be excluded"
+
+    def test_excludes_date_column(self):
+        """Date column should never be in normalization params."""
+        df = pd.DataFrame({
+            "Date": pd.date_range("2020-01-01", periods=100, freq="D"),
+            "feature_1": np.random.randn(100),
+        })
+
+        params = compute_normalization_params(df, train_end_row=70)
+
+        assert "Date" not in params
+
+
+class TestNormalizeDataframe:
+    """Test normalize_dataframe function."""
+
+    def test_applies_zscore_correctly(self):
+        """Normalized values should have mean ~0, std ~1 within train portion."""
+        n = 100
+        train_end = 70
+
+        df = pd.DataFrame({
+            "Date": pd.date_range("2020-01-01", periods=n, freq="D"),
+            "feature_1": np.random.randn(n) * 10 + 50,
+        })
+
+        params = compute_normalization_params(df, train_end_row=train_end)
+        df_norm = normalize_dataframe(df, params)
+
+        # Check normalized values in train portion
+        train_values = df_norm["feature_1"].iloc[:train_end].values
+        assert abs(train_values.mean()) < 0.1, f"Mean should be ~0, got {train_values.mean()}"
+        assert abs(train_values.std() - 1.0) < 0.1, f"Std should be ~1, got {train_values.std()}"
+
+    def test_preserves_excluded_columns(self):
+        """Date and bounded features should remain unchanged."""
+        n = 100
+        dates = pd.date_range("2020-01-01", periods=n, freq="D")
+        rsi_values = np.random.rand(n) * 100
+
+        df = pd.DataFrame({
+            "Date": dates,
+            "feature_1": np.random.randn(n) * 100,
+            "rsi_daily": rsi_values,
+        })
+
+        params = compute_normalization_params(df, train_end_row=70)
+        df_norm = normalize_dataframe(df, params)
+
+        # Date should be unchanged
+        pd.testing.assert_series_equal(df_norm["Date"], df["Date"])
+
+        # RSI should be unchanged (not in params)
+        np.testing.assert_array_almost_equal(
+            df_norm["rsi_daily"].values, rsi_values
+        )
+
+    def test_handles_zero_std(self):
+        """Feature with std=0 should normalize to 0, not NaN/inf."""
+        n = 100
+        df = pd.DataFrame({
+            "Date": pd.date_range("2020-01-01", periods=n, freq="D"),
+            "constant_feature": np.ones(n) * 42,  # Constant value, std=0
+            "normal_feature": np.random.randn(n) * 10,
+        })
+
+        params = compute_normalization_params(df, train_end_row=70)
+        df_norm = normalize_dataframe(df, params)
+
+        # Constant feature should be 0 (42 - 42) / (0 + eps) = 0
+        assert not df_norm["constant_feature"].isna().any(), "Should not have NaN"
+        assert not np.isinf(df_norm["constant_feature"]).any(), "Should not have inf"
+        # All values should be 0 (since x - mean = 0 for constant)
+        assert (df_norm["constant_feature"] == 0).all(), "Constant should normalize to 0"
+
+    def test_preserves_dtypes(self):
+        """Float32 features should remain float32 after normalization."""
+        n = 100
+        df = pd.DataFrame({
+            "Date": pd.date_range("2020-01-01", periods=n, freq="D"),
+            "feature_f32": np.random.randn(n).astype(np.float32) * 10,
+            "feature_f64": np.random.randn(n).astype(np.float64) * 10,
+        })
+
+        params = compute_normalization_params(df, train_end_row=70)
+        df_norm = normalize_dataframe(df, params)
+
+        # Should preserve float32
+        assert df_norm["feature_f32"].dtype == np.float32, (
+            f"Expected float32, got {df_norm['feature_f32'].dtype}"
+        )
