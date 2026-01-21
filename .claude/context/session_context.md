@@ -1,128 +1,82 @@
-# Session Handoff - 2026-01-21 ~02:00 UTC
+# Session Handoff - 2026-01-21 ~07:30 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `201acac` exp: MLP-only and shallow+wide architecture experiments
-- **Uncommitted changes**:
-  - `scripts/test_lr_ablation.py` (NEW - LR ablation experiment)
-  - `scripts/test_dropout_ablation.py` (NEW - Dropout ablation experiment)
-  - `scripts/test_combined_ablation.py` (NEW - Combined LR+dropout experiment)
-  - `outputs/training_dynamics/` (NEW - results directory with 3 CSVs + 3 JSONs)
-- **Ahead of origin**: 7 commits (not pushed)
+- **Last commit**: `da4abdb` exp: Dropout scaling - 20M_wide beats RF by 1.8% (AUC 0.7342)
+- **Uncommitted changes**: none
+- **Ahead of origin**: 9 commits (not pushed)
 
 ### Task Status
-- **Working on**: Architecture exploration - Training dynamics experiment COMPLETE
-- **Status**: 4 of 5 experiments complete, conclusion pending
+- **Working on**: Architecture scaling experiments
+- **Status**: Dropout scaling complete, next: test even shallower L=2/L=4
 
 ---
 
-## Architecture Exploration Progress
+## Dropout Scaling Results (This Session)
 
-### Experiments Completed
+### BREAKTHROUGH: 20M_wide beats Random Forest!
 
-#### 1. Small Models Experiment ✅
-**Result**: HYPOTHESIS REJECTED - 215K baseline beats smaller models
+| Config | d | L | Params | AUC | vs RF (0.716) |
+|--------|---|---|--------|-----|---------------|
+| **20M_wide** | 512 | 6 | 19M | **0.7342** | **+1.8%** ⭐ |
+| 20M_balanced | 384 | 12 | 21M | 0.7282 | +1.2% |
+| 20M_narrow | 256 | 32 | 25M | 0.7253 | +0.8% |
+| 200M_balanced | 768 | 24 | 170M | 0.7225 | +0.6% |
+| 200M_narrow | 512 | 48 | 152M | 0.7214 | +0.5% |
+| 200M_wide | 1024 | 12 | 152M | 0.7204 | +0.4% |
 
-#### 2. Shallow+Wide Experiment ✅
-**Result**: HYPOTHESIS REJECTED - L=4 d=64 beats L=1-2 with d=256-768
-
-#### 3. MLP-Only Experiment ✅
-**Result**: NUANCED - MLP peak 0.7077 beats PatchTST 0.6945, but overfits faster
-
-#### 4. Training Dynamics Experiment ✅ (THIS SESSION)
-**Result**: BREAKTHROUGH - PatchTST nearly matches RF with proper regularization!
-
-**LR Ablation (baseline dropout 0.2):**
-| Config | Best AUC | vs Baseline |
-|--------|----------|-------------|
-| **PatchTST_lr1e-5** | **0.7123** | **+1.8%** |
-| PatchTST_lr1e-6 | 0.5587 | -13.6% (too slow) |
-| MLP_lr1e-5 | 0.4734 | -23.4% |
-| MLP_lr1e-6 | 0.4659 | -24.2% |
-
-**Dropout Ablation (baseline LR 1e-3):**
-| Config | Best AUC | vs Baseline |
-|--------|----------|-------------|
-| **PatchTST_d0.5** | **0.7199** | **+2.5%** ⭐ BEST |
-| PatchTST_d0.4 | 0.7184 | +2.4% |
-| MLP_d0.4 | 0.6944 | -1.3% peak |
-| MLP_d0.5 | 0.6817 | -2.6% |
-
-**Combined Ablation (LR × Dropout):**
-| Config | Best AUC | Final AUC |
-|--------|----------|-----------|
-| PatchTST_lr1e-5_d0.5 | 0.7089 | 0.7089 |
-| **MLP_lr1e-5_d0.5** | 0.6977 | **0.6969** ⭐ Best MLP final |
-| PatchTST_lr1e-5_d0.4 | 0.6736 | 0.6736 |
-| Others | <0.65 | Too slow |
-
-### Experiments Remaining
-
-5. **Conclusion** - Summarize all findings, determine final answer
+### Key Findings
+1. **WIDE > NARROW at larger scales** - opposite of 2M finding!
+2. **Shallower is better at 20M**: L=6 > L=12 > L=32
+3. **200M doesn't improve over 20M** - data-limited regime
+4. **Some scaling IS happening** even with limited data
 
 ---
 
-## Key Findings Summary (All Sessions)
+## Next Session: Test Even Shallower Architectures
 
-| Finding | Evidence |
-|---------|----------|
-| RF beats baseline PatchTST | RF 0.716 vs PatchTST 0.695 (gap: 3%) |
-| Focal Loss helps | AUC 0.54→0.67 (+24.8%) |
-| **PatchTST + dropout=0.5 nearly matches RF** | **0.7199 vs 0.716 (gap: 0.4%)** ⭐ |
-| Higher dropout > lower LR for regularization | d=0.5 (0.7199) > lr=1e-5 (0.7123) |
-| Combining LR+dropout doesn't add up | lr1e-5+d0.5 (0.7089) < d0.5 alone (0.7199) |
-| MLP overfitting fixed | Final AUC 0.6969 vs 0.6626 baseline (+3.4%) |
-| MLP can beat PatchTST at peak | MLP 0.7077 vs PatchTST 0.6945 (+1.9%) |
-| Overparameterization NOT the issue | 215K baseline beats 33K-14.4M models |
-| Depth NOT the issue | L=4 d=64 beats L=1-2 with d=256-768 |
+User wants to test L=2 and L=4 at 20M budget:
 
-**Targets:**
-- RF AUC: 0.716
-- XGBoost AUC: 0.7555
+| Config | d | L | h | ~Params | Rationale |
+|--------|---|---|---|---------|-----------|
+| 20M_L2 | ~640 | 2 | 8 | ~20M | Ultra-shallow |
+| 20M_L3 | ~576 | 3 | 8 | ~20M | Very shallow |
+| 20M_L4 | ~544 | 4 | 8 | ~20M | Matches 2M optimal depth |
+| 20M_L5 | ~528 | 5 | 8 | ~20M | Between L4 and L6 |
 
-**Best Results:**
-- **PatchTST @ d=0.5**: 0.7199 (only 0.4% below RF!) ⭐
-- PatchTST @ d=0.4: 0.7184
-- PatchTST @ lr=1e-5: 0.7123
-- MLP peak: 0.7077 (overfits to 0.6626)
-- MLP stable (lr1e-5+d0.5): 0.6969
+Need to calculate exact d_model values to hit ~20M params.
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-21 ~01:50 UTC
+- Last `make test`: 2026-01-21 ~23:00 UTC
 - Result: **467 passed**, 2 warnings
 - Failing: none
 
 ---
 
-## Files Created This Session
+## Files Created/Modified This Session
 
 | File | Description |
 |------|-------------|
-| `scripts/test_lr_ablation.py` | LR ablation (1e-5, 1e-6) on PatchTST and MLP |
-| `scripts/test_dropout_ablation.py` | Dropout ablation (0.4, 0.5) on PatchTST and MLP |
-| `scripts/test_combined_ablation.py` | Combined LR×dropout (8 configs) |
-| `outputs/training_dynamics/lr_ablation_results.csv` | LR ablation results |
-| `outputs/training_dynamics/dropout_ablation_results.csv` | Dropout ablation results |
-| `outputs/training_dynamics/combined_ablation_results.csv` | Combined ablation results |
+| `scripts/test_dropout_scaling.py` | Width vs depth experiment at 20M/200M |
+| `outputs/dropout_scaling/dropout_scaling_results.csv` | Results (6 configs) |
+| `docs/architecture_exploration_conclusion_DRAFT.md` | Draft summary (may not retain) |
 
 ---
 
 ## Memory Entities Updated This Session
 
 **Created:**
-- `Plan_TrainingDynamicsExperiment_20260121` - Planning decision for training dynamics
-- `Finding_TrainingDynamicsExperiment_20260121` - BREAKTHROUGH: PatchTST 0.7199 ≈ RF 0.716
+- `Plan_DropoutScalingExperiment_20260121` - Planning decision for dropout scaling
+- `Finding_DropoutScalingExperiment_20260121` - BREAKTHROUGH: 20M_wide 0.7342 beats RF
 
 **From previous sessions (relevant):**
-- `Finding_MLPOnlyExperiment_20260121` - MLP beats PatchTST at peak but overfits
-- `Finding_SmallModels_20260120` - Smaller models don't help
-- `Finding_ShallowWide_20260120` - Shallow+wide doesn't help
-- `Finding_FocalLossFixesPatchTST_20260120` - Focal Loss breakthrough
-- `Finding_RFBeatsPatchTST_20260120` - Tree models outperform (baseline)
+- `Finding_TrainingDynamicsExperiment_20260121` - Dropout=0.5 works at 2M
+- `Finding_SmallModels_20260120` - Smaller models don't help at 2M
+- `Finding_ShallowWide_20260120` - At 2M, narrow-deep beats shallow-wide
 
 ---
 
@@ -138,10 +92,10 @@ make verify
 
 ## Next Session Should
 
-1. **Commit training dynamics experiment results** (3 scripts + outputs)
-2. **Write architecture exploration conclusion** - Document final findings
-3. **Update phase_tracker.md** with training dynamics results
-4. **Decide next phase** - What's after architecture exploration?
+1. **Calculate d_model for L=2,3,4,5** to hit ~20M params
+2. **Run 4 additional trials** with shallower 20M architectures
+3. **Analyze depth sweet spot** - is L=4-6 optimal at 20M?
+4. **Then**: Plan feature/indicator expansion experiments
 
 ---
 
@@ -167,6 +121,6 @@ make verify
 - Evidence-based claims
 
 ### Current Focus
-- Architecture exploration: Why do trees outperform transformers?
-- **ANSWER FOUND**: PatchTST with dropout=0.5 achieves 0.7199, only 0.4% below RF (0.716)
-- Transformers CAN match trees with proper regularization!
+- Architecture exploration: Optimal depth/width at different scales
+- **Observation**: "Some degree of scaling going on, even with this little data"
+- Next: Test L=2-4 at 20M, then feature expansion experiments
