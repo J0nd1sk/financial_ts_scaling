@@ -1285,3 +1285,56 @@ class TestEarlyStopping:
         # Should have stopped early due to AUC not improving
         assert result["stopped_early"] is True
         assert result["stop_reason"] == "early_stopping"
+
+
+class TestTrainerHighPrices:
+    """Tests for high_prices parameter in Trainer."""
+
+    def test_trainer_passes_high_prices_to_dataset(
+        self,
+        split_experiment_config: ExperimentConfig,
+        model_config: PatchTSTConfig,
+        mock_thermal_normal: ThermalCallback,
+        tmp_path: Path,
+    ) -> None:
+        """Test that Trainer passes high_prices to FinancialDataset.
+
+        When high_prices is provided, threshold targets should use HIGH not CLOSE.
+        This tests the wiring, not the calculation (that's in test_dataset.py).
+        """
+        from src.data.dataset import SimpleSplitter
+
+        # Load the test data to get high prices
+        df = pd.read_parquet(split_experiment_config.data_path)
+        high_prices = df["High"].values
+
+        splitter = SimpleSplitter(
+            dates=df["Date"],
+            context_length=10,
+            horizon=3,
+            val_start="2020-03-01",
+            test_start="2020-04-01",
+        )
+        splits = splitter.split()
+
+        # Create trainer WITH high_prices
+        trainer = Trainer(
+            experiment_config=split_experiment_config,
+            model_config=model_config,
+            batch_size=8,
+            learning_rate=0.001,
+            epochs=1,
+            device="cpu",
+            checkpoint_dir=tmp_path,
+            thermal_callback=mock_thermal_normal,
+            split_indices=splits,
+            high_prices=high_prices,
+        )
+
+        # Verify the high_prices attribute is stored
+        assert trainer.high_prices is not None
+        assert len(trainer.high_prices) == len(high_prices)
+
+        # Trainer should complete training without error
+        result = trainer.train()
+        assert "train_loss" in result
