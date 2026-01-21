@@ -1,21 +1,21 @@
-# Session Handoff - 2026-01-21 ~14:00 UTC
+# Session Handoff - 2026-01-21 ~15:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `078198c` feat: HIGH-based upside threshold targets + documentation audit
-- **Uncommitted changes**: Trainer fix for high_prices (ready to commit)
-- **Ahead of origin**: 12 commits (not pushed)
+- **Last commit**: `18bf655` fix: validate high_prices array length in FinancialDataset
+- **Uncommitted changes**: None
+- **Ahead of origin**: 14 commits (not pushed)
 
 ### Task Status
-- **Completed**: Fixed Trainer to pass high_prices to FinancialDataset
-- **Status**: Ready to re-run experiments with correct targets
-- **Next**: Re-run ALL threshold experiments with HIGH-based targets
+- **Completed**: Audited Trainer high_prices fix, added array length validation
+- **Status**: Ready to re-run ALL experiments with correct HIGH-based targets
+- **Next**: Re-run experiments and report AUC, accuracy, precision, recall, F1
 
 ---
 
-## 🔴 CRITICAL BUG DISCOVERED (2026-01-21)
+## 🔴 CRITICAL BUG FIXED (2026-01-21)
 
 ### The Bug
 
@@ -28,18 +28,18 @@
 | `backtest_optimal_models.py` | ✅ Manual loop | Used HIGH correctly |
 | All HPO scripts | ❌ Used Trainer | **Trained on CLOSE** |
 
+### Fixes Applied
+
+| Commit | Description |
+|--------|-------------|
+| `8235281` | Wire high_prices through Trainer to FinancialDataset |
+| `18bf655` | Add array length validation to prevent misaligned arrays |
+
 ### Impact
 
 **ALL previous experiments trained models on CLOSE-based targets but evaluated them on HIGH-based targets.**
 
 This is a train/eval distribution mismatch. All metrics are unreliable.
-
-### Fix Applied
-
-Commit pending: Added `high_prices` parameter to Trainer
-- `src/training/trainer.py`: +4 lines (parameter, docstring, storage, 2x pass-through)
-- `tests/test_training.py`: +1 test (verify wiring)
-- **470 tests pass** (was 469)
 
 ### What Must Be Re-Run
 
@@ -75,31 +75,43 @@ trainer = Trainer(
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-21 ~14:00 UTC
-- Result: **470 passed**, 2 warnings
+- Last `make test`: 2026-01-21 ~15:00 UTC
+- Result: **471 passed**, 2 warnings
 - Failing: none
+
+---
+
+## Experiment Scripts Ready
+
+The other agent created experiment scripts in `experiments/threshold_05pct_high/`:
+- `train_20M_wide_h2.py`
+- `train_20M_wide_h4.py`
+- `train_20M_wide_h8.py`
+
+These should use the correct `high_prices` parameter.
 
 ---
 
 ## Memory Entities Updated This Session
 
-**To Create:**
-- `Critical_TrainerHighPricesBug_20260121` - Documents this critical bug discovery
+**Created:**
+- `Critical_TrainerHighPricesBug_20260121` - Documents this critical bug discovery and fix
 
 **From previous sessions (now known invalid):**
 - `Finding_DropoutScalingExperiment_20260121` - **INVALID** (trained on CLOSE)
 - `Finding_ShallowDepthExperiment_20260121` - **INVALID** (trained on CLOSE)
-- `Finding_LRDropoutTuning_20260121` - **INVALID** (trained on CLOSE)
+- `Finding_BacktestThresholdAnalysis_20260121` - **INVALID** (trained on CLOSE)
 - `Target_Calculation_Definitive_Rule` - Still valid (defines correct approach)
 
 ---
 
 ## Next Session Should
 
-1. **Commit the Trainer fix**
-2. **Create 0.5% threshold experiment script** with correct `high_prices` parameter
-3. **Run experiments** and report full metrics (AUC, accuracy, precision, recall, F1)
-4. **Test h=4 variant** and compare to h=8
+1. **Verify experiment scripts** use `high_prices=df["High"].values`
+2. **Run 0.5% threshold experiments** with correct HIGH-based targets
+3. **Report full metrics**: AUC, accuracy, precision, recall, F1
+4. **Compare h=2, h=4, h=8** variants
+5. **If successful**: Re-run broader experiment set
 
 ---
 
@@ -135,6 +147,6 @@ make verify
 - Evidence-based claims
 
 ### Current Focus
-- Fix Trainer bug (DONE)
-- Re-run 0.5% threshold experiments with correct HIGH-based targets
-- Full metrics reporting (not just AUC)
+- Re-run ALL experiments with correct HIGH-based targets
+- Full metrics reporting (AUC, accuracy, precision, recall, F1)
+- Start fresh with valid training data
