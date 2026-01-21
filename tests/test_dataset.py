@@ -401,6 +401,28 @@ class TestFinancialDatasetHighPrices:
                 high_prices=high,
             )
 
+    def test_raises_on_high_prices_length_mismatch(self):
+        """high_prices length must match close_prices length."""
+        features_df = pd.DataFrame({
+            "Date": pd.date_range("2020-01-01", periods=20),
+            "Close": np.linspace(100, 110, 20),
+            "Volume": np.ones(20) * 1000,
+        })
+        close = features_df["Close"].values
+
+        # high_prices has wrong length (15 instead of 20)
+        high_wrong_length = np.linspace(101, 111, 15)
+
+        with pytest.raises(ValueError, match="high_prices length.*must match"):
+            FinancialDataset(
+                features_df=features_df,
+                close_prices=close,
+                context_length=5,
+                horizon=1,
+                threshold=0.01,
+                high_prices=high_wrong_length,
+            )
+
 
 # ============================================================
 # ChunkSplitter Tests - Hybrid train/val/test splits

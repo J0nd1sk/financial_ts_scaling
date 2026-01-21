@@ -611,6 +611,11 @@ class FinancialDataset(Dataset):
             high = np.asarray(high_prices, dtype=np.float64)
             if np.any(np.isnan(high)):
                 raise ValueError("high_prices contains NaN values")
+            if len(high) != len(close):
+                raise ValueError(
+                    f"high_prices length ({len(high)}) must match "
+                    f"close_prices length ({len(close)})"
+                )
         else:
             # Backward compatibility: use close for future max if high not provided
             high = close
