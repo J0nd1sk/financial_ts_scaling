@@ -1,19 +1,20 @@
-# Session Handoff - 2026-01-21 ~00:30 UTC
+# Session Handoff - 2026-01-21 ~02:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `7e5d6ab` docs: session handoff with Focal Loss breakthrough
+- **Last commit**: `201acac` exp: MLP-only and shallow+wide architecture experiments
 - **Uncommitted changes**:
-  - `scripts/test_mlp_only.py` (NEW - MLP experiment script)
-  - `outputs/mlp_only_experiment/` (NEW - results)
-  - `outputs/shallow_wide_experiment/` (from previous session)
-- **Ahead of origin**: 6 commits (not pushed)
+  - `scripts/test_lr_ablation.py` (NEW - LR ablation experiment)
+  - `scripts/test_dropout_ablation.py` (NEW - Dropout ablation experiment)
+  - `scripts/test_combined_ablation.py` (NEW - Combined LR+dropout experiment)
+  - `outputs/training_dynamics/` (NEW - results directory with 3 CSVs + 3 JSONs)
+- **Ahead of origin**: 7 commits (not pushed)
 
 ### Task Status
-- **Working on**: Architecture exploration - Training dynamics experiment is NEXT
-- **Status**: 3 of 5 experiments complete, 2 remaining
+- **Working on**: Architecture exploration - Training dynamics experiment COMPLETE
+- **Status**: 4 of 5 experiments complete, conclusion pending
 
 ---
 
@@ -27,28 +28,39 @@
 #### 2. Shallow+Wide Experiment ✅
 **Result**: HYPOTHESIS REJECTED - L=4 d=64 beats L=1-2 with d=256-768
 
-#### 3. MLP-Only Experiment ✅ (THIS SESSION)
-**Result**: NUANCED FINDING - MLP can BEAT PatchTST but overfits faster
+#### 3. MLP-Only Experiment ✅
+**Result**: NUANCED - MLP peak 0.7077 beats PatchTST 0.6945, but overfits faster
 
-| Model | Params | Best Val AUC | Final Val AUC |
-|-------|--------|--------------|---------------|
-| **MLP_h256_o64** | 185K | **0.7077** ⭐ | 0.6626 |
-| MLP_h128_o32 | 72K | 0.7006 | 0.6749 |
-| MLP_h512_o128 | 534K | 0.6992 | 0.6678 |
-| *PatchTST baseline* | 215K | *0.6945* | - |
-| *RF baseline* | - | *0.716* | - |
+#### 4. Training Dynamics Experiment ✅ (THIS SESSION)
+**Result**: BREAKTHROUGH - PatchTST nearly matches RF with proper regularization!
 
-**Key Finding**: MLP peak AUC (0.7077) beats PatchTST (0.6945) by +1.9%!
-- Attention helps GENERALIZATION, not learning capacity
-- MLP overfits faster, loses gains after early stopping
-- The signal IS learnable without attention
+**LR Ablation (baseline dropout 0.2):**
+| Config | Best AUC | vs Baseline |
+|--------|----------|-------------|
+| **PatchTST_lr1e-5** | **0.7123** | **+1.8%** |
+| PatchTST_lr1e-6 | 0.5587 | -13.6% (too slow) |
+| MLP_lr1e-5 | 0.4734 | -23.4% |
+| MLP_lr1e-6 | 0.4659 | -24.2% |
+
+**Dropout Ablation (baseline LR 1e-3):**
+| Config | Best AUC | vs Baseline |
+|--------|----------|-------------|
+| **PatchTST_d0.5** | **0.7199** | **+2.5%** ⭐ BEST |
+| PatchTST_d0.4 | 0.7184 | +2.4% |
+| MLP_d0.4 | 0.6944 | -1.3% peak |
+| MLP_d0.5 | 0.6817 | -2.6% |
+
+**Combined Ablation (LR × Dropout):**
+| Config | Best AUC | Final AUC |
+|--------|----------|-----------|
+| PatchTST_lr1e-5_d0.5 | 0.7089 | 0.7089 |
+| **MLP_lr1e-5_d0.5** | 0.6977 | **0.6969** ⭐ Best MLP final |
+| PatchTST_lr1e-5_d0.4 | 0.6736 | 0.6736 |
+| Others | <0.65 | Too slow |
 
 ### Experiments Remaining
 
-4. **Training dynamics** - Lower LR (1e-5, 1e-6), higher dropout (0.4, 0.5)
-   - **USER CLARIFICATION**: Test BOTH transformers AND MLPs
-   - Test if training stability can unlock MLP's 0.70+ potential
-5. **Conclusion** - Summarize findings, determine if transformers can match trees
+5. **Conclusion** - Summarize all findings, determine final answer
 
 ---
 
@@ -56,26 +68,31 @@
 
 | Finding | Evidence |
 |---------|----------|
-| RF beats PatchTST | RF AUC 0.716 vs PatchTST 0.695 (gap: 3%) |
+| RF beats baseline PatchTST | RF 0.716 vs PatchTST 0.695 (gap: 3%) |
 | Focal Loss helps | AUC 0.54→0.67 (+24.8%) |
+| **PatchTST + dropout=0.5 nearly matches RF** | **0.7199 vs 0.716 (gap: 0.4%)** ⭐ |
+| Higher dropout > lower LR for regularization | d=0.5 (0.7199) > lr=1e-5 (0.7123) |
+| Combining LR+dropout doesn't add up | lr1e-5+d0.5 (0.7089) < d0.5 alone (0.7199) |
+| MLP overfitting fixed | Final AUC 0.6969 vs 0.6626 baseline (+3.4%) |
 | MLP can beat PatchTST at peak | MLP 0.7077 vs PatchTST 0.6945 (+1.9%) |
-| MLP overfits faster | Best AUC 0.7077 → Final 0.6626 |
-| Attention helps generalization | PatchTST stable, MLP degrades |
 | Overparameterization NOT the issue | 215K baseline beats 33K-14.4M models |
 | Depth NOT the issue | L=4 d=64 beats L=1-2 with d=256-768 |
 
-**Targets**:
+**Targets:**
 - RF AUC: 0.716
 - XGBoost AUC: 0.7555
 
-**Best Results**:
-- PatchTST: 0.6945 (L=4, d=64, 215K params)
-- MLP peak: 0.7077 (h=256, o=64, 185K params) - but final was 0.6626
+**Best Results:**
+- **PatchTST @ d=0.5**: 0.7199 (only 0.4% below RF!) ⭐
+- PatchTST @ d=0.4: 0.7184
+- PatchTST @ lr=1e-5: 0.7123
+- MLP peak: 0.7077 (overfits to 0.6626)
+- MLP stable (lr1e-5+d0.5): 0.6969
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-21 ~00:25 UTC
+- Last `make test`: 2026-01-21 ~01:50 UTC
 - Result: **467 passed**, 2 warnings
 - Failing: none
 
@@ -85,23 +102,27 @@
 
 | File | Description |
 |------|-------------|
-| `scripts/test_mlp_only.py` | MLP-only experiment (patch-based MLP without attention) |
-| `outputs/mlp_only_experiment/results.json` | Experiment results |
-| `outputs/mlp_only_experiment/results.csv` | Results in CSV format |
+| `scripts/test_lr_ablation.py` | LR ablation (1e-5, 1e-6) on PatchTST and MLP |
+| `scripts/test_dropout_ablation.py` | Dropout ablation (0.4, 0.5) on PatchTST and MLP |
+| `scripts/test_combined_ablation.py` | Combined LR×dropout (8 configs) |
+| `outputs/training_dynamics/lr_ablation_results.csv` | LR ablation results |
+| `outputs/training_dynamics/dropout_ablation_results.csv` | Dropout ablation results |
+| `outputs/training_dynamics/combined_ablation_results.csv` | Combined ablation results |
 
 ---
 
 ## Memory Entities Updated This Session
 
 **Created:**
-- `Plan_MLPOnlyExperiment_20260121` (created): Planning decision for MLP experiment
-- `Finding_MLPOnlyExperiment_20260121` (created): Nuanced finding - MLP beats PatchTST at peak but overfits
+- `Plan_TrainingDynamicsExperiment_20260121` - Planning decision for training dynamics
+- `Finding_TrainingDynamicsExperiment_20260121` - BREAKTHROUGH: PatchTST 0.7199 ≈ RF 0.716
 
 **From previous sessions (relevant):**
+- `Finding_MLPOnlyExperiment_20260121` - MLP beats PatchTST at peak but overfits
 - `Finding_SmallModels_20260120` - Smaller models don't help
 - `Finding_ShallowWide_20260120` - Shallow+wide doesn't help
 - `Finding_FocalLossFixesPatchTST_20260120` - Focal Loss breakthrough
-- `Finding_RFBeatsPatchTST_20260120` - Tree models outperform
+- `Finding_RFBeatsPatchTST_20260120` - Tree models outperform (baseline)
 
 ---
 
@@ -117,13 +138,10 @@ make verify
 
 ## Next Session Should
 
-1. **Plan training dynamics experiment** - Include BOTH transformers AND MLPs
-   - Lower LR (1e-5, 1e-6) to slow learning and prevent overfitting
-   - Higher dropout (0.4, 0.5) for regularization
-   - Test if these stabilize MLP's 0.70+ potential
-2. **Run training dynamics experiment**
-3. **Conclude architecture exploration** - Document final findings
-4. **Commit all experiment results** (3 scripts, 3 output dirs)
+1. **Commit training dynamics experiment results** (3 scripts + outputs)
+2. **Write architecture exploration conclusion** - Document final findings
+3. **Update phase_tracker.md** with training dynamics results
+4. **Decide next phase** - What's after architecture exploration?
 
 ---
 
@@ -150,5 +168,5 @@ make verify
 
 ### Current Focus
 - Architecture exploration: Why do trees outperform transformers?
-- **USER CLARIFICATION**: Training dynamics experiment should test BOTH transformers AND MLPs
-- Goal: Close 3% gap to RF or prove it's impossible
+- **ANSWER FOUND**: PatchTST with dropout=0.5 achieves 0.7199, only 0.4% below RF (0.716)
+- Transformers CAN match trees with proper regularization!

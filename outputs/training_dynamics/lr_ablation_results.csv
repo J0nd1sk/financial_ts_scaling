@@ -1,0 +1,2 @@
+config_name,model_type,learning_rate,dropout,n_params,train_samples,val_samples,best_val_auc,final_val_auc,best_epoch,total_epochs,pred_min,pred_max,pred_std,training_time_min
+PatchTST_lr1e-5,PatchTST,1e-05,0.2,227521,7257,422,0.7044854881266491,0.7044854881266491,99,100,0.09823758155107498,0.29725193977355957,0.041227199137210846,0.9913756012916565

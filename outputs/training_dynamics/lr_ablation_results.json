@@ -1,0 +1,86 @@
+{
+  "experiment": "lr_ablation",
+  "description": "Testing lower learning rates (1e-5, 1e-6) vs baseline (1e-3)",
+  "fixed_params": {
+    "dropout": 0.2,
+    "context_length": 80,
+    "epochs": 100,
+    "batch_size": 128
+  },
+  "baselines": {
+    "patchtst_auc": 0.6945,
+    "mlp_best_auc": 0.7077,
+    "mlp_final_auc": 0.6626
+  },
+  "results": [
+    {
+      "config_name": "PatchTST_lr1e-5",
+      "model_type": "PatchTST",
+      "learning_rate": 1e-05,
+      "dropout": 0.2,
+      "n_params": 227521,
+      "train_samples": 7257,
+      "val_samples": 422,
+      "best_val_auc": 0.7122783334356017,
+      "final_val_auc": 0.7122783334356017,
+      "best_epoch": 100,
+      "total_epochs": 100,
+      "pred_min": 0.12243983894586563,
+      "pred_max": 0.3110416829586029,
+      "pred_std": 0.042044319212436676,
+      "training_time_min": 0.9744294126828511
+    },
+    {
+      "config_name": "PatchTST_lr1e-6",
+      "model_type": "PatchTST",
+      "learning_rate": 1e-06,
+      "dropout": 0.2,
+      "n_params": 227521,
+      "train_samples": 7257,
+      "val_samples": 422,
+      "best_val_auc": 0.5586917837638828,
+      "final_val_auc": 0.5485058599742284,
+      "best_epoch": 2,
+      "total_epochs": 12,
+      "pred_min": 0.15892493724822998,
+      "pred_max": 0.37342196702957153,
+      "pred_std": 0.036805957555770874,
+      "training_time_min": 0.12219871679941813
+    },
+    {
+      "config_name": "MLP_lr1e-5",
+      "model_type": "MLP",
+      "learning_rate": 1e-05,
+      "dropout": 0.2,
+      "n_params": 184961,
+      "train_samples": 7257,
+      "val_samples": 422,
+      "best_val_auc": 0.47340001227219736,
+      "final_val_auc": 0.45560532613364424,
+      "best_epoch": 1,
+      "total_epochs": 11,
+      "pred_min": 0.21318480372428894,
+      "pred_max": 0.2917933762073517,
+      "pred_std": 0.015440868213772774,
+      "training_time_min": 0.03682213624318441
+    },
+    {
+      "config_name": "MLP_lr1e-6",
+      "model_type": "MLP",
+      "learning_rate": 1e-06,
+      "dropout": 0.2,
+      "n_params": 184961,
+      "train_samples": 7257,
+      "val_samples": 422,
+      "best_val_auc": 0.46591397189666806,
+      "final_val_auc": 0.40983003006688346,
+      "best_epoch": 1,
+      "total_epochs": 11,
+      "pred_min": 0.4416295289993286,
+      "pred_max": 0.4599568247795105,
+      "pred_std": 0.0036656635347753763,
+      "training_time_min": 0.035500482718149824
+    }
+  ],
+  "timestamp": "2026-01-20T20:28:41.905669"
+}
