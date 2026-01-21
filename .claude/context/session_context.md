@@ -1,21 +1,21 @@
-# Session Handoff - 2026-01-21 ~09:00 UTC
+# Session Handoff - 2026-01-21 ~11:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `932783e` docs: session handoff - 20M_wide breakthrough, next L=2-4 trials
-- **Uncommitted changes**: Multiple new experiment scripts and outputs
-- **Ahead of origin**: 10 commits (not pushed)
+- **Last commit**: `078198c` feat: HIGH-based upside threshold targets + documentation audit
+- **Uncommitted changes**: None (clean working tree)
+- **Ahead of origin**: 11 commits (not pushed)
 
 ### Task Status
-- **Working on**: Target calculation fix (upside threshold using HIGH prices)
-- **Status**: APPROVED, not yet implemented
-- **Next**: TDD implementation of HIGH-based target in FinancialDataset
+- **Completed**: HIGH-based target implementation + documentation audit
+- **Status**: Ready for 0.5% threshold experiments
+- **Next**: Run experiments with HIGH-based targets at 0.5% threshold
 
 ---
 
-## CRITICAL: Target Calculation Bug - DEFINITIVE RULE
+## CRITICAL: Target Calculation - DEFINITIVE RULE
 
 **See Memory entity: `Target_Calculation_Definitive_Rule`**
 
@@ -31,33 +31,30 @@
 ❌ **NEVER** predict future CLOSE relative to current CLOSE. This is not how trading works.
 A trade entered at today's close achieves profit when the HIGH reaches the target, not when the CLOSE does.
 
-### Current Bug (to be fixed)
+### Implementation Complete
 
 ```python
-# WRONG - uses CLOSE prices for future window
-future_max = max(close[t+1:t+1+horizon])
-
-# CORRECT - uses HIGH prices for upside threshold
-future_max = max(high[t+1:t+1+horizon])
+# FinancialDataset now accepts high_prices parameter
+dataset = FinancialDataset(
+    features_df=df,
+    close_prices=close,
+    high_prices=high,  # NEW - uses HIGH for target calculation
+    context_length=60,
+    horizon=1,
+    threshold=0.005,  # 0.5%
+)
 ```
 
 ### Impact on Class Balance
 
 | Threshold | Using CLOSE (wrong) | Using HIGH (correct) |
 |-----------|---------------------|----------------------|
-| 0.5% | 29.1% | **50.0%** (balanced!) |
-| 1.0% | 14.1% | 23.9% |
-
-**User preference**: 0.5% threshold with HIGH-based target (50/50 balance)
-
-### Deprecated Terminology
-
-The terms "Close-to-Close" and "Close-to-High" are **DEPRECATED** - they caused confusion.
-Use "upside threshold (HIGH-based)" and "downside threshold (LOW-based)" instead.
+| 0.5% | 29.1% | **~50%** (balanced!) |
+| 1.0% | 14.1% | ~24% |
 
 ---
 
-## Experiments Completed This Session
+## Experiments Completed (Prior Sessions)
 
 ### 1. Shallow Depth Sweep (L=2-5 at 20M)
 **Finding**: L=6 remains optimal. Shallower underfits.
@@ -77,56 +74,41 @@ Use "upside threshold (HIGH-based)" and "downside threshold (LOW-based)" instead
 | lr8e5_d50 | 8e-5 | 0.50 | 0.7202 | -1.4% |
 | lr5e5_d50 | 5e-5 | 0.50 | 0.7160 | -1.8% |
 | lr1e4_d55 | 1e-4 | 0.55 | 0.7068 | -2.7% |
-| lr8e5_d55 | 8e-5 | 0.55 | 0.7091 | -2.5% |
-| lr5e5_d55 | 5e-5 | 0.55 | 0.7078 | -2.6% |
 
 ---
 
-## Best Model (Current - trained with CLOSE-based target, needs retraining)
+## Best Model (trained with CLOSE-based target, needs retraining with HIGH)
 
 **20M_wide**: d=512, L=6, h=8, LR=1e-4, dropout=0.5 → **AUC 0.7342** (+1.8% over RF)
 
-⚠️ This model was trained with the incorrect CLOSE-based target. Results will need to be re-validated after fixing to HIGH-based target.
+⚠️ This model was trained with the old CLOSE-based target. Results will change with HIGH-based target.
 
 ---
 
-## Next Session: Implementation Plan
+## Next Session: 0.5% Threshold Experiments
 
-### Task: Add HIGH-based Upside Threshold Target to FinancialDataset
+### Task: Run experiments with HIGH-based targets at 0.5% threshold
 
-**Approved change:**
-1. Add optional `high_prices` parameter to FinancialDataset
-2. When provided, use `max(high[t+1:t+1+horizon])` for upside threshold target
-3. Backward compatible - default behavior unchanged (for reproducibility of old experiments)
+**Experiment Setup:**
+1. Load SPY data with both Close and High prices
+2. Create FinancialDataset with `high_prices=high`, `threshold=0.005`
+3. Train 20M_wide model (d=512, L=6, h=8)
+4. Report full metrics: AUC, accuracy, precision, recall, F1
 
-**TDD Steps:**
-1. Write failing tests for HIGH-based target calculation
-2. Implement the change
-3. Run `make test` to verify all pass
-4. Run experiments with 0.5% threshold, HIGH-based target
+**Also test:**
+- h=4 variant (fewer heads) - compare to h=8
 
-**Also requested:**
-- Report comprehensive metrics: AUC, accuracy, precision, recall, F1
-- Test h=4 (fewer heads) variant
+**Expected Outcomes:**
+- ~50/50 class balance with 0.5% threshold + HIGH-based targets
+- Model should learn meaningful patterns with balanced data
+- Full metrics will show if model is just predicting majority class
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-21 ~08:50 UTC
-- Result: **467 passed**, 2 warnings
+- Last `make test`: 2026-01-21 ~10:45 UTC
+- Result: **469 passed**, 2 warnings
 - Failing: none
-
----
-
-## Files Created This Session (Not Committed)
-
-| File | Description |
-|------|-------------|
-| `scripts/test_shallow_depth.py` | L=2-5 depth experiment |
-| `scripts/test_lr_dropout_tuning.py` | LR/dropout tuning experiment |
-| `scripts/backtest_optimal_models.py` | Created in prior sub-session |
-| `outputs/shallow_depth/` | Results (CSV, JSON) |
-| `outputs/lr_dropout_tuning/` | Results (CSV, JSON) |
 
 ---
 
@@ -134,12 +116,11 @@ Use "upside threshold (HIGH-based)" and "downside threshold (LOW-based)" instead
 
 **Created:**
 - `Target_Calculation_Definitive_Rule` - **CANONICAL** definition of upside/downside threshold targets (HIGH/LOW based, NEVER CLOSE)
-- `Finding_ShallowDepthExperiment_20260121` - L=6 optimal, shallower underfits
-- `Finding_LRDropoutTuning_20260121` - LR=1e-4, dropout=0.5 optimal
 
 **From previous sessions (relevant):**
-- `Finding_DropoutScalingExperiment_20260121` - 20M_wide 0.7342 beats RF (with CLOSE-based target, needs revalidation)
-- `Finding_TrainingDynamicsExperiment_20260121` - Dropout=0.5 works at 2M
+- `Finding_ShallowDepthExperiment_20260121` - L=6 optimal, shallower underfits
+- `Finding_LRDropoutTuning_20260121` - LR=1e-4, dropout=0.5 optimal
+- `Finding_DropoutScalingExperiment_20260121` - 20M_wide 0.7342 beats RF (with CLOSE-based target)
 
 ---
 
@@ -155,10 +136,10 @@ make verify
 
 ## Next Session Should
 
-1. **Implement HIGH-based upside threshold target** in FinancialDataset (TDD)
-2. **Run 0.5% threshold experiment** with balanced data (~50/50 class distribution)
+1. **Create experiment script** for 0.5% threshold with HIGH-based targets
+2. **Train 20M_wide model** with new target calculation
 3. **Report full metrics**: AUC, accuracy, precision, recall, F1
-4. **Test h=4 variant** (fewer heads)
+4. **Test h=4 variant** and compare to h=8
 
 ---
 
@@ -184,7 +165,6 @@ make verify
 - Evidence-based claims
 
 ### Current Focus
-- **CRITICAL**: Fix target calculation (use HIGH prices for upside threshold - see `Target_Calculation_Definitive_Rule` in Memory)
-- Test 0.5% threshold with balanced data (~50/50 with HIGH-based target)
+- Run 0.5% threshold experiments with HIGH-based targets
 - Full metrics reporting (not just AUC)
 - Test h=4 (fewer heads) variant
