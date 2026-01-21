@@ -547,3 +547,106 @@ class TestLabelSmoothingBCELossGradient:
 
         assert predictions.grad is not None, "Gradients should flow to predictions"
         assert not torch.all(predictions.grad == 0), "Gradients should be non-zero"
+
+
+# =============================================================================
+# WeightedSumLoss Tests
+# =============================================================================
+
+
+class TestWeightedSumLossBasic:
+    """Basic functionality tests for WeightedSumLoss."""
+
+    def test_weighted_sum_loss_forward_computes_weighted_sum(self):
+        """Test WeightedSumLoss computes α*BCE + (1-α)*SoftAUC."""
+        from src.training.losses import WeightedSumLoss
+
+        torch.manual_seed(42)
+        predictions = torch.rand(100)
+        targets = torch.cat([torch.ones(50), torch.zeros(50)])
+
+        alpha = 0.6
+        loss_fn = WeightedSumLoss(alpha=alpha)
+
+        # Compute weighted sum loss
+        weighted_loss = loss_fn(predictions, targets)
+
+        # Compute individual losses manually
+        bce_loss = nn.BCELoss()(predictions, targets)
+        softauc_loss = SoftAUCLoss(gamma=2.0)(predictions, targets)
+        expected = alpha * bce_loss + (1 - alpha) * softauc_loss
+
+        assert abs(weighted_loss.item() - expected.item()) < 1e-5, \
+            f"Expected {expected.item():.6f}, got {weighted_loss.item():.6f}"
+
+    def test_weighted_sum_loss_default_alpha_is_half(self):
+        """Test WeightedSumLoss defaults to alpha=0.5."""
+        from src.training.losses import WeightedSumLoss
+
+        loss_fn = WeightedSumLoss()
+        assert loss_fn.alpha == 0.5, f"Default alpha should be 0.5, got {loss_fn.alpha}"
+
+    def test_weighted_sum_loss_alpha_one_equals_bce(self):
+        """Test alpha=1.0 produces pure BCE loss."""
+        from src.training.losses import WeightedSumLoss
+
+        torch.manual_seed(42)
+        predictions = torch.rand(50)
+        targets = torch.cat([torch.ones(25), torch.zeros(25)])
+
+        weighted_loss = WeightedSumLoss(alpha=1.0)(predictions, targets)
+        bce_loss = nn.BCELoss()(predictions, targets)
+
+        assert abs(weighted_loss.item() - bce_loss.item()) < 1e-6, \
+            f"alpha=1.0 should equal BCE: weighted={weighted_loss.item()}, bce={bce_loss.item()}"
+
+    def test_weighted_sum_loss_alpha_zero_equals_softauc(self):
+        """Test alpha=0.0 produces pure SoftAUC loss."""
+        from src.training.losses import WeightedSumLoss
+
+        torch.manual_seed(42)
+        predictions = torch.rand(50)
+        targets = torch.cat([torch.ones(25), torch.zeros(25)])
+
+        weighted_loss = WeightedSumLoss(alpha=0.0)(predictions, targets)
+        softauc_loss = SoftAUCLoss(gamma=2.0)(predictions, targets)
+
+        assert abs(weighted_loss.item() - softauc_loss.item()) < 1e-6, \
+            f"alpha=0.0 should equal SoftAUC: weighted={weighted_loss.item()}, softauc={softauc_loss.item()}"
+
+
+class TestWeightedSumLossValidation:
+    """Validation tests for WeightedSumLoss."""
+
+    def test_weighted_sum_loss_invalid_alpha_below_zero_raises(self):
+        """Test alpha < 0 raises ValueError."""
+        from src.training.losses import WeightedSumLoss
+
+        with pytest.raises(ValueError, match="alpha must be in"):
+            WeightedSumLoss(alpha=-0.1)
+
+    def test_weighted_sum_loss_invalid_alpha_above_one_raises(self):
+        """Test alpha > 1 raises ValueError."""
+        from src.training.losses import WeightedSumLoss
+
+        with pytest.raises(ValueError, match="alpha must be in"):
+            WeightedSumLoss(alpha=1.1)
+
+
+class TestWeightedSumLossGradient:
+    """Gradient flow tests for WeightedSumLoss."""
+
+    def test_weighted_sum_loss_gradient_flows(self):
+        """Test gradients propagate through WeightedSumLoss."""
+        from src.training.losses import WeightedSumLoss
+
+        loss_fn = WeightedSumLoss(alpha=0.5)
+
+        predictions = torch.tensor([0.7, 0.6, 0.3, 0.2], requires_grad=True)
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+        loss.backward()
+
+        assert predictions.grad is not None, "Gradients should flow to predictions"
+        assert not torch.all(predictions.grad == 0), "Gradients should be non-zero"

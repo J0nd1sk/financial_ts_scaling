@@ -31,6 +31,7 @@ NON_FEATURE_COLUMNS = {"Date"}
 # Task name to threshold mapping
 TASK_THRESHOLDS = {
     "direction": 0.0,  # Any positive return
+    "threshold_0.5pct": 0.005,
     "threshold_1pct": 0.01,
     "threshold_2pct": 0.02,
     "threshold_3pct": 0.03,

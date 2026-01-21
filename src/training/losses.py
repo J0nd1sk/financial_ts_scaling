@@ -154,6 +154,62 @@ class FocalLoss(nn.Module):
         return loss.mean()
 
 
+class WeightedSumLoss(nn.Module):
+    """Weighted sum of BCE and SoftAUC losses for multi-objective optimization.
+
+    Combines binary cross-entropy (for probability calibration) with SoftAUC
+    (for ranking optimization) using a tunable weight parameter.
+
+    Formula: L = α * BCE + (1 - α) * SoftAUC
+
+    Where:
+        α = 1.0: Pure BCE (probability calibration)
+        α = 0.5: Balanced (default)
+        α = 0.0: Pure SoftAUC (ranking optimization)
+
+    This allows trading off between:
+    - BCE: Well-calibrated probabilities, good for threshold-based decisions
+    - SoftAUC: Good ranking/separation, directly optimizes AUC-ROC
+
+    Args:
+        alpha: Weight for BCE loss. Must be in [0, 1]. Default 0.5.
+        gamma: Steepness parameter for SoftAUC component. Default 2.0.
+
+    Example:
+        >>> loss_fn = WeightedSumLoss(alpha=0.7)  # 70% BCE, 30% SoftAUC
+        >>> predictions = torch.tensor([0.9, 0.8, 0.2, 0.1])
+        >>> targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+        >>> loss = loss_fn(predictions, targets)
+    """
+
+    def __init__(self, alpha: float = 0.5, gamma: float = 2.0) -> None:
+        super().__init__()
+        if not 0.0 <= alpha <= 1.0:
+            raise ValueError(f"alpha must be in [0, 1], got {alpha}")
+        self.alpha = alpha
+        self.bce = nn.BCELoss()
+        self.softauc = SoftAUCLoss(gamma=gamma)
+
+    def forward(self, predictions: Tensor, targets: Tensor) -> Tensor:
+        """Compute weighted sum of BCE and SoftAUC losses.
+
+        Args:
+            predictions: Model predictions (probabilities), shape (N,) or (N, 1).
+            targets: Binary targets (0 or 1), shape (N,) or (N, 1).
+
+        Returns:
+            Scalar loss tensor.
+        """
+        # Flatten to 1D for consistent handling
+        predictions = predictions.view(-1)
+        targets = targets.view(-1)
+
+        bce_loss = self.bce(predictions, targets)
+        softauc_loss = self.softauc(predictions, targets)
+
+        return self.alpha * bce_loss + (1 - self.alpha) * softauc_loss
+
+
 class LabelSmoothingBCELoss(nn.Module):
     """Binary Cross-Entropy with Label Smoothing.
 

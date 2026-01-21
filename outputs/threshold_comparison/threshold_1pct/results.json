@@ -1,0 +1,32 @@
+{
+  "experiment_name": "threshold_1pct",
+  "task": "threshold_1pct",
+  "threshold": 0.01,
+  "context_length": 80,
+  "architecture": {
+    "d_model": 64,
+    "n_layers": 4,
+    "n_heads": 4,
+    "d_ff": 256,
+    "dropout": 0.2,
+    "use_revin": true
+  },
+  "training": {
+    "learning_rate": 0.001,
+    "batch_size": 128,
+    "epochs": 50
+  },
+  "results": {
+    "val_auc": 0.6944836472970486,
+    "val_loss": 0.34243326634168625,
+    "train_loss": 0.31705914699194726,
+    "stopped_early": true,
+    "training_time_minutes": 0.22462843656539916
+  },
+  "splits": {
+    "train_samples": 7257,
+    "val_samples": 422,
+    "test_samples": 181
+  },
+  "timestamp": "2026-01-20T14:53:56.380173"
+}

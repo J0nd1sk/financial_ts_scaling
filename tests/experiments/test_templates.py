@@ -360,10 +360,13 @@ class TestGenerateFinalTrainingScriptContent:
         assert "n_layers=48" in script or "N_LAYERS = 48" in script
         assert "n_heads=2" in script or "N_HEADS = 2" in script
 
-    def test_generate_final_training_script_uses_contiguous_mode(
+    def test_generate_final_training_script_uses_simple_splitter(
         self, final_training_params
     ):
-        """Test that script uses contiguous split mode for production-realistic evaluation."""
+        """Test that script uses SimpleSplitter with date-based splits for production-realistic evaluation."""
         script = generate_final_training_script(**final_training_params)
 
-        assert 'mode="contiguous"' in script
+        # Should use SimpleSplitter instead of ChunkSplitter
+        assert "SimpleSplitter" in script
+        assert 'val_start="2023-01-01"' in script
+        assert 'test_start="2025-01-01"' in script

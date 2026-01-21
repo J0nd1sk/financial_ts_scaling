@@ -18,6 +18,7 @@ import yaml
 # Valid values for categorical fields
 VALID_TASKS = frozenset({
     "direction",
+    "threshold_0.5pct",
     "threshold_1pct",
     "threshold_2pct",
     "threshold_3pct",

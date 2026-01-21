@@ -2,7 +2,7 @@
 """
 PHASE6A Experiment: 2M parameters, threshold_1pct task
 Type: HPO (Hyperparameter Optimization) with Architectural Search
-Generated: 2025-12-29T02:34:12.822713+00:00
+Generated: 2026-01-20T18:13:43.761751+00:00
 
 This script searches both model ARCHITECTURE (d_model, n_layers, n_heads, d_ff)
 and TRAINING parameters (lr, epochs, batch_size) to find optimal configuration.
@@ -26,7 +26,7 @@ from src.training.hpo import (
     save_all_trials,
 )
 from src.training.thermal import ThermalCallback
-from src.data.dataset import ChunkSplitter
+from src.data.dataset import SimpleSplitter
 from src.experiments.runner import update_experiment_log
 from src.experiments.trial_logger import TrialLogger
 
@@ -43,7 +43,7 @@ BUDGET = "2M"
 TASK = "threshold_1pct"
 HORIZON = 3
 TIMESCALE = "daily"
-DATA_PATH = "data/processed/v1/SPY_dataset_a25.parquet"
+DATA_PATH = "data/processed/v1/SPY_dataset_a20.parquet"
 FEATURE_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume', 'dema_9', 'dema_10', 'sma_12', 'dema_20', 'dema_25', 'sma_50', 'dema_90', 'sma_100', 'sma_200', 'rsi_daily', 'rsi_weekly', 'stochrsi_daily', 'stochrsi_weekly', 'macd_line', 'obv', 'adosc', 'atr_14', 'adx_14', 'bb_percent_b', 'vwap_20']
 
 # HPO settings
@@ -87,13 +87,19 @@ def load_training_search_space():
     return config.get("training_search_space", {})
 
 def get_split_indices(df):
-    """Get train/val/test split indices."""
-    splitter = ChunkSplitter(
-        total_days=len(df),
+    """Get train/val/test split indices using SimpleSplitter.
+
+    Uses date-based contiguous splits:
+    - Train: before 2023-01-01
+    - Val: 2023-01-01 to 2024-12-31
+    - Test: 2025-01-01 onwards
+    """
+    splitter = SimpleSplitter(
+        dates=df["Date"],
         context_length=60,  # PatchTST context window
         horizon=HORIZON,
-        val_ratio=0.15,
-        test_ratio=0.15,
+        val_start="2023-01-01",
+        test_start="2025-01-01",
     )
     return splitter.split()
 
@@ -201,6 +207,7 @@ if __name__ == "__main__":
         split_indices=split_indices,
         num_features=len(FEATURE_COLUMNS),
         verbose=True,  # Enable detailed per-trial metrics
+        use_revin=True,  # RevIN alone is best for non-stationary financial data
     )
 
     # Run optimization with thermal monitoring and incremental logging

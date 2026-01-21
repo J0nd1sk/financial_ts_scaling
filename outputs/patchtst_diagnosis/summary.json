@@ -1,0 +1,98 @@
+[
+  {
+    "config_name": "baseline",
+    "learning_rate": 0.0001,
+    "warmup": 5,
+    "use_cosine": false,
+    "use_revin": true,
+    "final_val_auc": 0.5247660979636763,
+    "final_pred_std": 7.302806892539593e-08,
+    "final_class_sep": -1.1920928955078125e-07,
+    "best_val_auc": 0.5356906989543203,
+    "best_epoch": 44
+  },
+  {
+    "config_name": "low_lr",
+    "learning_rate": 1e-05,
+    "warmup": 5,
+    "use_cosine": false,
+    "use_revin": true,
+    "final_val_auc": 0.48692900385250415,
+    "final_pred_std": 2.501268681953661e-06,
+    "final_class_sep": -1.1920928955078125e-07,
+    "best_val_auc": 0.4879196477710512,
+    "best_epoch": 46
+  },
+  {
+    "config_name": "very_low_lr",
+    "learning_rate": 3e-06,
+    "warmup": 10,
+    "use_cosine": false,
+    "use_revin": true,
+    "final_val_auc": 0.580820033021464,
+    "final_pred_std": 3.903387550963089e-05,
+    "final_class_sep": 8.046627044677734e-06,
+    "best_val_auc": 0.5858007705008256,
+    "best_epoch": 27
+  },
+  {
+    "config_name": "cosine",
+    "learning_rate": 0.0001,
+    "warmup": 5,
+    "use_cosine": true,
+    "use_revin": true,
+    "final_val_auc": 0.4798293891029169,
+    "final_pred_std": 9.917875587461822e-08,
+    "final_class_sep": -5.960464477539063e-08,
+    "best_val_auc": 0.5047881122729774,
+    "best_epoch": 0
+  },
+  {
+    "config_name": "low_lr_cosine",
+    "learning_rate": 1e-05,
+    "warmup": 5,
+    "use_cosine": true,
+    "use_revin": true,
+    "final_val_auc": 0.49397358282883874,
+    "final_pred_std": 4.1991775105998386e-06,
+    "final_class_sep": 8.344650268554688e-07,
+    "best_val_auc": 0.5142542652724271,
+    "best_epoch": 3
+  },
+  {
+    "config_name": "long_warmup",
+    "learning_rate": 0.0001,
+    "warmup": 20,
+    "use_cosine": false,
+    "use_revin": true,
+    "final_val_auc": 0.4864336818932306,
+    "final_pred_std": 1.3264384790545591e-07,
+    "final_class_sep": -5.960464477539063e-08,
+    "best_val_auc": 0.49397358282883874,
+    "best_epoch": 42
+  },
+  {
+    "config_name": "slow_start",
+    "learning_rate": 5e-06,
+    "warmup": 30,
+    "use_cosine": true,
+    "use_revin": true,
+    "final_val_auc": 0.5770776004402862,
+    "final_pred_std": 2.5904619178618304e-05,
+    "final_class_sep": 6.616115570068359e-06,
+    "best_val_auc": 0.5834067143643369,
+    "best_epoch": 15
+  },
+  {
+    "config_name": "no_revin",
+    "learning_rate": 0.0001,
+    "warmup": 5,
+    "use_cosine": false,
+    "use_revin": false,
+    "final_val_auc": 0.5016785910842048,
+    "final_pred_std": 1.7124247619904054e-07,
+    "final_class_sep": -5.960464477539063e-08,
+    "best_val_auc": 0.536103467253715,
+    "best_epoch": 0
+  }
+]

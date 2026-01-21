@@ -1,0 +1,107 @@
+{
+  "experiment": "threshold_comparison",
+  "thresholds_tested": [
+    "0.5%",
+    "1%",
+    "2%"
+  ],
+  "results": [
+    {
+      "experiment_name": "threshold_0.5pct",
+      "task": "threshold_0.5pct",
+      "threshold": 0.005,
+      "context_length": 80,
+      "architecture": {
+        "d_model": 64,
+        "n_layers": 4,
+        "n_heads": 4,
+        "d_ff": 256,
+        "dropout": 0.2,
+        "use_revin": true
+      },
+      "training": {
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "epochs": 50
+      },
+      "results": {
+        "val_auc": 0.5864473792592186,
+        "val_loss": 0.6450547724962234,
+        "train_loss": 0.5475214034841772,
+        "stopped_early": true,
+        "training_time_minutes": 0.20813443660736083
+      },
+      "splits": {
+        "train_samples": 7257,
+        "val_samples": 422,
+        "test_samples": 181
+      },
+      "timestamp": "2026-01-20T14:53:40.368580"
+    },
+    {
+      "experiment_name": "threshold_1pct",
+      "task": "threshold_1pct",
+      "threshold": 0.01,
+      "context_length": 80,
+      "architecture": {
+        "d_model": 64,
+        "n_layers": 4,
+        "n_heads": 4,
+        "d_ff": 256,
+        "dropout": 0.2,
+        "use_revin": true
+      },
+      "training": {
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "epochs": 50
+      },
+      "results": {
+        "val_auc": 0.6944836472970486,
+        "val_loss": 0.34243326634168625,
+        "train_loss": 0.31705914699194726,
+        "stopped_early": true,
+        "training_time_minutes": 0.22462843656539916
+      },
+      "splits": {
+        "train_samples": 7257,
+        "val_samples": 422,
+        "test_samples": 181
+      },
+      "timestamp": "2026-01-20T14:53:56.380173"
+    },
+    {
+      "experiment_name": "threshold_2pct",
+      "task": "threshold_2pct",
+      "threshold": 0.02,
+      "context_length": 80,
+      "architecture": {
+        "d_model": 64,
+        "n_layers": 4,
+        "n_heads": 4,
+        "d_ff": 256,
+        "dropout": 0.2,
+        "use_revin": true
+      },
+      "training": {
+        "learning_rate": 0.001,
+        "batch_size": 128,
+        "epochs": 50
+      },
+      "results": {
+        "val_auc": 0.6205250596658711,
+        "val_loss": 0.06502003641799092,
+        "train_loss": 0.11158080912080773,
+        "stopped_early": true,
+        "training_time_minutes": 0.13115816911061604
+      },
+      "splits": {
+        "train_samples": 7257,
+        "val_samples": 422,
+        "test_samples": 181
+      },
+      "timestamp": "2026-01-20T14:54:06.791997"
+    }
+  ],
+  "timestamp": "2026-01-20T14:54:07.186505"
+}

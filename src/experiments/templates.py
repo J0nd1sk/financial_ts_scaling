@@ -76,7 +76,7 @@ def generate_hpo_script(
             save_all_trials,
         )
         from src.training.thermal import ThermalCallback
-        from src.data.dataset import ChunkSplitter
+        from src.data.dataset import SimpleSplitter
         from src.experiments.runner import update_experiment_log
         from src.experiments.trial_logger import TrialLogger
 
@@ -137,13 +137,19 @@ def generate_hpo_script(
             return config.get("training_search_space", {{}})
 
         def get_split_indices(df):
-            """Get train/val/test split indices."""
-            splitter = ChunkSplitter(
-                total_days=len(df),
+            """Get train/val/test split indices using SimpleSplitter.
+
+            Uses date-based contiguous splits:
+            - Train: before 2023-01-01
+            - Val: 2023-01-01 to 2024-12-31
+            - Test: 2025-01-01 onwards
+            """
+            splitter = SimpleSplitter(
+                dates=df["Date"],
                 context_length=60,  # PatchTST context window
                 horizon=HORIZON,
-                val_ratio=0.15,
-                test_ratio=0.15,
+                val_start="2023-01-01",
+                test_start="2025-01-01",
             )
             return splitter.split()
 
@@ -251,6 +257,7 @@ def generate_hpo_script(
                 split_indices=split_indices,
                 num_features=len(FEATURE_COLUMNS),
                 verbose=True,  # Enable detailed per-trial metrics
+                use_revin=True,  # RevIN alone is best for non-stationary financial data
             )
 
             # Run optimization with thermal monitoring and incremental logging
@@ -515,10 +522,10 @@ def generate_final_training_script(
         Training params (from HPO):
             lr={learning_rate}, dropout={dropout}, weight_decay={weight_decay}
 
-        Data splits (contiguous mode):
-            Train: 1993 - Sept 2024
-            Val: Oct - Dec 2024 (early stopping)
-            Test: 2025 (final evaluation)
+        Data splits (SimpleSplitter date-based):
+            Train: 1993 - 2022 (before val_start)
+            Val: 2023 - 2024 (early stopping)
+            Test: 2025+ (final evaluation)
         """
         import sys
         import time
@@ -531,7 +538,7 @@ def generate_final_training_script(
         from src.config.experiment import ExperimentConfig
         from src.models.patchtst import PatchTSTConfig
         from src.models.arch_grid import get_memory_safe_batch_config
-        from src.data.dataset import ChunkSplitter
+        from src.data.dataset import SimpleSplitter
         from src.training.trainer import Trainer
         from src.training.thermal import ThermalCallback
         from src.experiments.runner import update_experiment_log
@@ -590,17 +597,17 @@ def generate_final_training_script(
             # Validate data
             df = validate_data()
 
-            # Create contiguous splits (production-realistic)
-            splitter = ChunkSplitter(
-                total_days=len(df),
+            # Create date-based contiguous splits (production-realistic)
+            # Train: before 2023, Val: 2023-2024, Test: 2025+
+            splitter = SimpleSplitter(
+                dates=df["Date"],
                 context_length=CONTEXT_LENGTH,
                 horizon=HORIZON,
-                val_ratio=0.15,
-                test_ratio=0.15,
-                mode="contiguous",
+                val_start="2023-01-01",
+                test_start="2025-01-01",
             )
             split_indices = splitter.split()
-            print(f"✓ Contiguous splits: train={{len(split_indices.train_indices)}}, "
+            print(f"✓ Date-based splits: train={{len(split_indices.train_indices)}}, "
                   f"val={{len(split_indices.val_indices)}}, test={{len(split_indices.test_indices)}}")
 
             # Create experiment config
@@ -655,6 +662,7 @@ def generate_final_training_script(
                 split_indices=split_indices,
                 accumulation_steps=batch_config["accumulation_steps"],
                 early_stopping_patience=EARLY_STOPPING_PATIENCE,
+                use_revin=True,  # RevIN alone is best for non-stationary financial data
             )
 
             # Train

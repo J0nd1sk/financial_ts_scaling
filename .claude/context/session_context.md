@@ -1,126 +1,136 @@
-# Session Handoff - 2026-01-20 ~20:00 UTC
+# Session Handoff - 2026-01-20 ~21:30 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `c5182cc` docs: add context length ablation results documentation
-- **Uncommitted changes**: 20 files (mostly from other terminal - loss function work)
-  - This terminal committed: context length ablation (2 commits)
-  - Other terminal: HPO scripts (12), templates.py, hpo.py, losses.py, test files
-- **Untracked**: `scripts/test_multiobjective_comparison.py` (other terminal)
+- **Last commit**: `a921271` docs: session handoff with context length ablation complete
+- **Uncommitted changes**: ~25+ files (from multiple sessions)
+- **Ahead of origin**: 18+ commits (not pushed)
 
 ### Task Status
-- **Context length ablation**: ✅ COMPLETE
-- **Loss comparison (other terminal)**: 🔄 IN PROGRESS (BCE winner so far)
+- **Working on**: Architecture exploration planning
+- **Status**: Plan document created, ready to execute experiments
 
 ---
 
-## COMPLETED THIS SESSION
+## 🚨 MAJOR FINDING (Other Terminal)
 
-### 1. Session Restore
-- Recovered from IDE crash
-- Identified partial context length ablation work in progress
-- Found ctx60 already tested (AUC 0.601)
+### Random Forest BEATS PatchTST on ALL thresholds!
 
-### 2. Context Length Ablation Planning
-- Planning session to identify risks
-- Found run_all.py key mismatch bug (best_val_auc vs val_auc)
-- Found ctx90-252 scripts had wrong Trainer API
-- Found ctx336 infeasible (test region too small)
+| Threshold | Pos Rate | PatchTST | Random Forest | Gradient Boost | Winner |
+|-----------|----------|----------|---------------|----------------|--------|
+| **0.5%** | 46% | 0.586 | **0.628** | 0.583 | **RF +7%** |
+| **1.0%** | 20% | 0.695 | **0.716** | 0.624 | **RF +3%** |
+| **2.0%** | 2% | 0.621 | 0.705 | **0.766** | **GB +23%** |
 
-### 3. Fixes Applied
-- Fixed run_all.py key references (4 changes)
-- Regenerated ctx90, ctx180, ctx252 from ctx60 template
-- Removed ctx336 (test region only 261 days, need 337)
-- Renamed run_all.py → run_context_ablation.py
-
-### 4. Context Length Experiments Run
-**Results (SimpleSplitter + RevIN, d=64/L=4/h=4, threshold_1pct h=1):**
-
-| Context | Val AUC | Δ vs 60d | Val Samples |
-|---------|---------|----------|-------------|
-| 60 days | 0.6011 | baseline | 442 |
-| **80 days** | **0.6945** | **+15.5%** | 422 |
-| 90 days | 0.6344 | +5.5% | 412 |
-| 120 days | 0.6877 | +14.4% | 382 |
-| 180 days | 0.5489 | -8.7% | 322 |
-| 252 days | 0.4768 | -20.7% | 250 |
-
-**Key Finding**: 80-day context is optimal (+15.5% AUC over baseline)
-
-### 5. Documentation & Commits
-- Commit `67d057e`: exp: context length ablation study (60-252 days)
-- Commit `c5182cc`: docs: add context length ablation results documentation
-- Created `docs/context_length_ablation_results.md`
+**Key insight**: Signal EXISTS - tree models find it, transformers don't.
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-20 ~20:00 UTC
+- Last `make test`: 2026-01-20 ~21:25 UTC
 - Result: **467 passed**, 2 warnings
-- Failing tests: none
+- Failing: none
 
 ---
 
-## Files Modified/Created This Session
+## Completed This Session (Loss Function Terminal)
 
-| File | Change | Status |
-|------|--------|--------|
-| `experiments/context_length_ablation/train_ctx60.py` | Template script | COMMITTED |
-| `experiments/context_length_ablation/train_ctx80.py` | NEW - 80 day | COMMITTED |
-| `experiments/context_length_ablation/train_ctx90.py` | Regenerated | COMMITTED |
-| `experiments/context_length_ablation/train_ctx120.py` | NEW - 120 day | COMMITTED |
-| `experiments/context_length_ablation/train_ctx180.py` | Regenerated | COMMITTED |
-| `experiments/context_length_ablation/train_ctx252.py` | Regenerated | COMMITTED |
-| `experiments/context_length_ablation/run_context_ablation.py` | Runner (renamed) | COMMITTED |
-| `outputs/context_length_ablation/*/results.json` | 6 results files | COMMITTED |
-| `outputs/context_length_ablation/summary.json` | Summary | COMMITTED |
-| `docs/context_length_ablation_results.md` | Documentation | COMMITTED |
+### 1. Expanded BCE vs weighted_05 Comparison
+- 12 experiments: {BCE, weighted_05} × {h1, h3, h5} × {2M, 20M}
+- **RESULT: NO CONSISTENT DIFFERENCE**
+  - Mean AUC diff: -0.26% (high variance, std=1.33%)
+  - 2M slightly favors weighted_05 (+0.29%)
+  - 20M favors BCE (-0.80%)
+- **RECOMMENDATION**: Stick with BCE (simpler, no benefit from weighted loss)
+- **CONCLUSION**: Loss function is NOT the bottleneck
+
+### 2. Architecture Exploration Plan Created
+- Plan document: `docs/architecture_exploration_plan.md`
+- Research question: Why do tree models outperform transformers?
+- Hypothesis: Early convergence due to over-parameterization and deep composition
 
 ---
 
-## Key Decisions Made This Session
+## Architecture Exploration Plan (NEXT STEPS)
 
-1. **80-day context is optimal** - AUC 0.6945, +15.5% over 60-day baseline
-2. **Sweet spot is 80-120 days** (~4-6 months of history)
-3. **Longer contexts hurt** - 180+ days performs worse than baseline
-4. **ctx336 excluded** - test region (2025+) only 261 days, need 337
-5. **Re-running workflow** - edit ctx60.py template, regenerate with sed, run runner
+**Research Question**: Why do tree-based models (XGBoost, RF) outperform PatchTST transformers?
+
+### Experiment 1: XGBoost Baseline (~30 min)
+- Same 20 features, same splits
+- Establishes target AUC to beat (~0.70-0.75 expected)
+- **Already confirmed by other terminal: RF gets 0.716 at 1% threshold**
+
+### Experiment 2: Smaller Models 200K-500K params (~30 min)
+- Test overparameterization hypothesis
+- Configs: 200K (L=2 d=32), 500K (L=2 d=64)
+- Current 2M model may be too large for ~7K training samples
+
+### Experiment 3: Shallow + Wide (~30 min)
+- L=1-2 layers with d_model=256-768
+- Test if depth is the problem
+- Shallow = closer to ensemble behavior
+
+### Experiment 4: MLP-Only (1-2 hrs)
+- Remove attention entirely
+- Test if attention is helping or hurting
+- May need new model class
+
+### Experiment 5: Training Dynamics (if time)
+- Lower LR (1e-5, 1e-6)
+- Higher dropout (0.4, 0.5)
+- Early stopping on AUC
+
+**Execution Order**: XGBoost → Small models → Shallow+wide → MLP-only
+
+**Success Criteria**: AUC > 0.70 OR conclusive evidence transformers can't match trees
+
+---
+
+## Files Created/Modified This Session
+
+| File | Change |
+|------|--------|
+| `scripts/test_expanded_comparison.py` | NEW - 12-experiment comparison script |
+| `outputs/expanded_comparison/` | NEW - BCE vs weighted_05 results |
+| `docs/architecture_exploration_plan.md` | NEW - next phase plan |
+
+**From other terminal (threshold comparison):**
+- `experiments/threshold_comparison/` - threshold scripts
+- `scripts/test_xgboost_thresholds.py` - XGBoost comparison
+- `outputs/threshold_comparison/` - results
+
+**Still uncommitted from previous sessions:**
+- 12 HPO scripts in `experiments/phase6a/`
+- `src/training/losses.py` (FocalLoss, SoftAUCLoss, WeightedSumLoss)
+- Multi-objective comparison scripts and outputs
+
+---
+
+## Data Versions
+- **Raw manifest**: SPY.parquet (8299 rows, 1993-2026)
+- **Processed manifest**: SPY_dataset_a20.parquet (8100 rows)
+- **Pending registrations**: none
 
 ---
 
 ## Memory Entities Updated This Session
 
-- `Finding_ContextLengthAblation_20260120` (created + updated): Full results, 80-day winner
-- `Plan_ContextLengthAblation` (created): Planning decisions and fixes
-- Relation: `Finding_ContextLengthAblation_20260120` → `Question_WhatImprovesAUC_Phase6A` (answers)
+**This session (loss function exploration):**
+- `Plan_ExpandedBCEvsWeighted_20260120` - 12-experiment comparison plan
+- `Finding_ExpandedBCEvsWeighted_20260120` - No consistent difference, stick with BCE
+- `Plan_ArchitectureExploration_20260120` - Next phase: shallow+wide, small models, etc.
+- `Hypothesis_TransformerEarlyConvergence_20260120` - Why transformers converge early
 
----
+**From other terminal (to be created):**
+- `Finding_RFBeatsPatchTST_20260120` - RF outperforms PatchTST on ALL thresholds
+- `Finding_SignalExistsAt0.5pct_20260120` - Signal confirmed with RF AUC 0.628
+- `Finding_PredictionCompression_PatchTST` - PatchTST outputs compressed to narrow range
 
-## Data Versions
-- Raw manifest: SPY.parquet (8299 rows, 1993-2026)
-- Processed manifest: SPY_dataset_a20.parquet (8100 rows)
-- SimpleSplitter splits: Train 7277, Val 442, Test 201 samples (at ctx=60)
-
----
-
-## Next Session Should
-
-### Immediate Options
-1. **Re-run loss comparison with 80-day context** - BCE got 0.667 at 60d, may improve at 80d
-2. **Update default context_length** - Change from 60 to 80 in templates/configs
-3. **Test h3 horizon with 80-day context** - h3 showed lower val_loss in HPO
-
-### Other Terminal (Loss Function Work)
-- BCE won single-objective comparison (AUC 0.667)
-- Multi-objective exploration deferred
-- 20 uncommitted files from that work
-
-### Research Questions
-- Does 80-day optimal context hold across different loss functions?
-- Does it hold across different horizons (h1 vs h3 vs h5)?
-- Should context_length be an HPO parameter?
+**Relevant from previous sessions:**
+- `Finding_ContextLengthAblation_20260120` - 80-day context optimal (+15.5%)
+- `Finding_MultiObjectiveComparison_20260120` - Multi-objective no improvement
 
 ---
 
@@ -156,6 +166,6 @@ make verify
 - Evidence-based claims
 
 ### Current Focus
-- Context length ablation COMPLETE (80 days optimal)
-- Other terminal working on loss functions
-- SimpleSplitter + RevIN are the foundation now
+- Architecture exploration: Why do trees outperform transformers?
+- Experiments: XGBoost baseline → Small models (200K) → Shallow+wide → MLP-only
+- Goal: Find config with AUC > 0.70 or prove transformers can't match trees

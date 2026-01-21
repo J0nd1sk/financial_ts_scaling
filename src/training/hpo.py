@@ -217,6 +217,7 @@ def create_architectural_objective(
     num_features: int | None = None,
     verbose: bool = False,
     force_extreme_trials: bool = True,
+    use_revin: bool = True,
 ) -> Callable[[optuna.Trial], float]:
     """Create Optuna objective function for architectural HPO.
 
@@ -232,6 +233,8 @@ def create_architectural_objective(
         num_features: Number of input features (required for model config)
         verbose: If True, capture and store detailed metrics per trial
         force_extreme_trials: If True, first 6 trials test architecture extremes
+        use_revin: If True, enable RevIN (Reversible Instance Normalization) in PatchTST.
+            RevIN normalizes per-instance at input, best for non-stationary financial data.
 
     Returns:
         Objective function for study.optimize()
@@ -359,6 +362,7 @@ def create_architectural_objective(
                 accumulation_steps=batch_config["accumulation_steps"],
                 early_stopping_patience=10,
                 early_stopping_min_delta=0.001,
+                use_revin=use_revin,
             )
 
             result = trainer.train(verbose=verbose)
