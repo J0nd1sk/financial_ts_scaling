@@ -1,0 +1,6 @@
+config_name,architecture,estimated_params,val_auc,val_loss,best_epoch,stopped_early,training_time_min,pred_min,pred_max,pred_std,train_samples,val_samples
+200K_a,"{'n_layers': 2, 'd_model': 32, 'n_heads': 2, 'd_ff': 128}",33185,0.6677302571025341,0.3162224106490612,50,True,0.15227493445078533,,,,7257,422
+200K_b,"{'n_layers': 1, 'd_model': 64, 'n_heads': 2, 'd_ff': 256}",65537,0.6891452414554827,0.29626668244600296,50,True,0.07023109992345174,,,,7257,422
+500K_a,"{'n_layers': 2, 'd_model': 64, 'n_heads': 2, 'd_ff': 256}",115521,0.6387065104006873,0.32956356555223465,50,True,0.12365223169326782,,,,7257,422
+500K_b,"{'n_layers': 3, 'd_model': 48, 'n_heads': 2, 'd_ff': 192}",96481,0.6910474320427072,0.30705714598298073,50,True,0.1166798988978068,,,,7257,422
+2M_baseline,"{'n_layers': 4, 'd_model': 64, 'n_heads': 4, 'd_ff': 256}",215489,0.6944836472970486,0.34243326634168625,50,True,0.19057000080744427,,,,7257,422

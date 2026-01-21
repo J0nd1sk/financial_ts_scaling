@@ -1,0 +1,109 @@
+{
+  "experiment": "small_models",
+  "hypothesis": "Smaller models cannot memorize noise",
+  "target_auc": 0.716,
+  "context_length": 80,
+  "results": [
+    {
+      "config_name": "200K_a",
+      "architecture": {
+        "n_layers": 2,
+        "d_model": 32,
+        "n_heads": 2,
+        "d_ff": 128
+      },
+      "estimated_params": 33185,
+      "val_auc": 0.6677302571025341,
+      "val_loss": 0.3162224106490612,
+      "best_epoch": 50,
+      "stopped_early": true,
+      "training_time_min": 0.15227493445078533,
+      "pred_min": null,
+      "pred_max": null,
+      "pred_std": null,
+      "train_samples": 7257,
+      "val_samples": 422
+    },
+    {
+      "config_name": "200K_b",
+      "architecture": {
+        "n_layers": 1,
+        "d_model": 64,
+        "n_heads": 2,
+        "d_ff": 256
+      },
+      "estimated_params": 65537,
+      "val_auc": 0.6891452414554827,
+      "val_loss": 0.29626668244600296,
+      "best_epoch": 50,
+      "stopped_early": true,
+      "training_time_min": 0.07023109992345174,
+      "pred_min": null,
+      "pred_max": null,
+      "pred_std": null,
+      "train_samples": 7257,
+      "val_samples": 422
+    },
+    {
+      "config_name": "500K_a",
+      "architecture": {
+        "n_layers": 2,
+        "d_model": 64,
+        "n_heads": 2,
+        "d_ff": 256
+      },
+      "estimated_params": 115521,
+      "val_auc": 0.6387065104006873,
+      "val_loss": 0.32956356555223465,
+      "best_epoch": 50,
+      "stopped_early": true,
+      "training_time_min": 0.12365223169326782,
+      "pred_min": null,
+      "pred_max": null,
+      "pred_std": null,
+      "train_samples": 7257,
+      "val_samples": 422
+    },
+    {
+      "config_name": "500K_b",
+      "architecture": {
+        "n_layers": 3,
+        "d_model": 48,
+        "n_heads": 2,
+        "d_ff": 192
+      },
+      "estimated_params": 96481,
+      "val_auc": 0.6910474320427072,
+      "val_loss": 0.30705714598298073,
+      "best_epoch": 50,
+      "stopped_early": true,
+      "training_time_min": 0.1166798988978068,
+      "pred_min": null,
+      "pred_max": null,
+      "pred_std": null,
+      "train_samples": 7257,
+      "val_samples": 422
+    },
+    {
+      "config_name": "2M_baseline",
+      "architecture": {
+        "n_layers": 4,
+        "d_model": 64,
+        "n_heads": 4,
+        "d_ff": 256
+      },
+      "estimated_params": 215489,
+      "val_auc": 0.6944836472970486,
+      "val_loss": 0.34243326634168625,
+      "best_epoch": 50,
+      "stopped_early": true,
+      "training_time_min": 0.19057000080744427,
+      "pred_min": null,
+      "pred_max": null,
+      "pred_std": null,
+      "train_samples": 7257,
+      "val_samples": 422
+    }
+  ],
+  "timestamp": "2026-01-20T17:21:58.007361"
+}
