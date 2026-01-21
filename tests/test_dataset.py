@@ -316,6 +316,93 @@ class TestErrorHandling:
 
 
 # ============================================================
+# FinancialDataset high_prices Tests - Using High for target calculation
+# ============================================================
+
+
+class TestFinancialDatasetHighPrices:
+    """Test high_prices parameter for correct target calculation."""
+
+    def test_uses_high_prices_for_label_calculation(self):
+        """When high_prices provided, labels should use max(high) not max(close).
+
+        Scenario: close=[100, 100, 101], high=[100, 100, 105], threshold=0.03
+        - Using close for future max: max([101]) = 101 < 103 (100*1.03) → label=0
+        - Using high for future max: max([105]) = 105 >= 103 → label=1
+        """
+        n_rows = 10
+        features_df = pd.DataFrame({
+            "Date": pd.date_range("2020-01-01", periods=n_rows, freq="D"),
+            "feature_1": np.ones(n_rows),
+        })
+
+        # Close prices: modest increase (1% at most)
+        close = np.array([100.0] * n_rows)
+        close[-1] = 101.0  # Only 1% up
+
+        # High prices: larger spike (5% up)
+        high = np.array([100.0] * n_rows)
+        high[-1] = 105.0  # 5% up
+
+        context_length = 5
+        horizon = 1
+        threshold = 0.03  # 3% threshold
+
+        # Without high_prices: should use close, label=0
+        dataset_close_only = FinancialDataset(
+            features_df=features_df,
+            close_prices=close,
+            context_length=context_length,
+            horizon=horizon,
+            threshold=threshold,
+        )
+
+        # With high_prices: should use high, label=1
+        dataset_with_high = FinancialDataset(
+            features_df=features_df,
+            close_prices=close,
+            context_length=context_length,
+            horizon=horizon,
+            threshold=threshold,
+            high_prices=high,
+        )
+
+        # Get the last valid sample (predicts from t=n_rows-2 to t=n_rows-1)
+        # Last sample index: n_rows - context_length - horizon + 1 - 1 = 10 - 5 - 1 + 1 - 1 = 4
+        last_idx = len(dataset_close_only) - 1
+
+        _, label_close = dataset_close_only[last_idx]
+        _, label_high = dataset_with_high[last_idx]
+
+        # Without high_prices: 101 < 103 → label=0
+        assert label_close.item() == 0.0, f"Expected 0.0 without high_prices, got {label_close.item()}"
+
+        # With high_prices: 105 >= 103 → label=1
+        assert label_high.item() == 1.0, f"Expected 1.0 with high_prices, got {label_high.item()}"
+
+    def test_raises_on_nan_in_high_prices(self):
+        """NaN in high_prices should raise ValueError."""
+        n_rows = 20
+        features_df = pd.DataFrame({
+            "Date": pd.date_range("2020-01-01", periods=n_rows, freq="D"),
+            "feature_1": np.ones(n_rows),
+        })
+        close = np.array([100.0] * n_rows)
+        high = np.array([100.0] * n_rows)
+        high[10] = np.nan  # Insert NaN
+
+        with pytest.raises(ValueError, match="high_prices.*NaN|NaN.*high"):
+            FinancialDataset(
+                features_df=features_df,
+                close_prices=close,
+                context_length=5,
+                horizon=1,
+                threshold=0.01,
+                high_prices=high,
+            )
+
+
+# ============================================================
 # ChunkSplitter Tests - Hybrid train/val/test splits
 # ============================================================
 

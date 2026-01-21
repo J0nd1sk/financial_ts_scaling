@@ -541,12 +541,16 @@ class SimpleSplitter:
 class FinancialDataset(Dataset):
     """PyTorch Dataset for financial time-series with binary threshold targets.
 
-    Loads feature data and close prices, constructs binary labels based on
-    whether the maximum future price exceeds a threshold percentage gain.
+    Loads feature data and close/high prices, constructs binary labels based on
+    whether the maximum future HIGH price exceeds a threshold percentage gain
+    over the current CLOSE price.
 
     Target construction rule:
-        future_max = max(close[t+1 : t+1+horizon])
+        future_max = max(high[t+1 : t+1+horizon])  # Uses High prices
         label = 1 if future_max >= close[t] * (1 + threshold) else 0
+
+    If high_prices is not provided, falls back to using close prices for
+    backward compatibility.
 
     Attributes:
         features: numpy array of shape (n_samples, context_length, n_features)
@@ -569,6 +573,7 @@ class FinancialDataset(Dataset):
         horizon: int,
         threshold: float,
         feature_columns: list[str] | None = None,
+        high_prices: np.ndarray | None = None,
     ) -> None:
         """Initialize the dataset.
 
@@ -580,9 +585,13 @@ class FinancialDataset(Dataset):
             threshold: Percentage threshold for positive label (e.g., 0.01 = 1%).
             feature_columns: Optional explicit list of feature columns to use.
                 If None, auto-discovers numeric columns (excluding only Date).
+            high_prices: Optional array of high prices for target calculation.
+                If provided, labels use max(high[future_window]) >= close[t] * threshold.
+                If None, falls back to using close prices (backward compatible).
 
         Raises:
             ValueError: If close_prices contains NaN values.
+            ValueError: If high_prices contains NaN values (when provided).
             ValueError: If sequence is too short for context_length + horizon.
             ValueError: If specified feature_columns are missing or non-numeric.
         """
@@ -596,6 +605,15 @@ class FinancialDataset(Dataset):
         # Validate no NaN in close prices
         if np.any(np.isnan(close)):
             raise ValueError("close_prices contains NaN values")
+
+        # Handle high_prices for target calculation
+        if high_prices is not None:
+            high = np.asarray(high_prices, dtype=np.float64)
+            if np.any(np.isnan(high)):
+                raise ValueError("high_prices contains NaN values")
+        else:
+            # Backward compatibility: use close for future max if high not provided
+            high = close
 
         # Determine feature columns
         if feature_columns is not None:
@@ -629,18 +647,20 @@ class FinancialDataset(Dataset):
         self._features = features
 
         # Pre-compute all labels using vectorized operations
-        self._labels = self._compute_labels(close)
+        # Pass close for threshold comparison, high for future max calculation
+        self._labels = self._compute_labels(close, high)
 
-    def _compute_labels(self, close: np.ndarray) -> np.ndarray:
+    def _compute_labels(self, close: np.ndarray, high: np.ndarray) -> np.ndarray:
         """Compute binary threshold labels for all valid samples.
 
         For each valid sample index i (0-indexed in dataset):
             - Prediction point t = i + context_length - 1 (in original data)
-            - Future window: close[t+1 : t+1+horizon]
+            - Future window: high[t+1 : t+1+horizon]
             - Label: 1 if max(future_window) >= close[t] * (1 + threshold), else 0
 
         Args:
-            close: Array of close prices.
+            close: Array of close prices (used for threshold comparison).
+            high: Array of high prices (used for future max calculation).
 
         Returns:
             Array of binary labels (0.0 or 1.0) for each sample.
@@ -654,12 +674,13 @@ class FinancialDataset(Dataset):
             # Current close price at prediction point
             current_close = close[t]
 
-            # Future window: t+1 to t+horizon (inclusive), i.e., close[t+1 : t+1+horizon]
+            # Future window: t+1 to t+horizon (inclusive)
+            # Use HIGH prices for max calculation
             future_start = t + 1
             future_end = t + 1 + self.horizon
-            future_max = close[future_start:future_end].max()
+            future_max = high[future_start:future_end].max()
 
-            # Threshold comparison
+            # Threshold comparison: future max HIGH >= current CLOSE * threshold
             threshold_price = current_close * (1 + self.threshold)
             labels[i] = 1.0 if future_max >= threshold_price else 0.0
 

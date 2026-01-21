@@ -376,6 +376,8 @@ training:
 
 Target construction rule: For each example at index t, compute `future_max = max(close[t+1 : t+horizon])`. Label = 1 if `future_max >= close[t] * (1 + pct_threshold)` else 0.
 
+> **⚠️ CORRECTION (2026-01-21)**: This documents the original implementation which was **conceptually incorrect**. The correct approach uses HIGH prices, not CLOSE prices: `future_max = max(high[t+1 : t+horizon])`. A trade achieves profit when the HIGH reaches the target, not when the CLOSE does. See Memory entity `Target_Calculation_Definitive_Rule` and decision_log.md entry 2026-01-21 for canonical rules.
+
 ### 6.7 Phase 5: Data Acquisition (2025-12-10)
 
 Extended data pipeline beyond SPY:

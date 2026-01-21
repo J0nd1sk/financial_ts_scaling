@@ -1,82 +1,145 @@
-# Session Handoff - 2026-01-21 ~07:30 UTC
+# Session Handoff - 2026-01-21 ~09:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `da4abdb` exp: Dropout scaling - 20M_wide beats RF by 1.8% (AUC 0.7342)
-- **Uncommitted changes**: none
-- **Ahead of origin**: 9 commits (not pushed)
+- **Last commit**: `932783e` docs: session handoff - 20M_wide breakthrough, next L=2-4 trials
+- **Uncommitted changes**: Multiple new experiment scripts and outputs
+- **Ahead of origin**: 10 commits (not pushed)
 
 ### Task Status
-- **Working on**: Architecture scaling experiments
-- **Status**: Dropout scaling complete, next: test even shallower L=2/L=4
+- **Working on**: Target calculation fix (upside threshold using HIGH prices)
+- **Status**: APPROVED, not yet implemented
+- **Next**: TDD implementation of HIGH-based target in FinancialDataset
 
 ---
 
-## Dropout Scaling Results (This Session)
+## CRITICAL: Target Calculation Bug - DEFINITIVE RULE
 
-### BREAKTHROUGH: 20M_wide beats Random Forest!
+**See Memory entity: `Target_Calculation_Definitive_Rule`**
 
-| Config | d | L | Params | AUC | vs RF (0.716) |
-|--------|---|---|--------|-----|---------------|
-| **20M_wide** | 512 | 6 | 19M | **0.7342** | **+1.8%** ⭐ |
-| 20M_balanced | 384 | 12 | 21M | 0.7282 | +1.2% |
-| 20M_narrow | 256 | 32 | 25M | 0.7253 | +0.8% |
-| 200M_balanced | 768 | 24 | 170M | 0.7225 | +0.6% |
-| 200M_narrow | 512 | 48 | 152M | 0.7214 | +0.5% |
-| 200M_wide | 1024 | 12 | 152M | 0.7204 | +0.4% |
+### What We Predict (Correct)
 
-### Key Findings
-1. **WIDE > NARROW at larger scales** - opposite of 2M finding!
-2. **Shallower is better at 20M**: L=6 > L=12 > L=32
-3. **200M doesn't improve over 20M** - data-limited regime
-4. **Some scaling IS happening** even with limited data
+| Target Type | Question | Formula |
+|-------------|----------|---------|
+| **UPSIDE threshold** ✅ | "Will HIGH in next N days be ≥X% above today's CLOSE?" | `max(high[t+1:t+1+horizon]) >= close[t] * (1+X%)` |
+| **DOWNSIDE threshold** (future) ✅ | "Will LOW in next N days be ≥X% below today's CLOSE?" | `min(low[t+1:t+1+horizon]) <= close[t] * (1-X%)` |
+
+### What We NEVER Predict
+
+❌ **NEVER** predict future CLOSE relative to current CLOSE. This is not how trading works.
+A trade entered at today's close achieves profit when the HIGH reaches the target, not when the CLOSE does.
+
+### Current Bug (to be fixed)
+
+```python
+# WRONG - uses CLOSE prices for future window
+future_max = max(close[t+1:t+1+horizon])
+
+# CORRECT - uses HIGH prices for upside threshold
+future_max = max(high[t+1:t+1+horizon])
+```
+
+### Impact on Class Balance
+
+| Threshold | Using CLOSE (wrong) | Using HIGH (correct) |
+|-----------|---------------------|----------------------|
+| 0.5% | 29.1% | **50.0%** (balanced!) |
+| 1.0% | 14.1% | 23.9% |
+
+**User preference**: 0.5% threshold with HIGH-based target (50/50 balance)
+
+### Deprecated Terminology
+
+The terms "Close-to-Close" and "Close-to-High" are **DEPRECATED** - they caused confusion.
+Use "upside threshold (HIGH-based)" and "downside threshold (LOW-based)" instead.
 
 ---
 
-## Next Session: Test Even Shallower Architectures
+## Experiments Completed This Session
 
-User wants to test L=2 and L=4 at 20M budget:
+### 1. Shallow Depth Sweep (L=2-5 at 20M)
+**Finding**: L=6 remains optimal. Shallower underfits.
 
-| Config | d | L | h | ~Params | Rationale |
-|--------|---|---|---|---------|-----------|
-| 20M_L2 | ~640 | 2 | 8 | ~20M | Ultra-shallow |
-| 20M_L3 | ~576 | 3 | 8 | ~20M | Very shallow |
-| 20M_L4 | ~544 | 4 | 8 | ~20M | Matches 2M optimal depth |
-| 20M_L5 | ~528 | 5 | 8 | ~20M | Between L4 and L6 |
+| Config | L | d | AUC | vs L=6 (0.7342) |
+|--------|---|---|-----|-----------------|
+| 20M_L2 | 2 | 896 | 0.7163 | -1.8% |
+| 20M_L3 | 3 | 720 | 0.7139 | -2.0% |
+| 20M_L4 | 4 | 640 | 0.7177 | -1.7% |
+| 20M_L5 | 5 | 560 | 0.7222 | -1.2% |
 
-Need to calculate exact d_model values to hit ~20M params.
+### 2. LR/Dropout Tuning
+**Finding**: Current settings (LR=1e-4, dropout=0.5) are optimal. More regularization hurts.
+
+| Config | LR | Dropout | AUC | vs ref |
+|--------|-----|---------|-----|--------|
+| lr8e5_d50 | 8e-5 | 0.50 | 0.7202 | -1.4% |
+| lr5e5_d50 | 5e-5 | 0.50 | 0.7160 | -1.8% |
+| lr1e4_d55 | 1e-4 | 0.55 | 0.7068 | -2.7% |
+| lr8e5_d55 | 8e-5 | 0.55 | 0.7091 | -2.5% |
+| lr5e5_d55 | 5e-5 | 0.55 | 0.7078 | -2.6% |
+
+---
+
+## Best Model (Current - trained with CLOSE-based target, needs retraining)
+
+**20M_wide**: d=512, L=6, h=8, LR=1e-4, dropout=0.5 → **AUC 0.7342** (+1.8% over RF)
+
+⚠️ This model was trained with the incorrect CLOSE-based target. Results will need to be re-validated after fixing to HIGH-based target.
+
+---
+
+## Next Session: Implementation Plan
+
+### Task: Add HIGH-based Upside Threshold Target to FinancialDataset
+
+**Approved change:**
+1. Add optional `high_prices` parameter to FinancialDataset
+2. When provided, use `max(high[t+1:t+1+horizon])` for upside threshold target
+3. Backward compatible - default behavior unchanged (for reproducibility of old experiments)
+
+**TDD Steps:**
+1. Write failing tests for HIGH-based target calculation
+2. Implement the change
+3. Run `make test` to verify all pass
+4. Run experiments with 0.5% threshold, HIGH-based target
+
+**Also requested:**
+- Report comprehensive metrics: AUC, accuracy, precision, recall, F1
+- Test h=4 (fewer heads) variant
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-21 ~23:00 UTC
+- Last `make test`: 2026-01-21 ~08:50 UTC
 - Result: **467 passed**, 2 warnings
 - Failing: none
 
 ---
 
-## Files Created/Modified This Session
+## Files Created This Session (Not Committed)
 
 | File | Description |
 |------|-------------|
-| `scripts/test_dropout_scaling.py` | Width vs depth experiment at 20M/200M |
-| `outputs/dropout_scaling/dropout_scaling_results.csv` | Results (6 configs) |
-| `docs/architecture_exploration_conclusion_DRAFT.md` | Draft summary (may not retain) |
+| `scripts/test_shallow_depth.py` | L=2-5 depth experiment |
+| `scripts/test_lr_dropout_tuning.py` | LR/dropout tuning experiment |
+| `scripts/backtest_optimal_models.py` | Created in prior sub-session |
+| `outputs/shallow_depth/` | Results (CSV, JSON) |
+| `outputs/lr_dropout_tuning/` | Results (CSV, JSON) |
 
 ---
 
 ## Memory Entities Updated This Session
 
 **Created:**
-- `Plan_DropoutScalingExperiment_20260121` - Planning decision for dropout scaling
-- `Finding_DropoutScalingExperiment_20260121` - BREAKTHROUGH: 20M_wide 0.7342 beats RF
+- `Target_Calculation_Definitive_Rule` - **CANONICAL** definition of upside/downside threshold targets (HIGH/LOW based, NEVER CLOSE)
+- `Finding_ShallowDepthExperiment_20260121` - L=6 optimal, shallower underfits
+- `Finding_LRDropoutTuning_20260121` - LR=1e-4, dropout=0.5 optimal
 
 **From previous sessions (relevant):**
+- `Finding_DropoutScalingExperiment_20260121` - 20M_wide 0.7342 beats RF (with CLOSE-based target, needs revalidation)
 - `Finding_TrainingDynamicsExperiment_20260121` - Dropout=0.5 works at 2M
-- `Finding_SmallModels_20260120` - Smaller models don't help at 2M
-- `Finding_ShallowWide_20260120` - At 2M, narrow-deep beats shallow-wide
 
 ---
 
@@ -92,10 +155,10 @@ make verify
 
 ## Next Session Should
 
-1. **Calculate d_model for L=2,3,4,5** to hit ~20M params
-2. **Run 4 additional trials** with shallower 20M architectures
-3. **Analyze depth sweet spot** - is L=4-6 optimal at 20M?
-4. **Then**: Plan feature/indicator expansion experiments
+1. **Implement HIGH-based upside threshold target** in FinancialDataset (TDD)
+2. **Run 0.5% threshold experiment** with balanced data (~50/50 class distribution)
+3. **Report full metrics**: AUC, accuracy, precision, recall, F1
+4. **Test h=4 variant** (fewer heads)
 
 ---
 
@@ -121,6 +184,7 @@ make verify
 - Evidence-based claims
 
 ### Current Focus
-- Architecture exploration: Optimal depth/width at different scales
-- **Observation**: "Some degree of scaling going on, even with this little data"
-- Next: Test L=2-4 at 20M, then feature expansion experiments
+- **CRITICAL**: Fix target calculation (use HIGH prices for upside threshold - see `Target_Calculation_Definitive_Rule` in Memory)
+- Test 0.5% threshold with balanced data (~50/50 with HIGH-based target)
+- Full metrics reporting (not just AUC)
+- Test h=4 (fewer heads) variant

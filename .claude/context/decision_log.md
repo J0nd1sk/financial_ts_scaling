@@ -1202,3 +1202,41 @@ if x is None:
 **Applicability**: Any code dealing with indices, counts, or numeric IDs that can legitimately be zero.
 
 **Memory Entity**: `Lesson_FalsyZeroBug`
+
+## 2026-01-21 CRITICAL: Target Calculation Correction
+
+**Context**: Discovered that target calculation was using the wrong price series. All prior documentation and code used `max(close[t+1:t+1+horizon])` but this is incorrect for trading purposes.
+
+**Problem**:
+- WRONG: Predicting if future CLOSE will exceed threshold → unrealistic trading assumption
+- RIGHT: Predicting if future HIGH will exceed threshold → matches actual trade execution
+
+**Decision**: Establish canonical target calculation rules (see Memory entity `Target_Calculation_Definitive_Rule`):
+
+| Target Type | Question | Formula |
+|-------------|----------|---------|
+| **UPSIDE threshold** | Will HIGH in next N days be ≥X% above today's CLOSE? | `max(high[t+1:t+1+horizon]) >= close[t] * (1+X%)` |
+| **DOWNSIDE threshold** (future) | Will LOW in next N days be ≥X% below today's CLOSE? | `min(low[t+1:t+1+horizon]) <= close[t] * (1-X%)` |
+
+**Rationale**: A trade entered at today's close achieves profit when the HIGH reaches the target price, not when the CLOSE does. This is fundamental to how trading actually works.
+
+**Impact on Class Balance**:
+- 0.5% threshold with CLOSE-based (wrong): 29.1% positive
+- 0.5% threshold with HIGH-based (correct): ~50% positive (balanced!)
+
+**Deprecated Terminology**: The terms "Close-to-Close" and "Close-to-High" caused confusion and are now deprecated. Use "upside threshold (HIGH-based)" and "downside threshold (LOW-based)" instead.
+
+**Historical Note**: Line 140 of this file (Phase 4 decision) documents the original incorrect implementation. That decision captured what was implemented at the time, but the approach was conceptually wrong.
+
+**Files Affected**:
+- `src/data/dataset.py` - CODE (needs implementation fix)
+- `docs/project_history.md` - Historical docs (note added)
+- This file (clarification added)
+- `.claude/context/session_context.md` - Updated with correct terminology
+
+**Memory Entity**: `Target_Calculation_Definitive_Rule` - canonical definition
+
+**Implications**:
+- All prior experiments used incorrect targets - results need revalidation
+- TDD implementation required to add HIGH-based target calculation
+- User prefers 0.5% threshold (achieves ~50/50 class balance with HIGH-based target)
