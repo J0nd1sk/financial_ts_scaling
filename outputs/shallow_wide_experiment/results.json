@@ -1,0 +1,121 @@
+{
+  "experiment": "shallow_wide",
+  "hypothesis": "Fewer layers with higher capacity behave like ensembles",
+  "target_auc": 0.716,
+  "context_length": 80,
+  "results": [
+    {
+      "config_name": "L1_d256",
+      "architecture": {
+        "n_layers": 1,
+        "d_model": 256,
+        "n_heads": 4,
+        "d_ff": 1024
+      },
+      "estimated_params": 851969,
+      "val_auc": 0.6630668221144996,
+      "val_loss": 0.3431548476219177,
+      "stopped_early": true,
+      "training_time_min": 0.11346817016601562,
+      "train_samples": 7257,
+      "val_samples": 422
+    },
+    {
+      "config_name": "L1_d512",
+      "architecture": {
+        "n_layers": 1,
+        "d_model": 512,
+        "n_heads": 8,
+        "d_ff": 2048
+      },
+      "estimated_params": 3276801,
+      "val_auc": 0.6815364791065841,
+      "val_loss": 0.323035154491663,
+      "stopped_early": true,
+      "training_time_min": 0.160224183400472,
+      "train_samples": 7257,
+      "val_samples": 422
+    },
+    {
+      "config_name": "L1_d768",
+      "architecture": {
+        "n_layers": 1,
+        "d_model": 768,
+        "n_heads": 8,
+        "d_ff": 3072
+      },
+      "estimated_params": 7274497,
+      "val_auc": 0.6935632324967785,
+      "val_loss": 0.29921504855155945,
+      "stopped_early": true,
+      "training_time_min": 0.25148944854736327,
+      "train_samples": 7257,
+      "val_samples": 422
+    },
+    {
+      "config_name": "L2_d256",
+      "architecture": {
+        "n_layers": 2,
+        "d_model": 256,
+        "n_heads": 4,
+        "d_ff": 1024
+      },
+      "estimated_params": 1641729,
+      "val_auc": 0.6731913849174694,
+      "val_loss": 0.3113870806992054,
+      "stopped_early": true,
+      "training_time_min": 0.10496288537979126,
+      "train_samples": 7257,
+      "val_samples": 422
+    },
+    {
+      "config_name": "L2_d512",
+      "architecture": {
+        "n_layers": 2,
+        "d_model": 512,
+        "n_heads": 8,
+        "d_ff": 2048
+      },
+      "estimated_params": 6429185,
+      "val_auc": 0.6935018715100939,
+      "val_loss": 0.29617783054709435,
+      "stopped_early": true,
+      "training_time_min": 0.2705747127532959,
+      "train_samples": 7257,
+      "val_samples": 422
+    },
+    {
+      "config_name": "L2_d768",
+      "architecture": {
+        "n_layers": 2,
+        "d_model": 768,
+        "n_heads": 8,
+        "d_ff": 3072
+      },
+      "estimated_params": 14362369,
+      "val_auc": 0.6698778916364975,
+      "val_loss": 0.30134882032871246,
+      "stopped_early": true,
+      "training_time_min": 0.402256699403127,
+      "train_samples": 7257,
+      "val_samples": 422
+    },
+    {
+      "config_name": "L4_d64_baseline",
+      "architecture": {
+        "n_layers": 4,
+        "d_model": 64,
+        "n_heads": 4,
+        "d_ff": 256
+      },
+      "estimated_params": 215489,
+      "val_auc": 0.6944836472970486,
+      "val_loss": 0.34243326634168625,
+      "stopped_early": true,
+      "training_time_min": 0.20591049989064533,
+      "train_samples": 7257,
+      "val_samples": 422
+    }
+  ],
+  "timestamp": "2026-01-20T17:30:55.103740"
+}

@@ -1,134 +1,107 @@
-# Session Handoff - 2026-01-20 ~17:30 UTC
+# Session Handoff - 2026-01-21 ~00:30 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `10f6825` exp: Focal Loss breakthrough - PatchTST AUC 0.54→0.67
-- **Uncommitted changes**: None
-- **Ahead of origin**: 5 commits (not pushed)
+- **Last commit**: `7e5d6ab` docs: session handoff with Focal Loss breakthrough
+- **Uncommitted changes**:
+  - `scripts/test_mlp_only.py` (NEW - MLP experiment script)
+  - `outputs/mlp_only_experiment/` (NEW - results)
+  - `outputs/shallow_wide_experiment/` (from previous session)
+- **Ahead of origin**: 6 commits (not pushed)
 
 ### Task Status
-- **Working on**: Model comparison (RF/XGBoost/GB vs PatchTST) and loss function investigation
-- **Status**: MAJOR BREAKTHROUGH - Focal Loss fixes PatchTST probability collapse!
+- **Working on**: Architecture exploration - Training dynamics experiment is NEXT
+- **Status**: 3 of 5 experiments complete, 2 remaining
 
 ---
 
-## 🚨 MAJOR FINDINGS THIS SESSION
+## Architecture Exploration Progress
 
-### 1. XGBoost Baseline Established
-| Threshold | XGBoost AUC | Prediction Range |
-|-----------|-------------|------------------|
-| 0.5% | 0.7336 | [0.028, 0.860] |
-| 1.0% | **0.7555** | [0.045, 0.482] |
-| 2.0% | 0.7523 | [0.032, 0.069] |
+### Experiments Completed
 
-### 2. PatchTST Probability Collapse Diagnosed
-- Standard BCE causes model to predict ~0.5 for EVERYTHING
-- Loss settles at 0.693 (BCE for always predicting the mean)
-- Prediction std drops to 0.0000 within 5-10 epochs
-- This is a **local minimum trap** - "lazy prediction" is stable
+#### 1. Small Models Experiment ✅
+**Result**: HYPOTHESIS REJECTED - 215K baseline beats smaller models
 
-### 3. Focal Loss BREAKTHROUGH 🎉
-| Loss Function | Best AUC | Improvement |
-|---------------|----------|-------------|
-| FocalLoss(γ=2) | **0.6717** | +24.8% vs BCE |
-| SoftAUCLoss | 0.6149 | +14.2% vs BCE |
-| BCE_weighted | 0.6052 | +12.4% vs BCE |
-| BCE (baseline) | 0.5383 | - |
+#### 2. Shallow+Wide Experiment ✅
+**Result**: HYPOTHESIS REJECTED - L=4 d=64 beats L=1-2 with d=256-768
 
-**Gap to XGBoost reduced from 22% → 11%!**
+#### 3. MLP-Only Experiment ✅ (THIS SESSION)
+**Result**: NUANCED FINDING - MLP can BEAT PatchTST but overfits faster
 
-### 4. Why Focal Loss Works
-- Down-weights easy (already correct) predictions
-- Forces model to keep learning on hard examples
-- Prevents convergence to "always predict 0.5" local minimum
-- Configuration: `FocalLoss(gamma=2.0, alpha=0.25)` with very_low_lr (3e-6), warmup=10
+| Model | Params | Best Val AUC | Final Val AUC |
+|-------|--------|--------------|---------------|
+| **MLP_h256_o64** | 185K | **0.7077** ⭐ | 0.6626 |
+| MLP_h128_o32 | 72K | 0.7006 | 0.6749 |
+| MLP_h512_o128 | 534K | 0.6992 | 0.6678 |
+| *PatchTST baseline* | 215K | *0.6945* | - |
+| *RF baseline* | - | *0.716* | - |
+
+**Key Finding**: MLP peak AUC (0.7077) beats PatchTST (0.6945) by +1.9%!
+- Attention helps GENERALIZATION, not learning capacity
+- MLP overfits faster, loses gains after early stopping
+- The signal IS learnable without attention
+
+### Experiments Remaining
+
+4. **Training dynamics** - Lower LR (1e-5, 1e-6), higher dropout (0.4, 0.5)
+   - **USER CLARIFICATION**: Test BOTH transformers AND MLPs
+   - Test if training stability can unlock MLP's 0.70+ potential
+5. **Conclusion** - Summarize findings, determine if transformers can match trees
 
 ---
 
-## Previous Findings (Earlier Terminals)
+## Key Findings Summary (All Sessions)
 
-### Random Forest BEATS PatchTST on ALL thresholds
-| Threshold | Pos Rate | PatchTST | Random Forest | Gradient Boost | Winner |
-|-----------|----------|----------|---------------|----------------|--------|
-| **0.5%** | 46% | 0.586 | **0.628** | 0.583 | **RF +7%** |
-| **1.0%** | 20% | 0.695 | **0.716** | 0.624 | **RF +3%** |
-| **2.0%** | 2% | 0.621 | 0.705 | **0.766** | **GB +23%** |
+| Finding | Evidence |
+|---------|----------|
+| RF beats PatchTST | RF AUC 0.716 vs PatchTST 0.695 (gap: 3%) |
+| Focal Loss helps | AUC 0.54→0.67 (+24.8%) |
+| MLP can beat PatchTST at peak | MLP 0.7077 vs PatchTST 0.6945 (+1.9%) |
+| MLP overfits faster | Best AUC 0.7077 → Final 0.6626 |
+| Attention helps generalization | PatchTST stable, MLP degrades |
+| Overparameterization NOT the issue | 215K baseline beats 33K-14.4M models |
+| Depth NOT the issue | L=4 d=64 beats L=1-2 with d=256-768 |
 
-**Key insight**: Signal EXISTS - tree models find it, transformers need Focal Loss to find it.
+**Targets**:
+- RF AUC: 0.716
+- XGBoost AUC: 0.7555
+
+**Best Results**:
+- PatchTST: 0.6945 (L=4, d=64, 215K params)
+- MLP peak: 0.7077 (h=256, o=64, 185K params) - but final was 0.6626
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-20 ~17:25 UTC
+- Last `make test`: 2026-01-21 ~00:25 UTC
 - Result: **467 passed**, 2 warnings
 - Failing: none
 
 ---
 
-## Completed This Session
+## Files Created This Session
 
-1. **XGBoost Testing** - established strong baseline (AUC 0.7555 @ 1%)
-2. **PatchTST Diagnosis** - identified probability collapse issue
-   - Tested 8 LR/warmup/scheduler configurations
-   - All converged to Pred Std = 0.0000
-3. **Loss Function Investigation** - tested 10 loss functions
-   - FocalLoss(γ=2) achieves AUC 0.6717
-   - SoftAUCLoss achieves AUC 0.6149 with better spread
-4. **Memory Entities Created**:
-   - `Finding_FocalLossFixesPatchTST_20260120`
-   - `Pattern_TransformerProbabilityCollapse_20260120`
-   - `Finding_RFBeatsPatchTST_20260120`
-   - `Finding_SignalExistsAt0.5pct_20260120`
-
----
-
-## Files Created/Modified This Session
-
-| File | Change | Status |
-|------|--------|--------|
-| `scripts/test_xgboost_thresholds.py` | NEW - XGBoost comparison | COMMITTED |
-| `scripts/diagnose_patchtst.py` | NEW - LR/warmup diagnosis | COMMITTED |
-| `scripts/test_loss_functions.py` | NEW - Loss function comparison | COMMITTED |
-| `outputs/patchtst_diagnosis/` | 8 history CSVs + summary | COMMITTED |
-| `outputs/loss_function_comparison/summary.json` | Results | COMMITTED |
-
----
-
-## Next Session Should
-
-### Immediate
-1. **Close the remaining 11% gap** to XGBoost:
-   - Test Focal Loss + even lower LR + longer training
-   - Try architectural changes (fewer layers, different d_model)
-   - Test on other thresholds (0.5%, 2%)
-
-2. **Validate findings on test set**:
-   - Run best Focal Loss config on 2025 data
-   - Compare to XGBoost on same test set
-
-### Research Questions
-1. Does Focal Loss help at all thresholds equally?
-2. Can we combine Focal Loss with architectural changes to match XGBoost?
-3. Is the remaining gap due to:
-   - Temporal patterns that don't exist (favors point-in-time models)?
-   - Insufficient model capacity?
-   - Need for ensemble approach?
-
-### Code Tasks
-1. Update HPO framework to use Focal Loss by default
-2. Document findings in research paper notes
-3. Consider pushing commits to origin
+| File | Description |
+|------|-------------|
+| `scripts/test_mlp_only.py` | MLP-only experiment (patch-based MLP without attention) |
+| `outputs/mlp_only_experiment/results.json` | Experiment results |
+| `outputs/mlp_only_experiment/results.csv` | Results in CSV format |
 
 ---
 
 ## Memory Entities Updated This Session
 
-- `Finding_FocalLossFixesPatchTST_20260120` - Focal Loss improves AUC from 0.54→0.67
-- `Pattern_TransformerProbabilityCollapse_20260120` - BCE causes prediction collapse
-- `Finding_RFBeatsPatchTST_20260120` - RF outperforms PatchTST on ALL thresholds
-- `Finding_SignalExistsAt0.5pct_20260120` - Signal confirmed with RF AUC 0.628
+**Created:**
+- `Plan_MLPOnlyExperiment_20260121` (created): Planning decision for MLP experiment
+- `Finding_MLPOnlyExperiment_20260121` (created): Nuanced finding - MLP beats PatchTST at peak but overfits
+
+**From previous sessions (relevant):**
+- `Finding_SmallModels_20260120` - Smaller models don't help
+- `Finding_ShallowWide_20260120` - Shallow+wide doesn't help
+- `Finding_FocalLossFixesPatchTST_20260120` - Focal Loss breakthrough
+- `Finding_RFBeatsPatchTST_20260120` - Tree models outperform
 
 ---
 
@@ -137,8 +110,20 @@
 source venv/bin/activate
 make test
 git status
-git log --oneline -5
+make verify
 ```
+
+---
+
+## Next Session Should
+
+1. **Plan training dynamics experiment** - Include BOTH transformers AND MLPs
+   - Lower LR (1e-5, 1e-6) to slow learning and prevent overfitting
+   - Higher dropout (0.4, 0.5) for regularization
+   - Test if these stabilize MLP's 0.70+ potential
+2. **Run training dynamics experiment**
+3. **Conclude architecture exploration** - Document final findings
+4. **Commit all experiment results** (3 scripts, 3 output dirs)
 
 ---
 
@@ -164,6 +149,6 @@ git log --oneline -5
 - Evidence-based claims
 
 ### Current Focus
-- Model comparison: RF/XGBoost vs PatchTST with Focal Loss
-- Loss function optimization for transformers
-- SimpleSplitter + RevIN + Focal Loss are the foundation for neural models
+- Architecture exploration: Why do trees outperform transformers?
+- **USER CLARIFICATION**: Training dynamics experiment should test BOTH transformers AND MLPs
+- Goal: Close 3% gap to RF or prove it's impossible

@@ -1,0 +1,57 @@
+{
+  "experiment": "mlp_only",
+  "hypothesis": "Self-attention may introduce noise; MLP might match/beat transformer",
+  "patchtst_baseline": 0.6945,
+  "rf_baseline": 0.716,
+  "context_length": 80,
+  "patch_length": 16,
+  "stride": 8,
+  "results": [
+    {
+      "config_name": "MLP_h256_o64",
+      "hidden_dim": 256,
+      "output_dim": 64,
+      "n_params": 184961,
+      "val_auc": 0.662637295207707,
+      "best_val_auc": 0.7076762594342517,
+      "pred_min": 0.12030310928821564,
+      "pred_max": 0.40386059880256653,
+      "pred_std": 0.054732631891965866,
+      "training_time_min": 0.09661678075790406,
+      "train_samples": 7257,
+      "val_samples": 422,
+      "n_patches": 9
+    },
+    {
+      "config_name": "MLP_h512_o128",
+      "hidden_dim": 512,
+      "output_dim": 128,
+      "n_params": 533761,
+      "val_auc": 0.6677916180892189,
+      "best_val_auc": 0.6992084432717677,
+      "pred_min": 0.06108561530709267,
+      "pred_max": 0.3323844075202942,
+      "pred_std": 0.05634073168039322,
+      "training_time_min": 0.0959414521853129,
+      "train_samples": 7257,
+      "val_samples": 422,
+      "n_patches": 9
+    },
+    {
+      "config_name": "MLP_h128_o32",
+      "hidden_dim": 128,
+      "output_dim": 32,
+      "n_params": 72001,
+      "val_auc": 0.67490949254464,
+      "best_val_auc": 0.7006197459655151,
+      "pred_min": 0.0970521867275238,
+      "pred_max": 0.3936626613140106,
+      "pred_std": 0.057111844420433044,
+      "training_time_min": 0.07482664982477824,
+      "train_samples": 7257,
+      "val_samples": 422,
+      "n_patches": 9
+    }
+  ],
+  "timestamp": "2026-01-20T19:55:29.233157"
+}
