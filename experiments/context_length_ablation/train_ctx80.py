@@ -73,6 +73,7 @@ def main():
     # Load data
     print(f"\nLoading {DATA_PATH}...")
     df = pd.read_parquet(DATA_PATH)
+    high_prices = df["High"].values
     print(f"Data: {len(df)} rows")
 
     # Create experiment config
@@ -137,6 +138,7 @@ def main():
             early_stopping_min_delta=0.001,
             early_stopping_metric="val_auc",
             use_revin=True,  # RevIN for non-stationary financial data
+            high_prices=high_prices,
         )
 
         # Train

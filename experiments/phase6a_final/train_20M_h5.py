@@ -84,6 +84,7 @@ if __name__ == "__main__":
 
     # Validate data
     df = validate_data()
+    high_prices = df["High"].values
 
     # Create contiguous splits (production-realistic)
     splitter = ChunkSplitter(
@@ -150,6 +151,7 @@ if __name__ == "__main__":
         split_indices=split_indices,
         accumulation_steps=batch_config["accumulation_steps"],
         early_stopping_patience=EARLY_STOPPING_PATIENCE,
+        high_prices=high_prices,
     )
 
     # Train

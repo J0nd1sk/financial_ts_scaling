@@ -162,6 +162,9 @@ def run_config(
     torch.manual_seed(SEED)
     np.random.seed(SEED)
 
+    # Extract high prices BEFORE any normalization
+    high_prices = df["High"].values
+
     # Prepare data
     df_train = df.copy()
     norm_params = None
@@ -192,6 +195,7 @@ def run_config(
         checkpoint_dir=output_dir / config_name,
         split_indices=split_indices,
         use_revin=use_revin,
+        high_prices=high_prices,
     )
 
     # Train
