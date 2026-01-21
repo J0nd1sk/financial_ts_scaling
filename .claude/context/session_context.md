@@ -1,136 +1,134 @@
-# Session Handoff - 2026-01-20 ~21:30 UTC
+# Session Handoff - 2026-01-20 ~17:30 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `a921271` docs: session handoff with context length ablation complete
-- **Uncommitted changes**: ~25+ files (from multiple sessions)
-- **Ahead of origin**: 18+ commits (not pushed)
+- **Last commit**: `10f6825` exp: Focal Loss breakthrough - PatchTST AUC 0.54→0.67
+- **Uncommitted changes**: None
+- **Ahead of origin**: 5 commits (not pushed)
 
 ### Task Status
-- **Working on**: Architecture exploration planning
-- **Status**: Plan document created, ready to execute experiments
+- **Working on**: Model comparison (RF/XGBoost/GB vs PatchTST) and loss function investigation
+- **Status**: MAJOR BREAKTHROUGH - Focal Loss fixes PatchTST probability collapse!
 
 ---
 
-## 🚨 MAJOR FINDING (Other Terminal)
+## 🚨 MAJOR FINDINGS THIS SESSION
 
-### Random Forest BEATS PatchTST on ALL thresholds!
+### 1. XGBoost Baseline Established
+| Threshold | XGBoost AUC | Prediction Range |
+|-----------|-------------|------------------|
+| 0.5% | 0.7336 | [0.028, 0.860] |
+| 1.0% | **0.7555** | [0.045, 0.482] |
+| 2.0% | 0.7523 | [0.032, 0.069] |
 
+### 2. PatchTST Probability Collapse Diagnosed
+- Standard BCE causes model to predict ~0.5 for EVERYTHING
+- Loss settles at 0.693 (BCE for always predicting the mean)
+- Prediction std drops to 0.0000 within 5-10 epochs
+- This is a **local minimum trap** - "lazy prediction" is stable
+
+### 3. Focal Loss BREAKTHROUGH 🎉
+| Loss Function | Best AUC | Improvement |
+|---------------|----------|-------------|
+| FocalLoss(γ=2) | **0.6717** | +24.8% vs BCE |
+| SoftAUCLoss | 0.6149 | +14.2% vs BCE |
+| BCE_weighted | 0.6052 | +12.4% vs BCE |
+| BCE (baseline) | 0.5383 | - |
+
+**Gap to XGBoost reduced from 22% → 11%!**
+
+### 4. Why Focal Loss Works
+- Down-weights easy (already correct) predictions
+- Forces model to keep learning on hard examples
+- Prevents convergence to "always predict 0.5" local minimum
+- Configuration: `FocalLoss(gamma=2.0, alpha=0.25)` with very_low_lr (3e-6), warmup=10
+
+---
+
+## Previous Findings (Earlier Terminals)
+
+### Random Forest BEATS PatchTST on ALL thresholds
 | Threshold | Pos Rate | PatchTST | Random Forest | Gradient Boost | Winner |
 |-----------|----------|----------|---------------|----------------|--------|
 | **0.5%** | 46% | 0.586 | **0.628** | 0.583 | **RF +7%** |
 | **1.0%** | 20% | 0.695 | **0.716** | 0.624 | **RF +3%** |
 | **2.0%** | 2% | 0.621 | 0.705 | **0.766** | **GB +23%** |
 
-**Key insight**: Signal EXISTS - tree models find it, transformers don't.
+**Key insight**: Signal EXISTS - tree models find it, transformers need Focal Loss to find it.
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-20 ~21:25 UTC
+- Last `make test`: 2026-01-20 ~17:25 UTC
 - Result: **467 passed**, 2 warnings
 - Failing: none
 
 ---
 
-## Completed This Session (Loss Function Terminal)
+## Completed This Session
 
-### 1. Expanded BCE vs weighted_05 Comparison
-- 12 experiments: {BCE, weighted_05} × {h1, h3, h5} × {2M, 20M}
-- **RESULT: NO CONSISTENT DIFFERENCE**
-  - Mean AUC diff: -0.26% (high variance, std=1.33%)
-  - 2M slightly favors weighted_05 (+0.29%)
-  - 20M favors BCE (-0.80%)
-- **RECOMMENDATION**: Stick with BCE (simpler, no benefit from weighted loss)
-- **CONCLUSION**: Loss function is NOT the bottleneck
-
-### 2. Architecture Exploration Plan Created
-- Plan document: `docs/architecture_exploration_plan.md`
-- Research question: Why do tree models outperform transformers?
-- Hypothesis: Early convergence due to over-parameterization and deep composition
-
----
-
-## Architecture Exploration Plan (NEXT STEPS)
-
-**Research Question**: Why do tree-based models (XGBoost, RF) outperform PatchTST transformers?
-
-### Experiment 1: XGBoost Baseline (~30 min)
-- Same 20 features, same splits
-- Establishes target AUC to beat (~0.70-0.75 expected)
-- **Already confirmed by other terminal: RF gets 0.716 at 1% threshold**
-
-### Experiment 2: Smaller Models 200K-500K params (~30 min)
-- Test overparameterization hypothesis
-- Configs: 200K (L=2 d=32), 500K (L=2 d=64)
-- Current 2M model may be too large for ~7K training samples
-
-### Experiment 3: Shallow + Wide (~30 min)
-- L=1-2 layers with d_model=256-768
-- Test if depth is the problem
-- Shallow = closer to ensemble behavior
-
-### Experiment 4: MLP-Only (1-2 hrs)
-- Remove attention entirely
-- Test if attention is helping or hurting
-- May need new model class
-
-### Experiment 5: Training Dynamics (if time)
-- Lower LR (1e-5, 1e-6)
-- Higher dropout (0.4, 0.5)
-- Early stopping on AUC
-
-**Execution Order**: XGBoost → Small models → Shallow+wide → MLP-only
-
-**Success Criteria**: AUC > 0.70 OR conclusive evidence transformers can't match trees
+1. **XGBoost Testing** - established strong baseline (AUC 0.7555 @ 1%)
+2. **PatchTST Diagnosis** - identified probability collapse issue
+   - Tested 8 LR/warmup/scheduler configurations
+   - All converged to Pred Std = 0.0000
+3. **Loss Function Investigation** - tested 10 loss functions
+   - FocalLoss(γ=2) achieves AUC 0.6717
+   - SoftAUCLoss achieves AUC 0.6149 with better spread
+4. **Memory Entities Created**:
+   - `Finding_FocalLossFixesPatchTST_20260120`
+   - `Pattern_TransformerProbabilityCollapse_20260120`
+   - `Finding_RFBeatsPatchTST_20260120`
+   - `Finding_SignalExistsAt0.5pct_20260120`
 
 ---
 
 ## Files Created/Modified This Session
 
-| File | Change |
-|------|--------|
-| `scripts/test_expanded_comparison.py` | NEW - 12-experiment comparison script |
-| `outputs/expanded_comparison/` | NEW - BCE vs weighted_05 results |
-| `docs/architecture_exploration_plan.md` | NEW - next phase plan |
-
-**From other terminal (threshold comparison):**
-- `experiments/threshold_comparison/` - threshold scripts
-- `scripts/test_xgboost_thresholds.py` - XGBoost comparison
-- `outputs/threshold_comparison/` - results
-
-**Still uncommitted from previous sessions:**
-- 12 HPO scripts in `experiments/phase6a/`
-- `src/training/losses.py` (FocalLoss, SoftAUCLoss, WeightedSumLoss)
-- Multi-objective comparison scripts and outputs
+| File | Change | Status |
+|------|--------|--------|
+| `scripts/test_xgboost_thresholds.py` | NEW - XGBoost comparison | COMMITTED |
+| `scripts/diagnose_patchtst.py` | NEW - LR/warmup diagnosis | COMMITTED |
+| `scripts/test_loss_functions.py` | NEW - Loss function comparison | COMMITTED |
+| `outputs/patchtst_diagnosis/` | 8 history CSVs + summary | COMMITTED |
+| `outputs/loss_function_comparison/summary.json` | Results | COMMITTED |
 
 ---
 
-## Data Versions
-- **Raw manifest**: SPY.parquet (8299 rows, 1993-2026)
-- **Processed manifest**: SPY_dataset_a20.parquet (8100 rows)
-- **Pending registrations**: none
+## Next Session Should
+
+### Immediate
+1. **Close the remaining 11% gap** to XGBoost:
+   - Test Focal Loss + even lower LR + longer training
+   - Try architectural changes (fewer layers, different d_model)
+   - Test on other thresholds (0.5%, 2%)
+
+2. **Validate findings on test set**:
+   - Run best Focal Loss config on 2025 data
+   - Compare to XGBoost on same test set
+
+### Research Questions
+1. Does Focal Loss help at all thresholds equally?
+2. Can we combine Focal Loss with architectural changes to match XGBoost?
+3. Is the remaining gap due to:
+   - Temporal patterns that don't exist (favors point-in-time models)?
+   - Insufficient model capacity?
+   - Need for ensemble approach?
+
+### Code Tasks
+1. Update HPO framework to use Focal Loss by default
+2. Document findings in research paper notes
+3. Consider pushing commits to origin
 
 ---
 
 ## Memory Entities Updated This Session
 
-**This session (loss function exploration):**
-- `Plan_ExpandedBCEvsWeighted_20260120` - 12-experiment comparison plan
-- `Finding_ExpandedBCEvsWeighted_20260120` - No consistent difference, stick with BCE
-- `Plan_ArchitectureExploration_20260120` - Next phase: shallow+wide, small models, etc.
-- `Hypothesis_TransformerEarlyConvergence_20260120` - Why transformers converge early
-
-**From other terminal (to be created):**
+- `Finding_FocalLossFixesPatchTST_20260120` - Focal Loss improves AUC from 0.54→0.67
+- `Pattern_TransformerProbabilityCollapse_20260120` - BCE causes prediction collapse
 - `Finding_RFBeatsPatchTST_20260120` - RF outperforms PatchTST on ALL thresholds
 - `Finding_SignalExistsAt0.5pct_20260120` - Signal confirmed with RF AUC 0.628
-- `Finding_PredictionCompression_PatchTST` - PatchTST outputs compressed to narrow range
-
-**Relevant from previous sessions:**
-- `Finding_ContextLengthAblation_20260120` - 80-day context optimal (+15.5%)
-- `Finding_MultiObjectiveComparison_20260120` - Multi-objective no improvement
 
 ---
 
@@ -139,7 +137,7 @@
 source venv/bin/activate
 make test
 git status
-make verify
+git log --oneline -5
 ```
 
 ---
@@ -166,6 +164,6 @@ make verify
 - Evidence-based claims
 
 ### Current Focus
-- Architecture exploration: Why do trees outperform transformers?
-- Experiments: XGBoost baseline → Small models (200K) → Shallow+wide → MLP-only
-- Goal: Find config with AUC > 0.70 or prove transformers can't match trees
+- Model comparison: RF/XGBoost vs PatchTST with Focal Loss
+- Loss function optimization for transformers
+- SimpleSplitter + RevIN + Focal Loss are the foundation for neural models
