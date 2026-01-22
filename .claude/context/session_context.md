@@ -1,83 +1,16 @@
-# Session Handoff - 2026-01-21 ~18:00 UTC
+# Session Handoff - 2026-01-21 ~20:30 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `c90b996` docs: session handoff - Trainer high_prices bug fixed
-- **Uncommitted changes**:
-  - 19 modified experiment scripts (1% threshold - high_prices added)
-  - `experiments/threshold_05pct_high/sweep_thresholds.py` (updated)
-  - `experiments/threshold_05pct_high/train_2M_narrow_deep.py` (new)
-  - `docs/threshold_05pct_high_experiments.md` (new)
-  - `outputs/threshold_05pct_high/2M_narrow_deep_threshold_05pct_HIGH/` (new)
-  - `outputs/threshold_05pct_high/threshold_sweep_results.csv` (new)
-- **Ahead of origin**: 15 commits (not pushed)
+- **Last commit**: `d2aab51` exp: 2M head count comparison (h=2, h=4, h=8) with HIGH-based 0.5% targets
+- **Uncommitted changes**: none (clean working tree)
+- **Ahead of origin**: 17 commits (not pushed)
 
 ### Task Status
-- **Completed this session**:
-  - 2M narrow-deep experiment (0.5% HIGH targets)
-  - Threshold sweep on 2M + 20M models
-  - Full comparison analysis and documentation
-- **Next**: 2M head count experiments (h=4, h=8)
-
----
-
-## 🔴 CRITICAL BUG FIXED (Previous Session)
-
-**Trainer was NOT passing `high_prices` to FinancialDataset.**
-
-All previous threshold experiments were invalid (trained on CLOSE, evaluated on HIGH).
-
-**Fixes applied:**
-- `8235281` - Wire high_prices through Trainer
-- `18bf655` - Add array length validation
-- **471 tests pass**
-
----
-
-## 0.5% Threshold Results (This Session)
-
-### AUC-ROC Rankings
-| Model | AUC | Params | Architecture |
-|-------|-----|--------|--------------|
-| 20M_h4 | 0.712 | ~20M | d=512, L=6, h=4 |
-| **2M_narrow** | **0.707** | ~1.6M | d=64, L=32, h=2 |
-| 20M_h8 | 0.697 | ~20M | d=512, L=6, h=8 |
-| 20M_h2 | 0.629 | ~20M | d=512, L=6, h=2 |
-
-### Best Configuration for Trading
-**2M_narrow at threshold 0.45:**
-- Precision: 69.5% (7/10 trades correct)
-- Recall: 50% (catches half of opportunities)
-- Accuracy: 67.4%
-- 59 trades over test period (181 total samples)
-
-### Key Finding: Inverse Scaling Confirmed
-- 2M performs comparably to 20M with 12x fewer parameters
-- 2M achieves HIGHEST accuracy (67.4%) among all models
-- More parameters don't help at this data scale
-
-### Training Hyperparameters (All Models)
-- Dropout: 0.5
-- Learning Rate: 1e-4
-- Head Dropout: 0.0
-- Epochs: 50 (early stopping on val_auc)
-- Context Length: 80 days
-
----
-
-## Pending Experiments
-
-### 2M Head Count Comparison (NEXT)
-- Only tested h=2 at 2M scale so far
-- Need: h=4 and h=8 variants for fair comparison
-- Architecture: d=64, L=32, h={4,8}
-- Keep: dropout=0.5, lr=1e-4, 0.5% HIGH targets
-
-### 1% Threshold Experiments (Other Terminal)
-- 19 scripts updated with high_prices
-- Ready to run after commit
+- **Completed this session**: 2M head count experiments (h=4, h=8)
+- **Status**: Complete
 
 ---
 
@@ -88,44 +21,127 @@ All previous threshold experiments were invalid (trained on CLOSE, evaluated on 
 
 ---
 
-## Memory Entities Updated
+## Completed This Session
 
-**This session:**
-- `Finding_2Mvs20M_InverseScaling_20260121` - 2M vs 20M comparison
-- `Finding_ThresholdSweep_05pct_20260121` - Threshold sweep results
-- `Pending_2M_HeadCountExperiment` - Next experiment to run
-- `Backlog_HeadDropoutExploration` - Future experiment idea
-
-**Still valid:**
-- `Critical_TrainerHighPricesBug_20260121` - Bug and fix documentation
-- `Target_Calculation_Definitive_Rule` - Canonical target definition
+1. **2M h=4 training script** created and trained
+2. **2M h=8 training script** created and trained
+3. **Threshold sweep** run on all 6 models (2M h2/h4/h8, 20M h2/h4/h8)
+4. **Documentation** updated in `docs/threshold_05pct_high_experiments.md`
+5. **All changes committed** (d2aab51)
 
 ---
 
-## Documentation
+## Key Findings This Session
 
-- `docs/threshold_05pct_high_experiments.md` - Full experimental writeup (NEW)
+### Optimal Head Count is Scale-Dependent
+
+| Scale | Best Head Count | Head Dim (d_k) | AUC |
+|-------|-----------------|----------------|-----|
+| 2M (d=64) | h=8 | 8 | 0.713 |
+| 20M (d=512) | h=4 | 128 | 0.712 |
+
+- **2M scale prefers MORE heads** with SMALLER attention dimensions
+- **20M scale prefers FEWER heads** with LARGER attention dimensions
+- Head configuration should NOT be transferred across scales
+
+### Best Model: 2M_h8
+
+| Metric | Value |
+|--------|-------|
+| AUC-ROC | 0.713 |
+| Best Accuracy | 67.96% (@ threshold 0.45) |
+| Precision @ 0.45 | 67.65% |
+| Recall @ 0.45 | 56.10% |
+| Trades @ 0.45 | 68 / 181 |
+
+### Threshold Sweep: 2M_h8 at Higher Thresholds
+
+| Threshold | Precision | Recall | Accuracy | Trades |
+|-----------|-----------|--------|----------|--------|
+| 0.45 | 67.65% | 56.10% | 67.96% | 68 |
+| 0.50 | 69.57% | 39.02% | 64.64% | 46 |
+| 0.55 | 71.88% | 28.05% | 62.43% | 32 |
+| 0.60 | 70.00% | 17.07% | 59.12% | 20 |
+
+---
+
+## Target Definition (Confirmed)
+
+**Task**: Predict whether tomorrow's HIGH price will be at least 0.5% above today's CLOSE.
+
+**Formula**: `max(HIGH[t+1:t+1+horizon]) >= CLOSE[t] * 1.005`
+
+**Rationale**: Reflects real trading — enter at close, exit when high reaches target.
+
+---
+
+## Pending Experiments
+
+1. **Head Dropout Exploration** - Currently 0.0, may try 0.1-0.3 (low priority)
+2. **Different Target Thresholds** - 1%, 2% instead of 0.5%
+3. **Longer Horizons** - 3-day, 5-day predictions
+4. **1% Threshold experiments** - 19 scripts ready (in other terminal)
+
+---
+
+## Files Modified This Session
+
+- `experiments/threshold_05pct_high/train_2M_narrow_h4.py` (NEW)
+- `experiments/threshold_05pct_high/train_2M_narrow_h8.py` (NEW)
+- `experiments/threshold_05pct_high/sweep_thresholds.py` (updated)
+- `docs/threshold_05pct_high_experiments.md` (comprehensive update)
+- `outputs/threshold_05pct_high/2M_narrow_h4_*/` (NEW)
+- `outputs/threshold_05pct_high/2M_narrow_h8_*/` (NEW)
+- `outputs/threshold_05pct_high/threshold_sweep_results.csv` (updated)
+
+---
+
+## Key Decisions Made
+
+- **Head count at 2M**: Tested h=4 and h=8 to compare with h=2 baseline. Found h=8 best.
+- **Parameter matching**: All models trained with identical hyperparameters (dropout=0.5, lr=1e-4, batch=64, epochs=50, ctx=80) for fair comparison.
+
+---
+
+## Memory Entities Updated
+
+- `Finding_2M_HeadCountComparison_20260121` (created): Scale-dependent head count finding
+- `Plan_2M_HeadCount_Experiments_20260121` (created): Planning record for this session
+- `Pending_2M_HeadCountExperiment` (updated): Marked as complete with results
+
+**Still valid from previous sessions:**
+- `Finding_2Mvs20M_InverseScaling_20260121`
+- `Finding_ThresholdSweep_05pct_20260121`
+- `Critical_TrainerHighPricesBug_20260121`
+- `Target_Calculation_Definitive_Rule`
+- `Backlog_HeadDropoutExploration`
+
+---
+
+## Data Versions
+
+- Raw manifest: SPY.OHLCV.daily (verified)
+- Processed manifest: SPY_dataset_a20.parquet (verified)
+- Pending registrations: none
 
 ---
 
 ## Next Session Should
 
-1. **Create 2M h=4 training script**: d=64, L=32, h=4
-2. **Create 2M h=8 training script**: d=64, L=32, h=8
-3. **Train both models** with same hyperparameters
-4. **Run threshold sweep** on new models
-5. **Compare all 2M variants** (h=2, h=4, h=8)
-6. **Commit all changes** if experiments succeed
+1. Consider longer horizons (3-day, 5-day) with the 2M_h8 architecture
+2. Or try 1% threshold experiments (scripts ready)
+3. Or explore head_dropout parameter (currently 0.0)
+4. Eventually push commits to origin (17 ahead)
 
 ---
 
 ## Commands to Run First
+
 ```bash
 source venv/bin/activate
 make test
 git status
-
-# Then create and run 2M h=4 experiment
+make verify
 ```
 
 ---
@@ -152,6 +168,6 @@ git status
 - Evidence-based claims
 
 ### Current Focus
-- 2M head count experiments (h=4, h=8)
-- Comparing architecture choices at smaller scale
-- Building valid experimental evidence with correct HIGH-based targets
+- 0.5% threshold experiments with correct HIGH-based targets
+- Architecture exploration at 2M scale
+- Building valid experimental evidence
