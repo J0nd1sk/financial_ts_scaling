@@ -451,6 +451,82 @@ Ran 12 HPO studies (4 budgets × 3 horizons) to find optimal architectures.
 - Early stopping with patience and min_delta parameters
 - Dropout as HPO parameter
 
+### 6.11 Phase 6A: Infrastructure Fixes (2026-01-19 to 2026-01-20)
+
+Critical issues discovered during backtest evaluation:
+
+**Problems Identified:**
+1. **ChunkSplitter Bug**: Validation used only 19 samples (1 per chunk), not ~500
+2. **Probability Collapse**: Models output near-constant predictions (0.52-0.57 range)
+3. **Normalization Interaction**: Global z-score + RevIN caused distribution issues
+4. **Context Length**: 60 days suboptimal for prediction task
+
+**Solutions Implemented:**
+1. **SimpleSplitter**: Date-based contiguous splits with sliding window for ALL regions
+   - Train: through 2022-12-31 (~7,255 samples)
+   - Validation: 2023-01-01 to 2024-12-31 (~420 samples)
+   - Test: 2025-01-01 onwards (~180 samples)
+2. **RevIN Only**: Removed global z-score, use per-instance normalization only
+3. **Context Length**: Changed from 60 to 80 days (ablation-validated)
+
+**Validation of Fixes:**
+- Prediction spread: 0.52-0.57 → 0.01-0.94 (no collapse)
+- AUC improved: 0.53-0.65 → 0.60-0.72
+- Validation samples: 19 → 420+
+
+### 6.12 Phase 6A: Ablation Studies (2026-01-20 to 2026-01-21)
+
+Systematic validation of hyperparameters through controlled experiments:
+
+**Context Length Ablation (2026-01-20):**
+| Context | Val AUC | Δ vs Baseline |
+|---------|---------|---------------|
+| 60 days | 0.601 | baseline |
+| **80 days** | **0.695** | **+15.5%** |
+| 120 days | 0.688 | +14.4% |
+| 180 days | 0.549 | -8.7% |
+| 252 days | 0.477 | -20.7% |
+
+**Finding**: 80-day context optimal, longer contexts hurt due to noise accumulation.
+
+**Head Dropout Ablation (2026-01-21):**
+| Scale | head_dropout | Test AUC | Δ vs Baseline |
+|-------|--------------|----------|---------------|
+| 2M | 0.00 (baseline) | 0.713 | — |
+| 2M | 0.05-0.30 | 0.711-0.713 | ~0% |
+| 20M | 0.00 (baseline) | 0.712 | — |
+| 20M | 0.05-0.15 | 0.612-0.614 | **-14%** |
+| 20M | 0.30 | 0.708 | -0.6% |
+
+**Finding**: Head dropout provides no benefit; encoder dropout (0.5) sufficient.
+
+**Head Count Comparison (2026-01-21):**
+- 2M scale: h=8 best (AUC 0.713) > h=4 (0.709) > h=2 (0.707)
+- 20M scale: h=4 best (AUC 0.712) > h=8 (0.697) > h=2 (0.629)
+
+**Finding**: Optimal head count varies by scale—not transferable.
+
+### 6.13 Phase 6A: Final Results (2026-01-21)
+
+12 experiments with corrected infrastructure (3 budgets × 4 horizons):
+
+**AUC Results:**
+| Budget | H1 | H2 | H3 | H5 | Mean |
+|--------|-----|-----|-----|-----|------|
+| 2M | 0.706 | 0.639 | 0.618 | 0.605 | 0.642 |
+| 20M | 0.715 | 0.635 | 0.615 | 0.596 | 0.640 |
+| 200M | 0.718 | 0.635 | 0.622 | 0.599 | 0.644 |
+
+**Key Conclusions:**
+1. **Minimal scaling benefit**: 200M only +1.7% over 2M at H1
+2. **Horizon dominates scale**: H1→H5 = -16% vs scale effect +1.7%
+3. **Feature bottleneck confirmed**: 25 features insufficient for larger models to benefit
+4. **Recall problem at H1**: Models miss 87-96% of positive opportunities
+
+**Implication**: Feature expansion (Phase 6C) is the logical next step to test whether scaling laws emerge with richer inputs.
+
+See `docs/phase6a_final_results.md` for complete analysis.
+
 ---
 
 ## 7. Deferred and Discarded Ideas
@@ -552,4 +628,5 @@ Original realistic timeline estimate: 2-3 months with thermal constraints.
 
 *Document created: 2026-01-17*
 *Updated: 2026-01-18 (added Phases 5, 5.5, 6A Prep, 6A HPO)*
+*Updated: 2026-01-21 (added sections 6.11-6.13: Infrastructure Fixes, Ablation Studies, Final Results)*
 *Consolidates: timeseries_transformer_experimentation_project.md, completed phases from project_phase_plans.md*

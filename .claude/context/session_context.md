@@ -1,120 +1,86 @@
-# Session Handoff - 2026-01-21 ~20:30 UTC
+# Session Handoff - 2026-01-22 ~01:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: main
-- **Last commit**: `d2aab51` exp: 2M head count comparison (h=2, h=4, h=8) with HIGH-based 0.5% targets
-- **Uncommitted changes**: none (clean working tree)
-- **Ahead of origin**: 17 commits (not pushed)
+- **Last commit**: `8e06765` docs: head dropout ablation results - no benefit, keep at 0.0
+- **Uncommitted changes**:
+  - Modified: session_context.md, results.json
+  - New: 11 experiment output dirs, threshold_sweep.csv, threshold_sweep_plots.png, threshold_sweep.py, test_threshold_sweep.py
+- **Ahead of origin**: 2 commits (not pushed)
 
 ### Task Status
-- **Completed this session**: 2M head count experiments (h=4, h=8)
-- **Status**: Complete
+- **Completed**: Phase 6A threshold sweep analysis
+- **Status**: Ready for Phase 6B/6C feature scaling
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-21
-- Result: **471 passed**, 2 warnings
+- Last `make test`: 2026-01-22
+- Result: **476 passed**, 2 warnings
 - Failing: none
 
 ---
 
 ## Completed This Session
 
-1. **2M h=4 training script** created and trained
-2. **2M h=8 training script** created and trained
-3. **Threshold sweep** run on all 6 models (2M h2/h4/h8, 20M h2/h4/h8)
-4. **Documentation** updated in `docs/threshold_05pct_high_experiments.md`
-5. **All changes committed** (d2aab51)
+1. **Session restore** from previous handoff
+2. **Phase 6A experiments verified complete** (all 12 models trained)
+3. **Threshold sweep script** (`scripts/threshold_sweep.py`):
+   - TDD: 5 new tests in `tests/test_threshold_sweep.py`
+   - Sweeps probability thresholds 0.1-0.8
+   - Computes precision/recall/F1/AUC at each threshold
+   - Output: `outputs/phase6a_final/threshold_sweep.csv` (96 rows)
+4. **Threshold sweep visualization** (`outputs/phase6a_final/threshold_sweep_plots.png`):
+   - Precision vs threshold (all models)
+   - Recall vs threshold (all models)
+   - Precision-Recall curves by horizon
+   - AUC bar chart by budget×horizon
+5. **Phase 6A analysis complete** - key findings documented
 
 ---
 
-## Key Findings This Session
+## Key Findings (Phase 6A Complete)
 
-### Optimal Head Count is Scale-Dependent
+### AUC by Model
+| Horizon | 2M | 20M | 200M |
+|---------|-----|------|------|
+| H1 | 0.707 | 0.717 | 0.724 |
+| H2 | 0.640 | 0.639 | 0.642 |
+| H3 | 0.621 | 0.618 | 0.631 |
+| H5 | 0.609 | 0.599 | 0.613 |
 
-| Scale | Best Head Count | Head Dim (d_k) | AUC |
-|-------|-----------------|----------------|-----|
-| 2M (d=64) | h=8 | 8 | 0.713 |
-| 20M (d=512) | h=4 | 128 | 0.712 |
-
-- **2M scale prefers MORE heads** with SMALLER attention dimensions
-- **20M scale prefers FEWER heads** with LARGER attention dimensions
-- Head configuration should NOT be transferred across scales
-
-### Best Model: 2M_h8
-
-| Metric | Value |
-|--------|-------|
-| AUC-ROC | 0.713 |
-| Best Accuracy | 67.96% (@ threshold 0.45) |
-| Precision @ 0.45 | 67.65% |
-| Recall @ 0.45 | 56.10% |
-| Trades @ 0.45 | 68 / 181 |
-
-### Threshold Sweep: 2M_h8 at Higher Thresholds
-
-| Threshold | Precision | Recall | Accuracy | Trades |
-|-----------|-----------|--------|----------|--------|
-| 0.45 | 67.65% | 56.10% | 67.96% | 68 |
-| 0.50 | 69.57% | 39.02% | 64.64% | 46 |
-| 0.55 | 71.88% | 28.05% | 62.43% | 32 |
-| 0.60 | 70.00% | 17.07% | 59.12% | 20 |
-
----
-
-## Target Definition (Confirmed)
-
-**Task**: Predict whether tomorrow's HIGH price will be at least 0.5% above today's CLOSE.
-
-**Formula**: `max(HIGH[t+1:t+1+horizon]) >= CLOSE[t] * 1.005`
-
-**Rationale**: Reflects real trading — enter at close, exit when high reaches target.
-
----
-
-## Pending Experiments
-
-1. **Head Dropout Exploration** - Currently 0.0, may try 0.1-0.3 (low priority)
-2. **Different Target Thresholds** - 1%, 2% instead of 0.5%
-3. **Longer Horizons** - 3-day, 5-day predictions
-4. **1% Threshold experiments** - 19 scripts ready (in other terminal)
+### Key Conclusions
+- **Parameter scaling provides minimal benefit** (200M only +1.7% over 2M)
+- **Data-limited regime confirmed** - more parameters don't help
+- **Shorter horizons easier** (H1 AUC ~0.72 vs H5 AUC ~0.61)
+- **H5 models best calibrated** for threshold selection (pred range 0.26-0.90)
+- **H1 models poorly calibrated** (predictions rarely exceed 0.5)
 
 ---
 
 ## Files Modified This Session
 
-- `experiments/threshold_05pct_high/train_2M_narrow_h4.py` (NEW)
-- `experiments/threshold_05pct_high/train_2M_narrow_h8.py` (NEW)
-- `experiments/threshold_05pct_high/sweep_thresholds.py` (updated)
-- `docs/threshold_05pct_high_experiments.md` (comprehensive update)
-- `outputs/threshold_05pct_high/2M_narrow_h4_*/` (NEW)
-- `outputs/threshold_05pct_high/2M_narrow_h8_*/` (NEW)
-- `outputs/threshold_05pct_high/threshold_sweep_results.csv` (updated)
-
----
-
-## Key Decisions Made
-
-- **Head count at 2M**: Tested h=4 and h=8 to compare with h=2 baseline. Found h=8 best.
-- **Parameter matching**: All models trained with identical hyperparameters (dropout=0.5, lr=1e-4, batch=64, epochs=50, ctx=80) for fair comparison.
+- `scripts/threshold_sweep.py` (NEW - 250 lines)
+- `tests/test_threshold_sweep.py` (NEW - 5 tests)
+- `outputs/phase6a_final/threshold_sweep.csv` (NEW - 96 rows)
+- `outputs/phase6a_final/threshold_sweep_plots.png` (NEW - visualization)
+- `outputs/phase6a_final/phase6a_*/results.json` (from background experiments)
+- `.claude/context/session_context.md` (this file)
 
 ---
 
 ## Memory Entities Updated
 
-- `Finding_2M_HeadCountComparison_20260121` (created): Scale-dependent head count finding
-- `Plan_2M_HeadCount_Experiments_20260121` (created): Planning record for this session
-- `Pending_2M_HeadCountExperiment` (updated): Marked as complete with results
+- `ThresholdSweepScript_Plan_20260121` (created): Planning decision for threshold sweep implementation
+- `Phase6A_ThresholdSweep_Finding_20260122` (created): Threshold sweep experimental findings
+- `Phase6A_Conclusion_DataLimited_20260122` (created): Phase 6A conclusion - data-limited regime
 
 **Still valid from previous sessions:**
-- `Finding_2Mvs20M_InverseScaling_20260121`
-- `Finding_ThresholdSweep_05pct_20260121`
-- `Critical_TrainerHighPricesBug_20260121`
-- `Target_Calculation_Definitive_Rule`
-- `Backlog_HeadDropoutExploration`
+- `Finding_2M_HeadCountComparison_20260121` - h=8 best at 2M scale
+- `Finding_2Mvs20M_InverseScaling_20260121` - 2M comparable to 20M
+- `Target_Calculation_Definitive_Rule` - HIGH-based targets
 
 ---
 
@@ -128,10 +94,15 @@
 
 ## Next Session Should
 
-1. Consider longer horizons (3-day, 5-day) with the 2M_h8 architecture
-2. Or try 1% threshold experiments (scripts ready)
-3. Or explore head_dropout parameter (currently 0.0)
-4. Eventually push commits to origin (17 ahead)
+1. **Begin Phase 6B/6C: Feature Scaling**
+   - Expand from 20 indicators to 50/100/200+ features
+   - No new data acquisition needed - generate from existing OHLCV
+2. **Plan feature tier expansion**:
+   - Tier a50: Add more MAs, oscillators, volume indicators
+   - Tier a100: Add Fibonacci, Ichimoku, more RSI variants
+   - Tier a200+: Comprehensive indicator library
+3. **Commit Phase 6A artifacts** (threshold sweep script, results, plots)
+4. **Consider**: Which horizons to focus on for feature scaling experiments
 
 ---
 
@@ -141,7 +112,8 @@
 source venv/bin/activate
 make test
 git status
-make verify
+# Commit new threshold sweep artifacts:
+git add -A && git commit -m "feat: threshold sweep script and Phase 6A analysis"
 ```
 
 ---
@@ -174,9 +146,9 @@ Always use unless new ablation evidence supersedes:
 - **Context Length**: 80 days
 - **Normalization**: RevIN only (no z-score)
 - **Splitter**: SimpleSplitter (442 val samples, not ChunkSplitter's 19)
+- **Head dropout**: 0.0 (ablation showed no benefit)
 - **Metrics**: AUC, accuracy, precision, recall, pred_range (all required)
 
 ### Current Focus
-- 1% threshold experiments with correct HIGH-based targets
-- Phase 6A final training with corrected infrastructure
-- Building valid experimental evidence
+- Phase 6A complete - data-limited regime confirmed
+- Next: Feature scaling (more indicators, not more parameters)

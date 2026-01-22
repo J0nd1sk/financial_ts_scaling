@@ -1,7 +1,11 @@
 # Phase 6A Backtest Analysis: 2025 Holdout Evaluation
 
+> **SUPERSEDED (2026-01-21):** The issues documented here have been **RESOLVED**. SimpleSplitter + RevIN normalization eliminated probability collapse. For authoritative final results, see **`docs/phase6a_final_results.md`**.
+>
+> This document is preserved as a record of the debugging journey.
+
 **Date**: 2026-01-19
-**Status**: ROOT CAUSE IDENTIFIED - Prior collapse due to BCE loss
+**Status**: ~~ROOT CAUSE IDENTIFIED - Prior collapse due to BCE loss~~ **RESOLVED** - Infrastructure fixes applied
 
 ## Executive Summary
 

@@ -113,11 +113,23 @@
 - `.claude/skills/experiment_generation/SKILL.md`: 228 lines (Task 5)
 - `.claude/skills/experiment_execution/SKILL.md`: 329 lines (Task 6)
 
-## Phase 6A: Parameter Scaling 🔄 IN PROGRESS
-- 12 HPO runs: 4 scales × 3 horizons (testing horizon variance)
+## Phase 6A: Parameter Scaling ✅ COMPLETE (2026-01-21)
+- 12 models trained: 3 scales × 4 horizons (2M/20M/200M × H1/H2/H3/H5)
 - Hold: 25 features, SPY
-- Vary: 2M → 20M → 200M → 2B parameters × 1d/3d/5d horizons
-- Research: Does error ∝ N^(-α)? Do optimal params vary by horizon?
+- Varied: 2M → 20M → 200M parameters
+- **Conclusion: Data-limited regime - parameter scaling provides minimal benefit**
+
+**Final Results (2026-01-21, Corrected Infrastructure):**
+| Horizon | 2M AUC | 20M AUC | 200M AUC | Scaling Benefit |
+|---------|--------|---------|----------|-----------------|
+| H1 | 0.706 | 0.715 | 0.718 | +1.7% |
+| H2 | 0.639 | 0.635 | 0.635 | -0.6% |
+| H3 | 0.618 | 0.615 | 0.622 | +0.6% |
+| H5 | 0.605 | 0.596 | 0.599 | -1.0% |
+
+- Results: `outputs/phase6a_final/phase6a_{budget}_h{horizon}/results.json`
+- Analysis: `docs/phase6a_final_results.md`
+- Key finding: Horizon effects (10x) dominate scale effects; feature bottleneck confirmed
 
 **Status (2026-01-01):**
 - ✅ **2M HPO Complete** (all 3 horizons, 50 trials each)
@@ -371,7 +383,23 @@
   - ✅ Figure data files (5 CSVs)
   - ✅ Table files (3 CSVs + LaTeX)
   - ✅ Discussion draft and conclusions documents
-  - Core finding: **Inverse scaling** - 2M outperforms 2B by 21%
+  - ~~Core finding: **Inverse scaling** - 2M outperforms 2B by 21%~~
+  - **CORRECTED (2026-01-21)**: Inverse scaling was artifact of 19-sample validation
+- ✅ **Ablation Studies Stage COMPLETE** (2026-01-20 to 2026-01-21)
+  - ✅ Context length ablation: 80 days optimal (+15.5% vs 60)
+  - ✅ Head dropout ablation: 0.0 best (encoder dropout sufficient)
+  - ✅ Head count comparison: 2M→h=8, 20M→h=4 (scale-dependent)
+  - Docs: `docs/context_length_ablation_results.md`, `docs/head_dropout_ablation_results.md`
+- ✅ **Phase 6A Final Experiments COMPLETE** (2026-01-21)
+  - 12 experiments: 3 budgets (2M/20M/200M) × 4 horizons (H1-H5)
+  - Infrastructure: SimpleSplitter (420+ val samples), RevIN only, ctx=80
+  - **CORRECTED FINDING**: Scaling is FLAT, not inverse
+    - 200M only +1.7% AUC over 2M at H1 (0.718 vs 0.706)
+    - Mean AUC: 2M=0.642, 20M=0.640, 200M=0.644
+  - Horizon effects dominate: H1→H5 = -16% vs scale +1.7%
+  - Feature bottleneck confirmed: 25 features insufficient for scaling
+  - Results: `outputs/phase6a_final/`
+  - Analysis: `docs/phase6a_final_results.md`
 - 📝 **Future Research Backlog**
   - Variable-width transformer architectures (user suggestion)
   - Funnel/hourglass/bottleneck designs

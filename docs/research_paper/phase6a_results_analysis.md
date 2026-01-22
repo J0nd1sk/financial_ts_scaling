@@ -1,5 +1,11 @@
 # Phase 6A Results Analysis: Parameter Scaling Experiments
 
+> **IMPORTANT UPDATE (2026-01-21):** This document contains HPO results from before infrastructure corrections. For authoritative final results with corrected infrastructure (SimpleSplitter, RevIN, proper validation sizes), see **`docs/phase6a_final_results.md`**.
+>
+> **Key correction:** The "inverse scaling" finding in this document was an artifact of using only 19 validation samples. With proper validation (420+ samples), scaling is **flat/minimal**, not inverse.
+
+---
+
 ## Executive Summary
 
 Phase 6A tested whether neural scaling laws apply to transformer models on financial time-series data by varying parameter budgets from 2M to 2B while holding feature count (20 indicators) and data (SPY daily, ~8000 observations) constant.
@@ -221,3 +227,33 @@ This finding has practical implications for quantitative finance practitioners, 
 *Analysis based on 600 HPO trials (12 studies × 50 trials) and 16 final training runs.*
 *Total compute time: ~177 hours (~7.4 days)*
 *Hardware: Apple M4 MacBook Pro, 128GB unified memory*
+
+---
+
+## Addendum: Infrastructure Corrections (2026-01-21)
+
+Subsequent investigation revealed critical infrastructure issues that invalidated some conclusions in this document:
+
+1. **ChunkSplitter Bug**: Validation used only 19 samples instead of ~420
+2. **Probability Collapse**: Models output near-constant predictions (0.52-0.57 range)
+3. **Normalization Issue**: Global z-score + RevIN caused distribution issues
+
+### Corrected Findings
+
+With corrected infrastructure (SimpleSplitter, RevIN only, 80-day context):
+
+| Finding | This Document | Corrected |
+|---------|---------------|-----------|
+| Scaling pattern | Inverse (2M best) | Flat/minimal |
+| Best budget | 2M significantly better | All similar |
+| Prediction spread | 0.52-0.57 (collapsed) | 0.01-0.94 (healthy) |
+
+### What Remains Valid
+
+- Horizon effects (H3 easiest, H1/H5 harder)
+- Architecture transfer failure across horizons
+- Feature bottleneck hypothesis
+
+### Authoritative Results
+
+See `docs/phase6a_final_results.md` for final results with corrected infrastructure.
