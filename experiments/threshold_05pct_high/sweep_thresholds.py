@@ -40,17 +40,29 @@ THRESHOLD = 0.005
 
 # Models to evaluate
 MODELS = {
-    "h8": {
-        "checkpoint": PROJECT_ROOT / "outputs/threshold_05pct_high/20M_wide_h8_threshold_05pct_HIGH/checkpoints",
-        "d_model": 512, "n_layers": 6, "n_heads": 8, "d_ff": 2048, "dropout": 0.5,
+    "2M_h2": {
+        "checkpoint": PROJECT_ROOT / "outputs/threshold_05pct_high/2M_narrow_deep_threshold_05pct_HIGH/checkpoints",
+        "d_model": 64, "n_layers": 32, "n_heads": 2, "d_ff": 256, "dropout": 0.5,
     },
-    "h4": {
+    "2M_h4": {
+        "checkpoint": PROJECT_ROOT / "outputs/threshold_05pct_high/2M_narrow_h4_threshold_05pct_HIGH/checkpoints",
+        "d_model": 64, "n_layers": 32, "n_heads": 4, "d_ff": 256, "dropout": 0.5,
+    },
+    "2M_h8": {
+        "checkpoint": PROJECT_ROOT / "outputs/threshold_05pct_high/2M_narrow_h8_threshold_05pct_HIGH/checkpoints",
+        "d_model": 64, "n_layers": 32, "n_heads": 8, "d_ff": 256, "dropout": 0.5,
+    },
+    "20M_h2": {
+        "checkpoint": PROJECT_ROOT / "outputs/threshold_05pct_high/20M_wide_h2_threshold_05pct_HIGH/checkpoints",
+        "d_model": 512, "n_layers": 6, "n_heads": 2, "d_ff": 2048, "dropout": 0.5,
+    },
+    "20M_h4": {
         "checkpoint": PROJECT_ROOT / "outputs/threshold_05pct_high/20M_wide_h4_threshold_05pct_HIGH/checkpoints",
         "d_model": 512, "n_layers": 6, "n_heads": 4, "d_ff": 2048, "dropout": 0.5,
     },
-    "h2": {
-        "checkpoint": PROJECT_ROOT / "outputs/threshold_05pct_high/20M_wide_h2_threshold_05pct_HIGH/checkpoints",
-        "d_model": 512, "n_layers": 6, "n_heads": 2, "d_ff": 2048, "dropout": 0.5,
+    "20M_h8": {
+        "checkpoint": PROJECT_ROOT / "outputs/threshold_05pct_high/20M_wide_h8_threshold_05pct_HIGH/checkpoints",
+        "d_model": 512, "n_layers": 6, "n_heads": 8, "d_ff": 2048, "dropout": 0.5,
     },
 }
 

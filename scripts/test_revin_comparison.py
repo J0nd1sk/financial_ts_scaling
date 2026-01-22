@@ -20,7 +20,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score, f1_score
 
 from src.config.experiment import ExperimentConfig
 from src.data.dataset import (
@@ -218,12 +218,20 @@ def run_config(
     except ValueError:
         auc = 0.5  # If only one class present
 
+    # Binary predictions at 0.5 threshold
+    binary_preds = (preds >= 0.5).astype(int)
+    accuracy = accuracy_score(labels, binary_preds)
+    precision = precision_score(labels, binary_preds, zero_division=0)
+    recall = recall_score(labels, binary_preds, zero_division=0)
+    f1 = f1_score(labels, binary_preds, zero_division=0)
+
     pred_min = preds.min()
     pred_max = preds.max()
     pred_std = preds.std()
     pred_mean = preds.mean()
 
     print(f"  AUC-ROC: {auc:.4f}")
+    print(f"  Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1: {f1:.4f}")
     print(f"  Predictions: min={pred_min:.4f}, max={pred_max:.4f}, std={pred_std:.4f}")
 
     # Clean up temp file
@@ -235,6 +243,10 @@ def run_config(
         "use_revin": use_revin,
         "val_loss": val_loss,
         "auc": auc,
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
         "pred_min": pred_min,
         "pred_max": pred_max,
         "pred_std": pred_std,

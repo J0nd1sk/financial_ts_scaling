@@ -6,25 +6,32 @@
     "n_layers": 4,
     "n_heads": 4,
     "d_ff": 256,
-    "dropout": 0.2,
+    "dropout": 0.5,
     "use_revin": true
   },
   "training": {
-    "learning_rate": 0.001,
+    "learning_rate": 0.0001,
     "batch_size": 128,
     "epochs": 50
   },
   "results": {
-    "val_auc": 0.6877294981640147,
-    "val_loss": 0.3092730641365051,
-    "train_loss": 0.3493822039219371,
+    "val_auc": 0.7310790558261522,
+    "val_loss": 0.5026089151700338,
+    "train_loss": 0.49500682322602524,
+    "accuracy": 0.8219895287958116,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "pred_min": 0.013173536397516727,
+    "pred_max": 0.4814549386501312,
+    "pred_std": 0.0899958685040474,
     "stopped_early": true,
-    "training_time_minutes": 0.16213225126266478
+    "training_time_minutes": 0.49919533332188926
   },
   "splits": {
     "train_samples": 7217,
     "val_samples": 382,
     "test_samples": 141
   },
-  "timestamp": "2026-01-20T11:49:26.843796"
+  "timestamp": "2026-01-21T15:23:41.384904"
 }

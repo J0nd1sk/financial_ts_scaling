@@ -17,7 +17,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import torch
+import numpy as np
 import pandas as pd
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 from src.config.experiment import ExperimentConfig
 from src.models.patchtst import PatchTSTConfig
@@ -38,10 +40,10 @@ N_HEADS = 4
 D_FF = 256  # 4 * d_model
 
 # Training
-LEARNING_RATE = 0.001
+LEARNING_RATE = 1e-4  # Slower for stability
 BATCH_SIZE = 128
 EPOCHS = 50
-DROPOUT = 0.20  # PatchTST-recommended
+DROPOUT = 0.50  # Higher for regularization
 
 # Context length (ABLATION VARIABLE)
 CONTEXT_LENGTH = 80
@@ -52,6 +54,41 @@ NUM_FEATURES = 20
 
 # Output
 OUTPUT_DIR = PROJECT_ROOT / "outputs/context_length_ablation" / EXPERIMENT_NAME
+
+
+# ============================================================================
+# EVALUATION HELPERS
+# ============================================================================
+
+def evaluate_model(model, dataloader, device):
+    """Evaluate model and return predictions + labels."""
+    model.eval()
+    all_preds = []
+    all_labels = []
+
+    with torch.no_grad():
+        for batch_x, batch_y in dataloader:
+            batch_x = batch_x.to(device)
+            preds = model(batch_x).cpu().numpy()
+            all_preds.extend(preds.flatten())
+            all_labels.extend(batch_y.numpy().flatten())
+
+    preds = np.array(all_preds)
+    labels = np.array(all_labels)
+
+    # Binary predictions at 0.5 threshold
+    binary_preds = (preds >= 0.5).astype(int)
+
+    return {
+        "accuracy": accuracy_score(labels, binary_preds),
+        "precision": precision_score(labels, binary_preds, zero_division=0),
+        "recall": recall_score(labels, binary_preds, zero_division=0),
+        "f1": f1_score(labels, binary_preds, zero_division=0),
+        "pred_mean": float(preds.mean()),
+        "pred_std": float(preds.std()),
+        "pred_min": float(preds.min()),
+        "pred_max": float(preds.max()),
+    }
 
 # ============================================================================
 # MAIN
@@ -150,14 +187,22 @@ def main():
         elapsed = time.time() - start_time
         print(f"\nTraining completed in {elapsed/60:.1f} minutes")
 
-    # Get metrics
-    val_auc = result.get("val_auc")
-    val_loss = result.get("val_loss")
-    stopped_early = result.get("stopped_early", False)
+        # Get metrics from training
+        val_auc = result.get("val_auc")
+        val_loss = result.get("val_loss")
+        stopped_early = result.get("stopped_early", False)
+
+        # Evaluate on validation set for accuracy/recall
+        eval_metrics = evaluate_model(trainer.model, trainer.val_dataloader, trainer.device)
 
     print(f"\nResults:")
     print(f"  Val AUC: {val_auc:.4f}" if val_auc else "  Val AUC: N/A")
     print(f"  Val Loss: {val_loss:.4f}" if val_loss else "  Val Loss: N/A")
+    print(f"  Accuracy: {eval_metrics['accuracy']:.4f}")
+    print(f"  Precision: {eval_metrics['precision']:.4f}")
+    print(f"  Recall: {eval_metrics['recall']:.4f}")
+    print(f"  F1: {eval_metrics['f1']:.4f}")
+    print(f"  Pred Range: [{eval_metrics['pred_min']:.4f}, {eval_metrics['pred_max']:.4f}]")
     print(f"  Stopped Early: {stopped_early}")
 
     # Save results
@@ -181,6 +226,13 @@ def main():
             "val_auc": val_auc,
             "val_loss": val_loss,
             "train_loss": result.get("train_loss"),
+            "accuracy": eval_metrics["accuracy"],
+            "precision": eval_metrics["precision"],
+            "recall": eval_metrics["recall"],
+            "f1": eval_metrics["f1"],
+            "pred_min": eval_metrics["pred_min"],
+            "pred_max": eval_metrics["pred_max"],
+            "pred_std": eval_metrics["pred_std"],
             "stopped_early": stopped_early,
             "training_time_minutes": elapsed / 60,
         },

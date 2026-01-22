@@ -1,0 +1,52 @@
+{
+  "experiment_name": "2M_narrow_h8_threshold_05pct_HIGH",
+  "task": "threshold_0.5pct",
+  "threshold": 0.005,
+  "target_type": "HIGH-based (correct)",
+  "context_length": 80,
+  "architecture": {
+    "d_model": 64,
+    "n_layers": 32,
+    "n_heads": 8,
+    "d_ff": 256,
+    "dropout": 0.5,
+    "use_revin": true,
+    "estimated_params_M": 1.574208
+  },
+  "training": {
+    "learning_rate": 0.0001,
+    "batch_size": 64,
+    "epochs_requested": 50,
+    "epochs_completed": 50,
+    "stopped_early": true
+  },
+  "class_balance": {
+    "train_positive_pct": 50.55808185200497,
+    "val_positive_pct": 45.26066350710901,
+    "test_positive_pct": 45.30386740331492
+  },
+  "val_metrics": {
+    "auc": 0.6056299721221188,
+    "loss": 0.685741296836308
+  },
+  "test_metrics": {
+    "accuracy": 0.6408839779005525,
+    "precision": 0.7428571428571429,
+    "recall": 0.3170731707317073,
+    "f1": 0.4444444444444444,
+    "auc_roc": 0.7107661985710767
+  },
+  "prediction_distribution": {
+    "min": 0.1872851848602295,
+    "max": 0.6947736740112305,
+    "spread": 0.507488489151001,
+    "std": 0.11913765966892242
+  },
+  "splits": {
+    "train_samples": 7257,
+    "val_samples": 422,
+    "test_samples": 181
+  },
+  "training_time_minutes": 4.862551987171173,
+  "timestamp": "2026-01-21T16:08:18.813880"
+}
