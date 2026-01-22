@@ -160,6 +160,31 @@ daily, 2d, 3d, 5d, weekly, 2wk, monthly, daily+multi-resolution
 ### Tasks (6)
 direction (binary), >1%/>2%/>3%/>5% thresholds (binary each), price regression
 
+### Hyperparameters (Fixed - Ablation-Validated)
+Based on ablation studies (2026-01), always use:
+- **Dropout**: 0.5 (high regularization)
+- **Learning Rate**: 1e-4 (stable convergence)
+- **Context Length**: 80 days (optimal from context ablation)
+- **Normalization**: RevIN only (no global z-score)
+- **Splitter**: SimpleSplitter (not ChunkSplitter - the latter gives only 19 val samples)
+
+These are non-negotiable unless new ablation evidence supersedes them.
+
+### Target Calculation (Multi-Horizon)
+For horizon H days, target is TRUE if:
+```
+max(High[t+1], High[t+2], ..., High[t+H]) >= Close[t] * (1 + threshold)
+```
+This means: did the price reach the threshold at ANY point within the horizon?
+
+### Metrics (Required for All Experiments)
+Always track and report:
+- AUC-ROC (discrimination)
+- Accuracy (overall correctness)
+- Precision (of positive predictions)
+- Recall (of actual positives) - **critical: 0% recall = useless model**
+- Prediction range [min, max] (detect probability collapse)
+
 ---
 
 ## Thermal Protocol

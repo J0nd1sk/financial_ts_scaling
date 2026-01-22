@@ -1,0 +1,37 @@
+{
+  "experiment_name": "20M_h4_hd030",
+  "ablation": "head_dropout",
+  "head_dropout": 0.3,
+  "baseline_auc": 0.712,
+  "architecture": {
+    "scale": "20M",
+    "d_model": 512,
+    "n_layers": 6,
+    "n_heads": 4,
+    "d_ff": 2048,
+    "dropout": 0.5,
+    "head_dropout": 0.3
+  },
+  "val_metrics": {
+    "auc": 0.6036354570385984,
+    "loss": 0.6926210692950657
+  },
+  "test_metrics": {
+    "accuracy": 0.6298342541436464,
+    "precision": 0.7027027027027027,
+    "recall": 0.3170731707317073,
+    "f1": 0.4369747899159664,
+    "auc_roc": 0.7076866223207687
+  },
+  "prediction_distribution": {
+    "min": 0.17593270540237427,
+    "max": 0.7825853824615479,
+    "spread": 0.6066526770591736
+  },
+  "training": {
+    "epochs_completed": 50,
+    "stopped_early": true,
+    "time_minutes": 0.9593956192334493
+  },
+  "timestamp": "2026-01-21T18:08:59.160980"
+}

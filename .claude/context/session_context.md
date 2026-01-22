@@ -167,7 +167,16 @@ make verify
 - Never summarize away important details
 - Evidence-based claims
 
+### Hyperparameters (Fixed - Ablation-Validated)
+Always use unless new ablation evidence supersedes:
+- **Dropout**: 0.5
+- **Learning Rate**: 1e-4
+- **Context Length**: 80 days
+- **Normalization**: RevIN only (no z-score)
+- **Splitter**: SimpleSplitter (442 val samples, not ChunkSplitter's 19)
+- **Metrics**: AUC, accuracy, precision, recall, pred_range (all required)
+
 ### Current Focus
-- 0.5% threshold experiments with correct HIGH-based targets
-- Architecture exploration at 2M scale
+- 1% threshold experiments with correct HIGH-based targets
+- Phase 6A final training with corrected infrastructure
 - Building valid experimental evidence

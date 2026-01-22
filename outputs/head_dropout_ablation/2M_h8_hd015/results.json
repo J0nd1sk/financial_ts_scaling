@@ -1,0 +1,37 @@
+{
+  "experiment_name": "2M_h8_hd015",
+  "ablation": "head_dropout",
+  "head_dropout": 0.15,
+  "baseline_auc": 0.713,
+  "architecture": {
+    "scale": "2M",
+    "d_model": 64,
+    "n_layers": 32,
+    "n_heads": 8,
+    "d_ff": 256,
+    "dropout": 0.5,
+    "head_dropout": 0.15
+  },
+  "val_metrics": {
+    "auc": 0.6039754312005621,
+    "loss": 0.6802290337426322
+  },
+  "test_metrics": {
+    "accuracy": 0.6685082872928176,
+    "precision": 0.7894736842105263,
+    "recall": 0.36585365853658536,
+    "f1": 0.5,
+    "auc_roc": 0.7116284799211628
+  },
+  "prediction_distribution": {
+    "min": 0.20751109719276428,
+    "max": 0.7120565176010132,
+    "spread": 0.5045454502105713
+  },
+  "training": {
+    "epochs_completed": 50,
+    "stopped_early": true,
+    "time_minutes": 4.34870711962382
+  },
+  "timestamp": "2026-01-21T17:59:01.462659"
+}

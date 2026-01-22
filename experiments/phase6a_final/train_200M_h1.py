@@ -1,195 +1,254 @@
 #!/usr/bin/env python3
 """
-6A Final Training: 200M parameters, horizon=1
-Type: Final Evaluation (fixed architecture and training params from HPO)
-Generated: 2026-01-19T20:53:44.195196+00:00
+Phase 6A Training: 200M parameters, horizon=1
 
-Architecture (from HPO):
-    d_model=384, n_layers=96, n_heads=4, d_ff=1536
+Architecture (Option A - PatchTST-standard):
+    d_model=256, n_layers=8, n_heads=8, d_ff=1024
 
-Training params (from HPO):
-    lr=0.00065, dropout=0.25, weight_decay=0.0003
+Hyperparameters (ablation-validated):
+    dropout=0.5, lr=1e-4, context=80, RevIN=True
 
-Data splits (contiguous mode):
-    Train: 1993 - Sept 2024
-    Val: Oct - Dec 2024 (early stopping)
-    Test: 2025 (final evaluation)
+Data splits (SimpleSplitter):
+    Train: through 2022
+    Val: 2023-2024 (442 samples)
+    Test: 2025+
 """
 import sys
+import json
 import time
 from pathlib import Path
+from datetime import datetime
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+import torch
+import numpy as np
 import pandas as pd
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+
 from src.config.experiment import ExperimentConfig
 from src.models.patchtst import PatchTSTConfig
-from src.models.arch_grid import get_memory_safe_batch_config
-from src.data.dataset import ChunkSplitter
+from src.data.dataset import SimpleSplitter
 from src.training.trainer import Trainer
-from src.training.thermal import ThermalCallback
-from src.experiments.runner import update_experiment_log
 
-# ============================================================
-# EXPERIMENT CONFIGURATION (all parameters visible)
-# ============================================================
+# ============================================================================
+# EXPERIMENT CONFIGURATION
+# ============================================================================
 
-EXPERIMENT = "train_200M_h1"
-PHASE = "6A"
+EXPERIMENT_NAME = "phase6a_200m_h1"
 BUDGET = "200M"
 HORIZON = 1
-DATA_PATH = "data/processed/v1/SPY_dataset_a20.parquet"
-FEATURE_COLUMNS = ['Open', 'High', 'Low', 'Close', 'Volume', 'dema_9', 'dema_10', 'sma_12', 'dema_20', 'dema_25', 'sma_50', 'dema_90', 'sma_100', 'sma_200', 'rsi_daily', 'rsi_weekly', 'stochrsi_daily', 'stochrsi_weekly', 'macd_line', 'obv', 'adosc', 'atr_14', 'adx_14', 'bb_percent_b', 'vwap_20']
 
-# Architecture (fixed from HPO)
-D_MODEL = 384
-N_LAYERS = 96
-N_HEADS = 4
-D_FF = 1536
+# Architecture (Option A - PatchTST-standard)
+D_MODEL = 256
+N_LAYERS = 8
+N_HEADS = 8
+D_FF = 1024
 
-# Training params (fixed from HPO)
-LEARNING_RATE = 0.00065
-DROPOUT = 0.25
-WEIGHT_DECAY = 0.0003
-WARMUP_STEPS = 200
+# Hyperparameters (ablation-validated - DO NOT CHANGE without new evidence)
+LEARNING_RATE = 1e-4
+DROPOUT = 0.5
+CONTEXT_LENGTH = 80
+
+# Training
+BATCH_SIZE = 128
 EPOCHS = 50
 
-# Model params
-CONTEXT_LENGTH = 60
-PATCH_LENGTH = 16
-STRIDE = 8
+# Data
+DATA_PATH = PROJECT_ROOT / "data/processed/v1/SPY_dataset_a20.parquet"
+NUM_FEATURES = 20
 
-# Early stopping
-EARLY_STOPPING_PATIENCE = 10
+# Output
+OUTPUT_DIR = PROJECT_ROOT / "outputs/phase6a_final" / EXPERIMENT_NAME
 
-# ============================================================
-# DATA VALIDATION
-# ============================================================
 
-def validate_data():
-    """Validate data file before running experiment."""
-    df = pd.read_parquet(PROJECT_ROOT / DATA_PATH)
-    assert len(df) > 1000, f"Insufficient data: {len(df)} rows"
-    assert all(col in df.columns for col in FEATURE_COLUMNS), "Missing feature columns"
-    print(f"✓ Data validated: {len(df)} rows, {len(FEATURE_COLUMNS)} features")
-    return df
+# ============================================================================
+# EVALUATION
+# ============================================================================
 
-# ============================================================
+def evaluate_model(model, dataloader, device):
+    """Evaluate model with full metrics."""
+    model.eval()
+    all_preds = []
+    all_labels = []
+
+    with torch.no_grad():
+        for batch_x, batch_y in dataloader:
+            batch_x = batch_x.to(device)
+            preds = model(batch_x).cpu().numpy()
+            all_preds.extend(preds.flatten())
+            all_labels.extend(batch_y.numpy().flatten())
+
+    preds = np.array(all_preds)
+    labels = np.array(all_labels)
+    binary_preds = (preds >= 0.5).astype(int)
+
+    # Handle edge case where only one class in labels
+    try:
+        auc = roc_auc_score(labels, preds)
+    except ValueError:
+        auc = None
+
+    return {
+        "auc": auc,
+        "accuracy": accuracy_score(labels, binary_preds),
+        "precision": precision_score(labels, binary_preds, zero_division=0),
+        "recall": recall_score(labels, binary_preds, zero_division=0),
+        "f1": f1_score(labels, binary_preds, zero_division=0),
+        "pred_min": float(preds.min()),
+        "pred_max": float(preds.max()),
+        "pred_mean": float(preds.mean()),
+        "pred_std": float(preds.std()),
+        "n_positive_preds": int((preds >= 0.5).sum()),
+        "n_samples": len(labels),
+        "class_balance": float(labels.mean()),
+    }
+
+
+# ============================================================================
 # MAIN
-# ============================================================
+# ============================================================================
 
-if __name__ == "__main__":
-    start_time = time.time()
+def main():
+    print("=" * 70)
+    print(f"PHASE 6A: {BUDGET} / horizon={HORIZON}")
+    print("=" * 70)
 
-    # Validate data
-    df = validate_data()
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    print(f"Device: {device}")
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Load data
+    print(f"\nLoading {DATA_PATH}...")
+    df = pd.read_parquet(DATA_PATH)
     high_prices = df["High"].values
+    print(f"Data: {len(df)} rows")
 
-    # Create contiguous splits (production-realistic)
-    splitter = ChunkSplitter(
-        total_days=len(df),
-        context_length=CONTEXT_LENGTH,
-        horizon=HORIZON,
-        val_ratio=0.15,
-        test_ratio=0.15,
-        mode="contiguous",
-    )
-    split_indices = splitter.split()
-    print(f"✓ Contiguous splits: train={len(split_indices.train_indices)}, "
-          f"val={len(split_indices.val_indices)}, test={len(split_indices.test_indices)}")
-
-    # Create experiment config
+    # Experiment config
     experiment_config = ExperimentConfig(
-        data_path=str(PROJECT_ROOT / DATA_PATH),
+        data_path=str(DATA_PATH.relative_to(PROJECT_ROOT)),
         task="threshold_1pct",
         timescale="daily",
-        horizon=HORIZON,
         context_length=CONTEXT_LENGTH,
+        horizon=HORIZON,
+        wandb_project=None,
+        mlflow_experiment=None,
     )
 
-    # Create model config (fixed architecture from HPO)
+    # Model config
     model_config = PatchTSTConfig(
-        num_features=len(FEATURE_COLUMNS),
+        num_features=NUM_FEATURES,
         context_length=CONTEXT_LENGTH,
-        patch_length=PATCH_LENGTH,
-        stride=STRIDE,
+        patch_length=16,
+        stride=8,
         d_model=D_MODEL,
-        n_layers=N_LAYERS,
         n_heads=N_HEADS,
+        n_layers=N_LAYERS,
         d_ff=D_FF,
         dropout=DROPOUT,
         head_dropout=0.0,
     )
 
-    # Get memory-safe batch config
-    batch_config = get_memory_safe_batch_config(
-        d_model=D_MODEL,
-        n_layers=N_LAYERS,
+    print(f"\nArchitecture: d={D_MODEL}, L={N_LAYERS}, h={N_HEADS}, d_ff={D_FF}")
+    print(f"Training: lr={LEARNING_RATE}, dropout={DROPOUT}, ctx={CONTEXT_LENGTH}")
+
+    # SimpleSplitter for proper validation
+    splitter = SimpleSplitter(
+        dates=df["Date"],
+        context_length=CONTEXT_LENGTH,
+        horizon=HORIZON,
+        val_start="2023-01-01",
+        test_start="2025-01-01",
     )
-    print(f"✓ Batch config: batch_size={batch_config['micro_batch']}, "
-          f"accumulation={batch_config['accumulation_steps']}")
+    split_indices = splitter.split()
 
-    # Create thermal callback
-    thermal_callback = ThermalCallback()
-    print("✓ Thermal monitoring enabled")
+    print(f"\nSplits: train={len(split_indices.train_indices)}, "
+          f"val={len(split_indices.val_indices)}, test={len(split_indices.test_indices)}")
 
-    # Output directory
-    output_dir = PROJECT_ROOT / "outputs" / "final_training" / EXPERIMENT
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Create trainer
+    # Trainer with RevIN
     trainer = Trainer(
         experiment_config=experiment_config,
         model_config=model_config,
-        batch_size=batch_config["micro_batch"],
+        batch_size=BATCH_SIZE,
         learning_rate=LEARNING_RATE,
         epochs=EPOCHS,
-        device="mps",
-        checkpoint_dir=output_dir,
-        thermal_callback=thermal_callback,
+        device=device,
+        checkpoint_dir=OUTPUT_DIR,
         split_indices=split_indices,
-        accumulation_steps=batch_config["accumulation_steps"],
-        early_stopping_patience=EARLY_STOPPING_PATIENCE,
+        early_stopping_patience=10,
+        early_stopping_min_delta=0.001,
+        early_stopping_metric="val_auc",
+        use_revin=True,
         high_prices=high_prices,
     )
 
     # Train
-    print(f"\nStarting final training: {EXPERIMENT}")
-    print(f"  Architecture: d_model={D_MODEL}, n_layers={N_LAYERS}, n_heads={N_HEADS}")
-    print(f"  Training: lr={LEARNING_RATE}, epochs={EPOCHS}, dropout={DROPOUT}")
+    print(f"\nTraining for {EPOCHS} epochs...")
+    start_time = time.time()
     result = trainer.train(verbose=True)
+    elapsed = time.time() - start_time
 
-    duration = time.time() - start_time
+    # Evaluate on validation (test evaluation requires separate dataloader creation)
+    val_metrics = evaluate_model(trainer.model, trainer.val_dataloader, trainer.device)
 
-    # Log to experiment CSV
-    log_result = {
-        "experiment": EXPERIMENT,
-        "phase": PHASE,
+    print(f"\n" + "=" * 70)
+    print("RESULTS")
+    print("=" * 70)
+    print(f"Training time: {elapsed/60:.1f} min")
+    print(f"Stopped early: {result.get('stopped_early', False)}")
+    print(f"\nValidation (2023-2024, {val_metrics['n_samples']} samples):")
+    print(f"  AUC: {val_metrics['auc']:.4f}" if val_metrics['auc'] else "  AUC: N/A")
+    print(f"  Accuracy: {val_metrics['accuracy']:.4f}")
+    print(f"  Precision: {val_metrics['precision']:.4f}")
+    print(f"  Recall: {val_metrics['recall']:.4f}")
+    print(f"  F1: {val_metrics['f1']:.4f}")
+    print(f"  Pred Range: [{val_metrics['pred_min']:.4f}, {val_metrics['pred_max']:.4f}]")
+    print(f"  Class Balance: {val_metrics['class_balance']:.3f} ({int(val_metrics['class_balance']*val_metrics['n_samples'])} positives)")
+
+    # Save results
+    results = {
+        "experiment": EXPERIMENT_NAME,
         "budget": BUDGET,
-        "task": "threshold_1pct",
         "horizon": HORIZON,
-        "timescale": "daily",
-        "script_path": __file__,
-        "run_type": "final_training",
-        "status": "success" if result.get("val_loss") is not None else "completed",
-        "val_loss": result.get("val_loss"),
-        "duration_seconds": duration,
-        "d_model": D_MODEL,
-        "n_layers": N_LAYERS,
-        "n_heads": N_HEADS,
-        "d_ff": D_FF,
-        "hyperparameters": {
-            "learning_rate": LEARNING_RATE,
-            "dropout": DROPOUT,
-            "weight_decay": WEIGHT_DECAY,
-            "warmup_steps": WARMUP_STEPS,
-            "epochs": EPOCHS,
+        "architecture": {
+            "d_model": D_MODEL,
+            "n_layers": N_LAYERS,
+            "n_heads": N_HEADS,
+            "d_ff": D_FF,
         },
+        "hyperparameters": {
+            "dropout": DROPOUT,
+            "learning_rate": LEARNING_RATE,
+            "context_length": CONTEXT_LENGTH,
+            "batch_size": BATCH_SIZE,
+            "epochs": EPOCHS,
+            "use_revin": True,
+        },
+        "splits": {
+            "train": len(split_indices.train_indices),
+            "val": len(split_indices.val_indices),
+            "test": len(split_indices.test_indices),
+        },
+        "training": {
+            "train_loss": result.get("train_loss"),
+            "val_loss": result.get("val_loss"),
+            "val_auc": result.get("val_auc"),
+            "stopped_early": result.get("stopped_early", False),
+            "training_time_min": elapsed / 60,
+        },
+        "val_metrics": val_metrics,
+        "timestamp": datetime.now().isoformat(),
     }
-    update_experiment_log(log_result, PROJECT_ROOT / "docs" / "experiment_results.csv")
 
-    print(f"\n✓ Final training complete in {duration/60:.1f} min")
-    print(f"  Val loss: {result.get('val_loss', 'N/A')}")
-    print(f"  Stopped early: {result.get('stopped_early', False)}")
-    print(f"  Checkpoint: {output_dir / 'best_checkpoint.pt'}")
+    results_path = OUTPUT_DIR / "results.json"
+    with open(results_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"\nResults saved to {results_path}")
+
+    return val_metrics["auc"]
+
+
+if __name__ == "__main__":
+    main()
