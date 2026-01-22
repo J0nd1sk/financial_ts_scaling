@@ -527,6 +527,37 @@ Systematic validation of hyperparameters through controlled experiments:
 
 See `docs/phase6a_final_results.md` for complete analysis.
 
+### 6.14 Phase 6A: Threshold Sweep Analysis (2026-01-22)
+
+Post-training analysis examining precision/recall tradeoffs across probability thresholds:
+
+**Script:** `scripts/threshold_sweep.py` (250 lines, TDD with 5 tests in `tests/test_threshold_sweep.py`)
+
+**Methodology:**
+- Swept probability thresholds 0.1-0.8 across all 12 models
+- Computed precision, recall, F1, and AUC at each threshold
+- Generated visualization (`outputs/phase6a_final/threshold_sweep_plots.png`)
+
+**Key Findings:**
+
+| Finding | Evidence |
+|---------|----------|
+| H1 models poorly calibrated | Predictions rarely exceed 0.5, limiting threshold selection |
+| H5 models best calibrated | Prediction range 0.26-0.90, enabling meaningful threshold tuning |
+| Best F1 at low thresholds | 0.1-0.2 optimal (trading precision for recall) |
+| AUC confirms horizon effect | H1≈0.72 >> H2≈0.64 > H3≈0.62 > H5≈0.60 |
+
+**Scaling Effect Quantified:**
+- Parameter scaling (2M→200M): +1.7% AUC improvement
+- Horizon selection (H1→H5): -16% AUC degradation
+- **Horizon choice has 10x more impact than parameter count**
+
+**Outputs:**
+- `outputs/phase6a_final/threshold_sweep.csv` (96 rows: 12 models × 8 thresholds)
+- `outputs/phase6a_final/threshold_sweep_plots.png` (4-panel visualization)
+
+**Conclusion:** Confirms data-limited regime finding. With only 25 features, parameter scaling provides minimal benefit. Feature expansion (Phase 6C) is the logical next step.
+
 ---
 
 ## 7. Deferred and Discarded Ideas
@@ -629,4 +660,5 @@ Original realistic timeline estimate: 2-3 months with thermal constraints.
 *Document created: 2026-01-17*
 *Updated: 2026-01-18 (added Phases 5, 5.5, 6A Prep, 6A HPO)*
 *Updated: 2026-01-21 (added sections 6.11-6.13: Infrastructure Fixes, Ablation Studies, Final Results)*
+*Updated: 2026-01-22 (added section 6.14: Threshold Sweep Analysis, archived 12 stale docs)*
 *Consolidates: timeseries_transformer_experimentation_project.md, completed phases from project_phase_plans.md*

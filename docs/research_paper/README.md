@@ -36,10 +36,12 @@ research_paper/
 
 ## Current Status
 
-### Phase 6A: Parameter Scaling (COMPLETE)
-- 600 HPO trials across 12 studies
-- 16 final training runs
-- **Core finding**: Inverse scaling - smaller models outperform larger ones
+### Phase 6A: Parameter Scaling (COMPLETE - 2026-01-22)
+- 12 final models trained (3 budgets × 4 horizons) with corrected infrastructure
+- **Core finding**: Flat/minimal scaling - 200M only +1.7% AUC over 2M (data-limited regime)
+- Threshold sweep analysis complete (96 configurations tested)
+
+> **⚠️ IMPORTANT**: Earlier HPO results (pre-2026-01-20) showed "inverse scaling" but this was a **measurement artifact** caused by ChunkSplitter providing only 19 validation samples. With corrected infrastructure (SimpleSplitter, 420+ val samples, RevIN normalization), scaling is flat/minimal, not inverse.
 
 ### Pending Phases
 - **Phase 6B**: Horizon scaling (not started)
@@ -64,16 +66,19 @@ research_paper/
 2. `appendices/appendix_b2_architecture_analysis.md` - Architecture insights
 3. `appendices/appendix_b3_training_parameters.md` - Training params
 
-## Core Findings Summary
+## Core Findings Summary (Updated 2026-01-22)
 
 | Finding | Evidence | Strength |
 |---------|----------|----------|
-| Inverse scaling | 2M beats 2B by 21% | Strong |
-| Data-limited regime | 4000 samples / 2B params = severe overfit | Strong |
-| h3 most predictable | Best loss across all budgets | Moderate |
-| n_heads minimal impact | r=0.047 correlation | Strong |
-| Architectures horizon-specific | +132% degradation on transfer | Strong |
-| Feature richness hypothesis | Theoretical | Hypothesis |
+| Flat/minimal scaling | 200M only +1.7% AUC over 2M | Strong |
+| Data-limited regime | 25 features insufficient for larger models to benefit | Strong |
+| Horizon dominates scale | H1→H5 = -16% AUC vs scale effect +1.7% | Strong |
+| H1 best AUC but poorly calibrated | Predictions rarely exceed 0.5 | Strong |
+| H5 best calibrated | Prediction range 0.26-0.90 | Strong |
+| Architectures horizon-specific | Optimal config varies by horizon | Moderate |
+| Feature richness hypothesis | More features may unlock scaling | Hypothesis |
+
+> **Note**: Previous finding of "inverse scaling (2M beats 2B by 21%)" was based on 19-sample validation and is now considered invalid.
 
 ## Figure Generation
 
@@ -118,5 +123,5 @@ When adding new analysis:
 
 ---
 
-*Last updated: 2026-01-19*
-*Phase 6A analysis complete*
+*Last updated: 2026-01-22*
+*Phase 6A complete with corrected infrastructure*

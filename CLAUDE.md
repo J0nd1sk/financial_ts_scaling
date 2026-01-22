@@ -185,6 +185,24 @@ Always track and report:
 - Recall (of actual positives) - **critical: 0% recall = useless model**
 - Prediction range [min, max] (detect probability collapse)
 
+### Feature Engineering Principle (Phase 6C)
+
+**THE #1 GOAL**: Give the neural network the ability to discern signal from noise.
+
+**Raw indicator values are noise.** An SMA of 450 vs 150 means nothing without context.
+
+**Relationships and dynamics are signal:**
+- **Position relative to level**: % distance of price from MA (negative = below)
+- **Duration**: Days price has been above/below a level (overextension signal)
+- **Slope**: Rate of change of the indicator itself (trend direction/strength)
+- **Acceleration**: Change in slope (momentum shifts before price)
+- **Cross proximity**: % difference between two MAs (how close to crossing)
+- **Recency of events**: Days since last cross (decaying influence)
+
+**Example**: Being above the 50 MA is bullish, but less so if the 50 MA's slope is near 0 or negative. This nuance is lost with raw MA values.
+
+**Implementation**: See `docs/feature_engineering_exploration.md` for detailed feature designs.
+
 ---
 
 ## Thermal Protocol
