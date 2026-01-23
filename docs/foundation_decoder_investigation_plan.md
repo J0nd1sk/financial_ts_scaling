@@ -57,14 +57,21 @@ PatchTST is an **encoder-only** transformer. While encoders excel at representat
 | **TimesFM** | Decoder-only | General TS | ✅ Supported | Google, 200M params, newest (2.5) |
 | **Timer** | Generative | General TS | ✅ Supported | Tsinghua, checkpoints available |
 
-### Tier 2: Architecture Comparison
+### Tier 2: Architecture Comparison (Trained from Scratch)
 
-| Model | Type | Attention Pattern | Notes |
-|-------|------|-------------------|-------|
-| **PatchTST** | Encoder-only | Bidirectional (patches) | Our baseline |
-| **iTransformer** | "Inverted" | Across variates | ICLR 2024 Spotlight |
-| **TimeMixer** | MLP (no attention) | N/A | Tests if attention needed |
-| **Informer** | Encoder-Decoder | ProbSparse | Classic comparison |
+These models contribute to **parameter scaling law research** - they are NOT foundation models.
+
+| Model | Type | Key Innovation | Notes |
+|-------|------|----------------|-------|
+| **PatchTST** | Encoder-only | Patch embeddings | Our baseline |
+| **iTransformer** | "Inverted" | Feature-wise attention | ICLR 2024 Spotlight |
+| **TimeMixer** | MLP (no attention) | No attention needed? | Tests attention necessity |
+| **Informer** | Encoder-Decoder | ProbSparse attention | Memory-efficient long sequences |
+| **Autoformer** | Encoder-Decoder | Autocorrelation | Replaces attention with autocorr |
+| **FEDformer** | Encoder-Decoder | Frequency domain | Fourier/Wavelet decomposition |
+| **ETSformer** | Encoder-Decoder | Exponential smoothing | Stats + neural hybrid |
+| **Crossformer** | Encoder-Decoder | Cross-variate | Explicit cross-dimension attention |
+| **ARMA-Attention** | Hybrid | Statistical + neural | Conditional on implementation |
 
 ### Tier 3: Financial-Specific (If Available)
 
@@ -94,13 +101,23 @@ PatchTST is an **encoder-only** transformer. While encoders excel at representat
 | FD-03 | TimesFM | H1 | Fine-tune, forecast → threshold |
 | FD-04 | TimesFM | H3 | Fine-tune, forecast → threshold |
 
-**Phase 2: Architecture Comparison**
+**Phase 2: Architecture Comparison (Trained from Scratch)**
 | Experiment | Model | Horizon | Notes |
 |------------|-------|---------|-------|
 | FD-05 | iTransformer | H1 | Train from scratch, classification head |
 | FD-06 | iTransformer | H3 | Train from scratch, classification head |
 | FD-07 | TimeMixer | H1 | Train from scratch, classification head |
 | FD-08 | TimeMixer | H3 | Train from scratch, classification head |
+| FD-09 | Informer | H1 | ProbSparse attention |
+| FD-10 | Informer | H3 | ProbSparse attention |
+| FD-11 | Autoformer | H1 | Autocorrelation-based |
+| FD-12 | Autoformer | H3 | Autocorrelation-based |
+| FD-13 | FEDformer | H1 | Frequency domain |
+| FD-14 | FEDformer | H3 | Frequency domain |
+| FD-15 | ETSformer | H1 | Exponential smoothing |
+| FD-16 | ETSformer | H3 | Exponential smoothing |
+| FD-17 | Crossformer | H1 | Cross-variate attention |
+| FD-18 | Crossformer | H3 | Cross-variate attention |
 
 **Baseline (from Phase 6A)**
 | Model | H1 AUC | H3 AUC |
@@ -157,6 +174,41 @@ PatchTST is an **encoder-only** transformer. While encoders excel at representat
 - [ ] Document findings
 - [ ] Decision: roll into main project or discard
 
+### Task 7: Informer Implementation
+- [ ] Port Informer architecture (ProbSparse attention)
+- [ ] Add classification head
+- [ ] Integrate with Trainer
+- [ ] Run FD-09, FD-10
+
+### Task 8: Autoformer Implementation
+- [ ] Port Autoformer architecture (autocorrelation)
+- [ ] Add classification head
+- [ ] Integrate with Trainer
+- [ ] Run FD-11, FD-12
+
+### Task 9: FEDformer Implementation
+- [ ] Port FEDformer architecture (frequency domain)
+- [ ] Add classification head
+- [ ] Integrate with Trainer
+- [ ] Run FD-13, FD-14
+
+### Task 10: ETSformer Implementation
+- [ ] Port ETSformer architecture (exponential smoothing)
+- [ ] Add classification head
+- [ ] Integrate with Trainer
+- [ ] Run FD-15, FD-16
+
+### Task 11: Crossformer Implementation
+- [ ] Port Crossformer architecture (cross-variate)
+- [ ] Add classification head
+- [ ] Integrate with Trainer
+- [ ] Run FD-17, FD-18
+
+### Task 12: Extended Analysis
+- [ ] Compare all 9 architectures
+- [ ] Identify patterns (encoder vs decoder, attention vs MLP)
+- [ ] Final recommendations for Phase 6C
+
 ---
 
 ## Dependencies & Risks
@@ -178,6 +230,41 @@ PatchTST is an **encoder-only** transformer. While encoders excel at representat
 
 ---
 
+## TimesFM Execution Strategy
+
+**Issue**: TimesFM requires JAX, which has ARM64/Apple Silicon incompatibilities. Native installation fails.
+
+**Approved Approaches**:
+
+| Approach | Role | Description |
+|----------|------|-------------|
+| **Docker x86** | Primary (Local) | `--platform linux/amd64` with Rosetta 2 emulation |
+| **Google Colab** | Secondary (Cloud) | Agent produces `.ipynb` notebooks for user execution |
+
+### Docker Requirements
+```bash
+# Pull and run with x86 emulation
+docker run --platform linux/amd64 -v $(pwd):/workspace -it python:3.11 bash
+pip install timesfm torch pandas
+```
+
+### Colab Notebook Requirements
+Notebooks must be:
+- **Self-contained**: No local imports from project
+- **Data download cells**: Include MD5 verification
+- **Results export**: JSON format compatible with `runner.py` schema
+
+Example notebook structure:
+```
+1. Install dependencies (pip install timesfm)
+2. Download data (parquet from project or regenerate)
+3. Load/fine-tune TimesFM
+4. Evaluate (AUC, accuracy, precision, recall)
+5. Export results as JSON
+```
+
+---
+
 ## Timeline Estimate
 
 | Phase | Tasks | Estimate |
@@ -187,8 +274,14 @@ PatchTST is an **encoder-only** transformer. While encoders excel at representat
 | TimesFM | 3 | 4-8 hours |
 | iTransformer | 4 | 4-6 hours |
 | TimeMixer | 5 | 4-6 hours |
-| Analysis | 6 | 2-4 hours |
-| **Total** | | **20-36 hours** |
+| Initial Analysis | 6 | 2-4 hours |
+| Informer | 7 | 3-5 hours |
+| Autoformer | 8 | 3-5 hours |
+| FEDformer | 9 | 3-5 hours |
+| ETSformer | 10 | 3-5 hours |
+| Crossformer | 11 | 3-5 hours |
+| Extended Analysis | 12 | 3-5 hours |
+| **Total** | | **40-70 hours** |
 
 ---
 

@@ -417,9 +417,14 @@
 3. Is attention even necessary? (TimeMixer is pure MLP)
 
 **Tasks:**
-- ⏳ Task 1: Environment setup (GluonTS, TimesFM deps)
-- ⏳ Task 2: Lag-Llama integration & fine-tuning
-- ⏳ Task 3: TimesFM integration & fine-tuning
+- ✅ Task 1: Environment setup (GluonTS, TimesFM deps) - COMPLETE 2026-01-23
+  - GluonTS 0.15.1, HuggingFace Hub 1.3.3 installed
+  - src/models/foundation/ module created
+  - Lag-Llama weights downloaded (28MB)
+  - 13 tests added (11 pass, 2 skipped for TimesFM)
+  - TimesFM deferred due to JAX/ARM incompatibility
+- ⏳ Task 2: Lag-Llama integration & fine-tuning ← NEXT
+- ⏸️ Task 3: TimesFM integration (deferred - JAX/ARM issues)
 - ⏳ Task 4: iTransformer implementation
 - ⏳ Task 5: TimeMixer implementation
 - ⏳ Task 6: Analysis & decision

@@ -1203,6 +1203,70 @@ if x is None:
 
 **Memory Entity**: `Lesson_FalsyZeroBug`
 
+## 2026-01-23 Expanded Architecture Scope for Foundation Investigation
+
+**Context**: Original investigation plan included only 4 architecture comparisons (PatchTST, iTransformer, TimeMixer, Informer). Expanding scope to include more encoder-decoder architectures for comprehensive comparison.
+
+**Decision**: Add 5 additional architectures to Tier 2 (trained from scratch), bringing total to 9 architectures.
+
+**New Architectures**:
+| Model | Type | Key Innovation |
+|-------|------|----------------|
+| Autoformer | Enc-Dec | Autocorrelation replaces attention |
+| FEDformer | Enc-Dec | Frequency domain decomposition |
+| ETSformer | Enc-Dec | Exponential smoothing + neural |
+| Crossformer | Enc-Dec | Cross-variate attention |
+| ARMA-Attention | Hybrid | Statistical + neural (conditional) |
+
+**Rationale**:
+- These are architectures, NOT foundation models - they contribute to scaling law research
+- Encoder-decoder designs may have different inductive biases than encoder-only PatchTST
+- Provides comprehensive coverage of transformer variants for financial time series
+- All have published implementations available for porting
+
+**Impact**:
+- Added experiments FD-09 through FD-18 (10 new experiments)
+- Added Tasks 7-12 to implementation plan
+- Timeline updated: 20-36 hours → 40-70 hours
+
+**Alternatives Considered**:
+- Only foundation models → rejected; architecture comparison equally valuable
+- All architectures at once → rejected; staged implementation more manageable
+- Skip encoder-decoder → rejected; may reveal different attention patterns
+
+**Implications**:
+- More comprehensive architecture comparison for research paper
+- Can identify if attention pattern (causal vs bidirectional) matters
+- Extended timeline but more publishable findings
+
+## 2026-01-23 TimesFM Execution Path: Docker + Colab
+
+**Context**: TimesFM requires JAX, which is incompatible with ARM64/Apple Silicon. Native installation fails on M4 MacBook Pro.
+
+**Decision**: Use Docker x86 emulation (primary) and Google Colab notebooks (secondary) for TimesFM experiments.
+
+**Approaches**:
+| Approach | Role | When to Use |
+|----------|------|-------------|
+| Docker x86 | Primary | Local development, faster iteration |
+| Colab | Secondary | If Docker too slow or for cloud GPU access |
+
+**Rationale**:
+- Docker with `--platform linux/amd64` uses Rosetta 2 to run x86 containers on ARM
+- Colab notebooks provide self-contained experiments runnable in user's browser
+- Both approaches avoid modifying the project's Python environment
+
+**Alternatives Considered**:
+- Native JAX on ARM → rejected; unstable, requires manual metal plugin installation
+- Skip TimesFM → rejected; it's a key foundation model in the investigation
+- Separate venv → rejected; JAX ARM issues persist regardless of venv
+
+**Implications**:
+- TimesFM experiments will be slower than native models
+- Colab notebooks must be self-contained (no local imports)
+- Results exported as JSON for integration with analysis pipeline
+- Investigation plan updated with execution strategy section
+
 ## 2026-01-21 CRITICAL: Target Calculation Correction
 
 **Context**: Discovered that target calculation was using the wrong price series. All prior documentation and code used `max(close[t+1:t+1+horizon])` but this is incorrect for trading purposes.
@@ -1240,3 +1304,47 @@ if x is None:
 - All prior experiments used incorrect targets - results need revalidation
 - TDD implementation required to add HIGH-based target calculation
 - User prefers 0.5% threshold (achieves ~50/50 class balance with HIGH-based target)
+
+## 2026-01-23 Lag-Llama Integration Complete
+
+**Context**: Task 2 of Foundation Model Investigation - implementing LagLlamaWrapper for binary classification.
+
+**Decision**: Implemented `LagLlamaWrapper` class that adapts the pre-trained Lag-Llama foundation model for threshold-based binary classification.
+
+**Key Technical Decisions**:
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| CDF Implementation | Normal approximation via `ndtr` | PyTorch lacks `betainc`; normal approx is differentiable and accurate for df > 5 |
+| Context Length | 1150 (min 1124) | Lag-Llama requires max_lag (1092) + 32 |
+| Fine-tuning Mode | "full" (all params trainable) | Maximize adaptation to financial domain |
+| Input Handling | Two approaches: Close-only OR feature projection | Compare univariate vs multivariate adaptation |
+
+**Files Created**:
+- `src/models/foundation/lag_llama.py` - LagLlamaWrapper class
+- `tests/test_lag_llama.py` - 16 unit tests (all passing)
+- `experiments/foundation/train_lagllama_h1_close.py` - FD-01a
+- `experiments/foundation/train_lagllama_h1_proj.py` - FD-01b
+- `experiments/foundation/train_lagllama_h3_close.py` - FD-02a
+- `experiments/foundation/train_lagllama_h3_proj.py` - FD-02b
+
+**Success Criteria**:
+| Horizon | Baseline (PatchTST 200M) | Target (5% improvement) |
+|---------|--------------------------|-------------------------|
+| H1 | 0.718 | ≥0.74 |
+| H3 | 0.622 | ≥0.65 |
+
+**Dependencies Installed**:
+- `lag-llama` (from GitHub)
+- `gluonts` 0.15.1
+- numpy 1.26.4, pandas 2.1.4 (pinned for gluonts compatibility)
+
+**Alternatives Considered**:
+- scipy-based CDF → rejected; not differentiable, breaks gradient flow
+- PyTorch betainc → not available in PyTorch 2.9.1
+- Sigmoid approximation → less accurate than normal approximation
+
+**Implications**:
+- Experiments FD-01/FD-02 ready to run
+- CDF approximation accuracy validated in tests (relative ordering preserved)
+- Full gradient flow enables end-to-end fine-tuning

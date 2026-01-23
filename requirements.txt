@@ -15,6 +15,27 @@ fredapi>=0.5.0
 pandas-ta>=0.3.14b
 # !!! TA-Lib - pip install requires compiled binary; install via: brew install ta-lib, then pip install TA-Lib
 
+# Advanced Mathematical Features (Category 16 - Indicator Catalog v0.4)
+# Fractal Analysis
+antropy>=0.1.6           # Higuchi, Katz, Petrosian fractal dimensions
+nolds>=0.6.0             # Lyapunov exponent, correlation dimension, DFA
+MFDFA>=0.4.3             # Multifractal Detrended Fluctuation Analysis
+hfda>=0.2.0              # Alternative Higuchi Fractal Dimension
+
+# Spectral Decomposition
+EMD-signal>=1.6.0        # EMD, EEMD, CEEMDAN (PyEMD)
+PyWavelets>=1.4.0        # Wavelet decomposition
+
+# Recurrence Quantification Analysis
+PyRQA>=8.2.0             # RQA features (DET, LAM, entropy)
+
+# Topological Data Analysis (optional - computationally heavy)
+# giotto-tda>=0.6.0       # Persistent homology, Betti curves
+# Uncomment when implementing TDA features - requires significant compute
+
+# Cross-Correlation Analysis
+# py-DCCA: Install from GitHub: pip install git+https://github.com/letfoolsdie/dcca.git
+
 # Hyperparameter Optimization
 optuna>=3.5.0
 optuna-dashboard>=0.15.0

@@ -1,9 +1,30 @@
 # Indicator Catalog - Exhaustive Feature Enumeration
 
 **Purpose:** Systematic enumeration of ALL possible indicators for Phase 6C feature scaling.
-**Status:** DRAFT v0.3 - expanded with risk metrics and additional indicators
+**Status:** DRAFT v0.4 - advanced mathematical features added
 **Created:** 2026-01-22
 **Revised:** 2026-01-23
+
+---
+
+## Revision Notes (v0.4)
+
+**Key changes from v0.3:**
+- Added **Category 16: Advanced Mathematical Features** (~118 features)
+  - 16.1 Fractal Analysis (~17 features): Higuchi FD, Katz FD, MFDFA, Lévy alpha, FDI
+  - 16.2 Chaos Theory (~8 features): Lyapunov exponent, correlation dimension
+  - 16.3 Recurrence Quantification Analysis (~11 features): DET, LAM, entropy
+  - 16.4 Spectral Decomposition (~10 features): EMD/EEMD, Hilbert transform
+  - 16.5 Topological Data Analysis (~11 features): Betti curves, persistence
+  - 16.6 Cross-Correlation Analysis (~4 features): DCCA, MF-DCCA
+  - 16.7 Ergodic Economics (~6 features): Time-average growth, Kelly fraction
+  - 16.8 Polynomial Regression Channels (~13 features): Quadratic, cubic, quintic
+  - 16.9 Additional Stochastic (~8 features): Rolling Hurst, DFA alpha, mean reversion
+  - 16.10 Volatility Risk Premium (~8 features): VRP, implied/realized ratio
+  - 16.11 Risk Resilience (~6 features): Recovery speed, resilience score
+- New dependencies: antropy, nolds, MFDFA, hfda, PyEMD, pyrqa, giotto-tda
+- Total new features: ~118
+- Updated grand total: ~2,090 features
 
 ---
 
@@ -1346,50 +1367,351 @@ Library dependencies: vmdpy, PyWavelets
 
 ---
 
+## Category 16: Advanced Mathematical Features
+
+**NEW in v0.4** - Advanced mathematical techniques from fractal analysis, chaos theory, topological data analysis, and related fields.
+
+**Library Requirements:**
+- **Fractal/Chaos:** `antropy>=0.1.6`, `nolds>=0.6.0`, `MFDFA>=0.4.3`, `hfda>=0.2.0`
+- **Spectral:** `PyEMD>=1.6.0`
+- **RQA:** `pyrqa>=8.2.0`
+- **TDA:** `giotto-tda>=0.6.0` (optional, computationally heavy)
+- **Cross-correlation:** `py-DCCA` (install from GitHub)
+- **Existing:** `scipy`, `numpy` (Hilbert, polynomial fits)
+
+### 16.1 Fractal Analysis Features (~17 features)
+
+**Fractal Dimension** measures the complexity/roughness of price paths. Different methods capture different aspects.
+
+| Feature | Description | Library | Tier |
+|---------|-------------|---------|------|
+| `higuchi_fd` | Higuchi Fractal Dimension | `antropy`, `hfda` | a200 |
+| `higuchi_fd_slope` | Change in Higuchi FD | - | a200 |
+| `higuchi_fd_acceleration` | Change in HFD slope | - | a200 |
+| `katz_fd` | Katz Fractal Dimension | `antropy` | a200 |
+| `katz_fd_slope` | Change in Katz FD | - | a200 |
+| `petrosian_fd` | Petrosian Fractal Dimension | `antropy` | a500 |
+| `mfdfa_hurst_mean` | Mean Hurst from MFDFA | `MFDFA` | a500 |
+| `mfdfa_hurst_width` | Width of multifractal spectrum | `MFDFA` | a500 |
+| `mfdfa_alpha_min` | Min singularity exponent | `MFDFA` | a500 |
+| `mfdfa_alpha_max` | Max singularity exponent | `MFDFA` | a500 |
+| `levy_alpha` | Lévy stable distribution alpha | `scipy.stats` | a500 |
+| `levy_alpha_slope` | Change in Lévy alpha | - | a500 |
+| `tail_exponent` | Power-law tail exponent (Hill estimator) | custom | a500 |
+| `tail_exponent_slope` | Change in tail exponent | - | a500 |
+| `fdi` | Fractal Dimension Index (Bill Williams) | custom | a200 |
+| `fdi_slope` | Change in FDI | - | a200 |
+| `fdi_regime` | FDI regime score (-1 trending, +1 ranging) | - | a200 |
+
+**Interpretation:**
+- **Higuchi FD**: Values near 1.5 = random walk, <1.5 = trending, >1.5 = mean-reverting
+- **MFDFA**: Captures multifractal properties (different scaling at different scales)
+- **FDI**: Bill Williams' trading indicator; high FDI = ranging market, low FDI = trending
+
+### 16.2 Chaos Theory Features (~8 features)
+
+**Chaos Theory** metrics quantify system predictability and attractor dynamics.
+
+| Feature | Description | Library | Tier |
+|---------|-------------|---------|------|
+| `lyapunov_exp` | Maximal Lyapunov exponent | `nolds` | a500 |
+| `lyapunov_exp_slope` | Change in Lyapunov | - | a500 |
+| `lyapunov_regime` | Chaos regime score (0=stable, 1=chaotic) | - | a500 |
+| `correlation_dim` | Correlation dimension | `nolds` | a500 |
+| `correlation_dim_slope` | Change in correlation dim | - | a500 |
+| `embedding_dim` | Optimal embedding dimension | `nolds` | a1000 |
+| `attractor_radius` | Phase space attractor size | custom | a1000 |
+| `predictability_horizon` | Lyapunov-based forecast limit | custom | a1000 |
+
+**Interpretation:**
+- **Lyapunov > 0**: Chaotic system, prediction error grows exponentially
+- **Lyapunov ≈ 0**: Edge of chaos, quasi-periodic
+- **Lyapunov < 0**: Stable, convergent dynamics
+- **Correlation dimension**: Effective degrees of freedom in the system
+
+### 16.3 Recurrence Quantification Analysis (~11 features)
+
+**RQA** analyzes recurrence patterns in phase space. Excellent for detecting regime changes.
+
+| Feature | Description | Library | Tier |
+|---------|-------------|---------|------|
+| `rqa_recurrence_rate` | % recurrence points (REC) | `pyrqa` | a500 |
+| `rqa_determinism` | % diagonal lines (DET) | `pyrqa` | a500 |
+| `rqa_det_slope` | Change in determinism | - | a500 |
+| `rqa_laminarity` | % vertical lines (LAM) | `pyrqa` | a500 |
+| `rqa_lam_slope` | Change in laminarity | - | a500 |
+| `rqa_avg_diagonal` | Mean diagonal length (Lmean) | `pyrqa` | a500 |
+| `rqa_max_diagonal` | Max diagonal length (Lmax) | `pyrqa` | a500 |
+| `rqa_entropy` | Diagonal length entropy | `pyrqa` | a500 |
+| `rqa_trapping_time` | Avg vertical line length | `pyrqa` | a500 |
+| `rqa_ratio` | DET/REC ratio | - | a500 |
+| `rqa_crisis_indicator` | RQA-based crisis detection | custom | a500 |
+
+**Interpretation:**
+- **High DET**: Deterministic/predictable dynamics
+- **High LAM**: System getting "stuck" in states (laminarity)
+- **DET/REC ratio**: Rising ratio may precede regime changes
+
+### 16.4 Spectral Decomposition (beyond FFT) (~10 features)
+
+**EMD/HHT** provides adaptive, data-driven decomposition (unlike fixed-basis FFT/wavelets).
+
+| Feature | Description | Library | Tier |
+|---------|-------------|---------|------|
+| `emd_imf_count` | Number of IMFs from EMD | `PyEMD` | a500 |
+| `emd_trend_strength` | Residual/total variance ratio | `PyEMD` | a500 |
+| `eemd_noise_ratio` | Noise component ratio | `PyEMD` | a500 |
+| `hilbert_inst_freq` | Instantaneous frequency (HHT) | `scipy` | a500 |
+| `hilbert_inst_freq_slope` | Change in inst. frequency | - | a500 |
+| `hilbert_inst_amplitude` | Instantaneous amplitude | `scipy` | a500 |
+| `hilbert_phase` | Instantaneous phase | `scipy` | a500 |
+| `spectral_centroid` | Weighted mean frequency | custom | a200 |
+| `spectral_bandwidth` | Frequency spread | custom | a200 |
+| `spectral_rolloff` | Frequency below which 85% energy | custom | a500 |
+
+**Interpretation:**
+- **EMD IMFs**: Intrinsic Mode Functions capture different timescales
+- **Instantaneous frequency**: Local cycle length (via Hilbert transform)
+- **Spectral centroid**: "Center of mass" of frequency spectrum
+
+### 16.5 Topological Data Analysis (~11 features)
+
+**TDA** uses persistent homology to detect structural patterns. Uses 40-60 day sliding windows.
+
+**Note:** Data loss is ~60 days (configurable), less than 252d MA features.
+
+| Feature | Description | Library | Tier |
+|---------|-------------|---------|------|
+| `tda_betti_0` | Connected components (Betti-0) | `giotto-tda` | a200 |
+| `tda_betti_0_slope` | Change in Betti-0 | - | a200 |
+| `tda_betti_1` | Loops/holes (Betti-1) | `giotto-tda` | a200 |
+| `tda_betti_1_slope` | Change in Betti-1 | - | a200 |
+| `tda_persistence_entropy` | Entropy of persistence diagram | `giotto-tda` | a200 |
+| `tda_persistence_entropy_slope` | Change in persistence entropy | - | a200 |
+| `tda_total_persistence` | Sum of lifetimes | `giotto-tda` | a200 |
+| `tda_amplitude` | Amplitude from persistence | `giotto-tda` | a200 |
+| `tda_landscape_norm` | L^p norm of persistence landscape | `giotto-tda` | a500 |
+| `tda_crisis_indicator` | TDA-based early warning | custom | a200 |
+| `tda_regime_change_prob` | Topological regime shift probability | custom | a500 |
+
+**Interpretation:**
+- **Betti-0**: Number of connected components (market fragmentation)
+- **Betti-1**: Number of loops/cycles (cyclical patterns)
+- **Persistence entropy**: Complexity of topological features
+- **Crisis indicator**: Research shows TDA can detect crashes 1-2 weeks early
+
+### 16.6 Cross-Correlation Analysis (~4 features)
+
+**DCCA** (Detrended Cross-Correlation Analysis) measures long-range correlations.
+
+| Feature | Description | Library | Tier |
+|---------|-------------|---------|------|
+| `dcca_coeff` | Detrended cross-correlation coefficient | `py-DCCA` | a500 |
+| `dcca_coeff_slope` | Change in DCCA | - | a500 |
+| `mfdcca_hurst` | Cross-correlation Hurst | `MF-DCCA` | a1000 |
+| `dpcca_partial` | Partial cross-correlation (controlling for third var) | custom | a1000 |
+
+**Note:** These features require a second time series (e.g., VIX, sector indices) for cross-correlation.
+
+### 16.7 Ergodic Economics Features (~6 features)
+
+**Ergodic Economics** (Ole Peters) distinguishes time-average from ensemble-average growth.
+
+| Feature | Description | Library | Tier |
+|---------|-------------|---------|------|
+| `time_avg_growth` | Time-average growth rate (geometric) | custom | a200 |
+| `ensemble_avg_growth` | Ensemble-average growth rate (arithmetic) | custom | a200 |
+| `ergodicity_ratio` | Time avg / Ensemble avg | custom | a200 |
+| `ergodicity_ratio_slope` | Change in ergodicity ratio | - | a200 |
+| `kelly_fraction` | Optimal Kelly bet size | custom | a200 |
+| `ruin_probability` | Probability of ruin over horizon | custom | a500 |
+
+**Interpretation:**
+- **Ergodicity ratio < 1**: Non-ergodic dynamics (time average < ensemble average)
+- **Kelly fraction**: Optimal position sizing for growth maximization
+- Ratio approaching 1 indicates more ergodic (stable) dynamics
+
+### 16.8 Polynomial Regression Channels (~13 features)
+
+**Polynomial channels** fit curves to price, providing flexible trend estimation.
+
+**Note:** Includes quadratic (2), cubic (3), AND quintic (5) per user preference.
+
+| Feature | Description | Library | Tier |
+|---------|-------------|---------|------|
+| `poly2_residual` | Quadratic (parabolic) fit residual | `numpy` | a200 |
+| `poly2_channel_position` | Position in quadratic channel (0-1) | `numpy` | a200 |
+| `poly2_curvature` | Parabolic curvature (2nd derivative) | `numpy` | a200 |
+| `poly3_residual` | Cubic fit residual | `numpy` | a200 |
+| `poly3_channel_position` | Position in cubic channel (0-1) | `numpy` | a200 |
+| `poly3_slope` | Cubic regression slope at current | `numpy` | a200 |
+| `poly3_curvature` | Cubic curvature (2nd derivative) | `numpy` | a200 |
+| `poly5_residual` | Quintic fit residual | `numpy` | a200 |
+| `poly5_channel_position` | Position in quintic channel (0-1) | `numpy` | a200 |
+| `poly5_slope` | Quintic slope at current | `numpy` | a200 |
+| `poly_degree_optimal` | Best-fit polynomial degree (AIC/BIC) | `numpy` | a500 |
+| `poly_inflection_distance` | Distance to nearest inflection point | custom | a500 |
+| `poly_trend_strength` | R² of best polynomial fit | `numpy` | a200 |
+
+**Interpretation:**
+- **Channel position**: 0 = at lower band, 1 = at upper band
+- **Curvature**: Positive = convex (accelerating), negative = concave (decelerating)
+- **Inflection distance**: How close to trend reversal point
+
+### 16.9 Additional Stochastic Features (~8 features)
+
+**Extensions** to existing Hurst/fBm features with rolling and multi-scale variants.
+
+| Feature | Description | Library | Tier |
+|---------|-------------|---------|------|
+| `fbm_hurst_rolling` | Rolling fBm Hurst estimate | `fbm` | a200 |
+| `fbm_hurst_rolling_slope` | Change in rolling Hurst | - | a200 |
+| `fbm_hurst_rolling_accel` | Acceleration of Hurst change | - | a200 |
+| `multi_fbm_hurst` | Time-varying Hurst (multi-fBm) | custom | a1000 |
+| `dfa_alpha` | DFA scaling exponent | `nolds` | a200 |
+| `dfa_alpha_slope` | Change in DFA alpha | - | a200 |
+| `mean_reversion_halflife` | OU process half-life estimate | custom | a200 |
+| `mean_reversion_speed` | OU theta parameter | custom | a200 |
+
+**Interpretation:**
+- **DFA alpha ≈ 0.5**: Random walk
+- **DFA alpha > 0.5**: Persistent (trending)
+- **DFA alpha < 0.5**: Anti-persistent (mean-reverting)
+- **Mean reversion half-life**: Expected time for price to revert halfway to mean
+
+### 16.10 Volatility Risk Premium Features (~8 features)
+
+**Girsanov-derived**: Practical approximation of "market price of risk" using VIX data.
+
+**Data Required:** VIX index (already available in our data pipeline).
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `volatility_risk_premium` | VIX - realized_vol(30d) | a100 |
+| `vrp_slope` | Change in VRP | a100 |
+| `vrp_acceleration` | Change in VRP slope | a100 |
+| `vrp_zscore` | VRP normalized by 252d history | a100 |
+| `vrp_percentile` | VRP historical percentile | a100 |
+| `vrp_regime_score` | VRP regime (-1 cheap vol, +1 expensive) | a100 |
+| `vrp_mean_reversion` | Distance from VRP mean | a200 |
+| `implied_vs_realized_ratio` | VIX / realized_vol | a100 |
+
+**Interpretation:**
+- **VRP > 0**: Implied vol > realized vol (vol sellers get paid)
+- **VRP < 0**: Implied vol < realized vol (rare, vol buyers get paid)
+- **High VRP**: Fear premium is elevated, potential mean reversion
+- This is the practical equivalent of "market price of risk" from Girsanov theorem
+
+### 16.11 Risk Resilience Features (~6 features)
+
+**BSDE-inspired**: Practical approximations of dynamic risk recovery from stochastic control theory.
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `drawdown_recovery_speed` | Slope during recovery from drawdown | a200 |
+| `drawdown_recovery_accel` | Acceleration of recovery | a200 |
+| `risk_resilience_score` | How quickly risk metrics normalize | a200 |
+| `cvar_mean_reversion_speed` | Speed of CVaR returning to mean | a500 |
+| `max_recovery_time` | Estimated time to recover from max DD | a500 |
+| `resilience_regime` | Recovery regime score | a200 |
+
+**Interpretation:**
+- **Recovery speed > 0**: Actively recovering from drawdown
+- **High resilience score**: Risk metrics quickly normalize after shocks
+- These features capture the "bounce-back" behavior after adverse events
+
+### 16.12 Category 16 Feature Count Estimate
+
+```
+16.1 Fractal Analysis: ~17 features
+16.2 Chaos Theory: ~8 features
+16.3 RQA: ~11 features
+16.4 Spectral (EMD/HHT): ~10 features
+16.5 TDA: ~11 features
+16.6 Cross-Correlation: ~4 features
+16.7 Ergodic Economics: ~6 features
+16.8 Polynomial Channels: ~13 features
+16.9 Stochastic Extensions: ~8 features
+16.10 VRP (Girsanov-derived): ~8 features
+16.11 Risk Resilience (BSDE-inspired): ~6 features
+
+TOTAL CATEGORY 16 FEATURES: ~118
+
+Tier breakdown:
+- a100: ~8 (VRP features - use existing VIX data)
+- a200: ~55 (Core fractal, TDA, polynomial, ergodic, resilience)
+- a500: ~45 (Advanced chaos, RQA, spectral, cross-correlation)
+- a1000: ~10 (Multi-fBm, embedding dim, advanced TDA)
+```
+
+### 16.13 Library Dependencies Summary
+
+| Library | Features Enabled | Install Notes |
+|---------|------------------|---------------|
+| `antropy>=0.1.6` | Higuchi, Katz, Petrosian FD | `pip install antropy` |
+| `nolds>=0.6.0` | Lyapunov, correlation dim, DFA | `pip install nolds` |
+| `MFDFA>=0.4.3` | Multifractal DFA | `pip install MFDFA` |
+| `hfda>=0.2.0` | Alternative Higuchi FD | `pip install hfda` |
+| `PyEMD>=1.6.0` | EMD, EEMD, CEEMDAN | `pip install EMD-signal` |
+| `pyrqa>=8.2.0` | RQA features | `pip install PyRQA` |
+| `giotto-tda>=0.6.0` | Persistent homology | `pip install giotto-tda` (heavy) |
+| `py-DCCA` | DCCA features | Install from GitHub |
+
+---
+
 ## Grand Total Estimate
 
-| Category | Features (v0.3) | Change from v0.2 | Notes |
+| Category | Features (v0.4) | Change from v0.3 | Notes |
 |----------|-----------------|------------------|-------|
 | Moving Averages | 780 | 0 | No changes |
-| Oscillators | 416 | +20 | +QQE (8), +STC (7), +DeMarker (5) |
+| Oscillators | 416 | 0 | No changes |
 | Volatility | 257 | 0 | No changes |
 | Volume | 169 | 0 | No changes |
-| Trend Indicators | 58 | +6 | +Donchian Channel (6) |
+| Trend Indicators | 58 | 0 | No changes |
 | Support/Resistance | 49 | 0 | No changes |
 | Candlestick | 57 | 0 | No changes |
-| Momentum | 40 | +8 | +Daily returns (3), +Expectancy (5) |
+| Momentum | 40 | 0 | No changes |
 | Calendar | 16 | 0 | No changes |
 | Entropy | 34 | 0 | No changes |
 | Regime | 25 | 0 | No changes |
 | Multi-Timeframe | 11 | 0 | No changes |
 | SMC | 17 | 0 | No changes |
-| **Risk-Adjusted (NEW)** | **28** | **+28** | **Sharpe, Sortino, VaR, CVaR** |
-| **Signal Processing (NEW)** | **15** | **+15** | **VMD, Wavelet, FFT (optional)** |
-| **TOTAL** | **~1,972** | **+77** | **~4% increase with high-signal features** |
+| Risk-Adjusted | 28 | 0 | No changes |
+| Signal Processing | 15 | 0 | No changes |
+| **Advanced Math (NEW)** | **~118** | **+118** | **Fractal, chaos, TDA, ergodic, VRP** |
+| **TOTAL** | **~2,090** | **+118** | **~6% increase with advanced features** |
 
-**Key Changes in v0.3:**
-- Added Category 14: Risk-Adjusted Metrics (~28 features)
-  - Sharpe Ratio: widely used in ML portfolio research
-  - Sortino Ratio: downside-focused risk adjustment
-  - VaR/CVaR: tail risk metrics
-- Added Category 15: Signal Processing (~15 features, optional)
-  - VMD: 2024-2025 research shows improved predictions
-  - Wavelets: established denoising technique
-  - FFT: spectral analysis complement
-- Expanded Oscillators (+20 features)
-  - QQE: smoothed RSI with ATR bands
-  - STC: backtested high-performance indicator
-  - DeMarker: exhaustion measurement
-- Added Donchian Channel (+6 features): enables entropy-filtered breakouts
-- Added Expectancy metrics (+5 features): fundamental performance metrics
-- Added Daily return enhancements (+3 features)
+**Key Changes in v0.4:**
+- Added Category 16: Advanced Mathematical Features (~118 features)
+  - **Fractal Analysis** (~17): Higuchi FD, Katz FD, MFDFA, Lévy alpha, FDI
+  - **Chaos Theory** (~8): Lyapunov exponent, correlation dimension, attractor features
+  - **RQA** (~11): Determinism, laminarity, diagonal entropy, crisis indicators
+  - **Spectral/EMD** (~10): EMD/EEMD decomposition, Hilbert instantaneous frequency
+  - **TDA** (~11): Betti curves, persistence entropy, regime change probability
+  - **Cross-Correlation** (~4): DCCA, MF-DCCA coefficients
+  - **Ergodic Economics** (~6): Time-average growth, Kelly fraction, ergodicity ratio
+  - **Polynomial Channels** (~13): Quadratic, cubic, quintic regression channels
+  - **Stochastic Extensions** (~8): Rolling Hurst, DFA alpha, mean reversion
+  - **Volatility Risk Premium** (~8): VRP, implied/realized ratio (Girsanov-derived)
+  - **Risk Resilience** (~6): Recovery speed, resilience score (BSDE-inspired)
+- New dependencies: antropy, nolds, MFDFA, hfda, PyEMD, pyrqa, giotto-tda
 
-**Tier Distribution (v0.3 additions):**
+**Tier Distribution (v0.4 additions):**
 
 | Tier | New Features | Examples |
 |------|--------------|----------|
-| a100 | ~42 | Sharpe, Sortino, QQE, STC, Expectancy, Daily returns |
-| a200 | ~35 | VaR, CVaR, Donchian, DeMarker, VMD, Wavelet, FFT |
+| a100 | ~8 | VRP, implied/realized ratio (use existing VIX data) |
+| a200 | ~55 | Higuchi FD, TDA Betti curves, polynomial channels, ergodic features |
+| a500 | ~45 | Lyapunov, RQA, EMD/HHT, MFDFA, DCCA |
+| a1000 | ~10 | Multi-fBm, embedding dimension, advanced cross-correlation |
+
+**Previous v0.3 Changes Summary:**
+- Added Category 14: Risk-Adjusted Metrics (~28 features)
+- Added Category 15: Signal Processing (~15 features)
+- Expanded Oscillators: +QQE, +STC, +DeMarker (+20 features)
+- Added Donchian Channel (+6 features)
+- Added Expectancy metrics (+5 features)
+- Added Daily return enhancements (+3 features)
 
 **Previous v0.2 Changes Summary:**
 - Signed features replace binary pairs (Pattern 1, 3): ~150 features saved
@@ -1435,16 +1757,21 @@ Understanding lookback requirements is critical for training data availability.
 3. ✅ **High-Signal Oscillators Added:** QQE, STC, DeMarker
 4. ✅ **Donchian Channel Added:** Enables entropy-filtered breakout strategies
 5. ✅ **Expectancy Metrics Added:** Fundamental performance features
-6. **Implementation Phase:** Begin coding feature calculations
-7. **Library Integration:** Install PyWavelets, vmdpy if signal processing prioritized
-8. **Tier Validation:** Verify a100 features are highest-signal during Phase 6C
+6. ✅ **Advanced Mathematical Features Added:** Fractal, chaos, TDA, ergodic, VRP in Category 16
+7. **Implementation Phase:** Begin coding feature calculations
+8. **Library Integration:** Install new dependencies when implementing Category 16
+   - Phase 0: VRP features (no new deps, uses existing VIX data)
+   - Phase 1: antropy, nolds, numpy (a200 features)
+   - Phase 2: MFDFA, PyEMD, pyrqa (a500 features)
+   - Phase 3: giotto-tda (a1000 TDA features, computationally heavy)
+9. **Tier Validation:** Verify a100 features are highest-signal during Phase 6C
 
 ---
 
 ## Verification Checklist
 
 **Catalog Integrity:**
-- [x] Total feature count: ~1,972 (target was ~1,970)
+- [x] Total feature count: ~2,090 (v0.4)
 - [x] No duplicate feature names (verified by naming convention consistency)
 - [x] All new features follow naming conventions
 - [x] All slopes have corresponding accelerations
@@ -1455,7 +1782,7 @@ Understanding lookback requirements is critical for training data availability.
 - [x] No `max(0, x)` patterns (use signed `extreme_dist` features)
 - [x] All categorical features converted to continuous scores
 
-**New Indicator Verification:**
+**New Indicator Verification (v0.3):**
 
 | Indicator | Category | Features | Tier | Library Req. |
 |-----------|----------|----------|------|--------------|
@@ -1473,15 +1800,47 @@ Understanding lookback requirements is critical for training data availability.
 | Wavelet | 15 | 5 | a200 | PyWavelets |
 | FFT | 15 | 5 | a200 | scipy |
 
+**New Indicator Verification (v0.4 - Category 16):**
+
+| Indicator Group | Section | Features | Tier | Library Req. |
+|-----------------|---------|----------|------|--------------|
+| Higuchi/Katz FD | 16.1 | 5 | a200 | antropy, hfda |
+| Petrosian FD | 16.1 | 1 | a500 | antropy |
+| MFDFA | 16.1 | 4 | a500 | MFDFA |
+| Lévy/Tail | 16.1 | 4 | a500 | scipy, custom |
+| FDI | 16.1 | 3 | a200 | custom |
+| Lyapunov/Chaos | 16.2 | 5 | a500 | nolds |
+| Embedding/Attractor | 16.2 | 3 | a1000 | nolds, custom |
+| RQA | 16.3 | 11 | a500 | pyrqa |
+| EMD/HHT | 16.4 | 7 | a500 | PyEMD |
+| Spectral Features | 16.4 | 3 | a200-a500 | custom |
+| TDA Betti/Persistence | 16.5 | 9 | a200 | giotto-tda |
+| TDA Advanced | 16.5 | 2 | a500 | giotto-tda |
+| DCCA | 16.6 | 2 | a500 | py-DCCA |
+| MF-DCCA/DPCCA | 16.6 | 2 | a1000 | custom |
+| Ergodic Economics | 16.7 | 6 | a200-a500 | custom |
+| Polynomial Channels | 16.8 | 13 | a200-a500 | numpy |
+| Stochastic Extensions | 16.9 | 8 | a200-a1000 | nolds, custom |
+| VRP | 16.10 | 8 | a100-a200 | None (VIX data) |
+| Risk Resilience | 16.11 | 6 | a200-a500 | custom |
+
 **Library Dependencies Summary:**
 - `pandas-ta`: QQE, STC, DeMarker, Donchian (already in requirements)
-- `vmdpy` or `PyEMD`: VMD features (new)
-- `PyWavelets`: Wavelet features (new)
+- `vmdpy` or `PyEMD`: VMD features
+- `PyWavelets`: Wavelet features
 - `scipy`: FFT features (already available)
+- `antropy>=0.1.6`: Higuchi, Katz, Petrosian FD (new)
+- `nolds>=0.6.0`: Lyapunov, correlation dim, DFA (new)
+- `MFDFA>=0.4.3`: Multifractal DFA (new)
+- `hfda>=0.2.0`: Alternative Higuchi FD (new)
+- `PyEMD>=1.6.0`: EMD, EEMD, CEEMDAN (new)
+- `pyrqa>=8.2.0`: RQA features (new)
+- `giotto-tda>=0.6.0`: Persistent homology (new, optional, heavy)
+- `py-DCCA`: DCCA features (new, install from GitHub)
 
 ---
 
-*Document Version: 0.3 DRAFT*
+*Document Version: 0.4 DRAFT*
 *Created: 2026-01-22*
 *Revised: 2026-01-23*
-*Status: Expanded with risk metrics, signal processing, and additional oscillators*
+*Status: Expanded with advanced mathematical features (fractal, chaos, TDA, ergodic, VRP)*

@@ -6,5 +6,6 @@ This module provides wrappers for pre-trained foundation models:
 """
 
 from src.models.foundation.base import FoundationModel
+from src.models.foundation.lag_llama import LagLlamaWrapper, distribution_to_threshold_prob
 
-__all__ = ["FoundationModel"]
+__all__ = ["FoundationModel", "LagLlamaWrapper", "distribution_to_threshold_prob"]

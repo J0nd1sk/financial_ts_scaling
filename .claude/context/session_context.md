@@ -1,85 +1,97 @@
-# Session Handoff - 2026-01-23 ~15:00 UTC
+# Session Handoff - 2026-01-23 ~14:00 UTC
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: `experiment/foundation-decoder-investigation`
-- **Last commit**: `e25e680` docs: Foundation Model & Decoder Architecture Investigation plan
+- **Last commit**: `688e7f1` docs: Indicator Catalog v0.3 - risk metrics, signal processing, expanded indicators
 - **Uncommitted changes**:
   - `.claude/context/session_context.md` (this file)
-  - `docs/feature_engineering_exploration.md` (from previous session)
-  - `docs/indicator_catalog.md` (**v0.3 COMPLETE this session**)
-  - `requirements.txt` (from previous session)
-  - `src/models/foundation/` (new directory - untracked)
-  - `tests/test_foundation_setup.py` (new file - untracked)
+  - `.claude/context/phase_tracker.md`
+  - `docs/indicator_catalog.md` - **UPDATED TO v0.4**
+  - `requirements.txt` - **ADDED ADVANCED MATH DEPENDENCIES**
+  - `docs/foundation_decoder_investigation_plan.md`
+  - `tmp.txt`
 
-### Active Work Streams
-Two parallel work streams active:
-1. **Architecture Terminal**: Foundation Model & Decoder Architecture Investigation
-2. **Feature Terminal (THIS SESSION)**: Phase 6C Feature Engineering - **Indicator catalog v0.3 COMPLETE**
+### Task Status
+- **Working on**: Indicator Catalog v0.4 - Advanced Mathematical Features
+- **Status**: COMPLETE - documentation phase done
 
 ---
 
 ## Test Status
 - Last `make test`: 2026-01-23 (this session)
-- Result: **490 passed**, 1 failed, 2 skipped, 8 warnings
-- Failing: `test_lag_llama_checkpoint_loads` (pre-existing, unrelated to this session)
-  - Cause: `ModuleNotFoundError: No module named 'gluonts.torch.modules.loss'`
-  - This is a dependency issue with the Lag-Llama checkpoint, not related to indicator catalog
+- Result: **489 passed, 2 skipped, 8 warnings**
+- All tests passing
 
 ---
 
 ## Completed This Session
 
-1. **Indicator Catalog v0.3 Expansion** - COMPLETE
-   - Added **Category 14: Risk-Adjusted Metrics** (~28 features)
-     - Sharpe Ratio (20d, 60d, 252d + slopes/accels)
-     - Sortino Ratio (20d, 60d, 252d + slopes/accels)
-     - VaR (95%, 99% at 20d + derivatives)
-     - CVaR / Expected Shortfall
-     - Risk regime features
-   - Added **Category 15: Signal Processing** (~15 features, optional)
-     - VMD (Variational Mode Decomposition)
-     - Wavelet features
-     - FFT features
-   - Added **QQE** to Category 2 (~8 features)
-   - Added **Schaff Trend Cycle (STC)** to Category 2 (~7 features)
-   - Added **DeMarker indicator** to Category 2 (~5 features)
-   - Added **Donchian Channel** to Category 5 (~6 features)
-   - Added **Daily return enhancements** to Category 8 (~3 features)
-   - Added **Expectancy metrics** to Category 8 (~5 features)
-   - Updated grand total table
-   - Added verification checklist
+### Indicator Catalog v0.4 - Advanced Mathematical Features
 
-### Document Stats
-- Previous (v0.2): ~1,895 features
-- New (v0.3): ~1,972 features
-- **Net increase: +77 features (~4%)**
+**docs/indicator_catalog.md updated:**
+- Version: 0.3 → 0.4
+- Added Category 16: Advanced Mathematical Features (~118 new features)
+  - 16.1 Fractal Analysis (~17): Higuchi FD, Katz FD, MFDFA, Lévy alpha, FDI
+  - 16.2 Chaos Theory (~8): Lyapunov exponent, correlation dimension
+  - 16.3 RQA (~11): Determinism, laminarity, crisis indicators
+  - 16.4 Spectral/EMD (~10): EMD decomposition, Hilbert transform
+  - 16.5 TDA (~11): Betti curves, persistence entropy
+  - 16.6 Cross-Correlation (~4): DCCA, MF-DCCA
+  - 16.7 Ergodic Economics (~6): Time-average growth, Kelly fraction
+  - 16.8 Polynomial Channels (~13): Quadratic, cubic, quintic regression
+  - 16.9 Stochastic Extensions (~8): Rolling Hurst, DFA, mean reversion
+  - 16.10 VRP (~8): Volatility risk premium (Girsanov-derived)
+  - 16.11 Risk Resilience (~6): Recovery speed (BSDE-inspired)
+- Updated Grand Total: ~2,090 features (was ~1,972)
+- Updated verification checklist with new indicator tables
+- Updated Next Steps with phased library integration
 
-### Tier Distribution of New Features
-- **a100 (high priority):** ~42 features (Sharpe, Sortino, QQE, STC, Expectancy, Daily returns)
-- **a200 (medium priority):** ~35 features (VaR, CVaR, Donchian, DeMarker, VMD, Wavelet, FFT)
+**requirements.txt updated:**
+- Added antropy>=0.1.6 (Higuchi, Katz, Petrosian FD)
+- Added nolds>=0.6.0 (Lyapunov, correlation dim, DFA)
+- Added MFDFA>=0.4.3 (Multifractal DFA)
+- Added hfda>=0.2.0 (Alternative Higuchi FD)
+- Added EMD-signal>=1.6.0 (PyEMD)
+- Added PyWavelets>=1.4.0 (Wavelet decomposition)
+- Added PyRQA>=8.2.0 (RQA features)
+- giotto-tda commented (optional, heavy)
+- py-DCCA noted (install from GitHub)
 
 ---
 
 ## Files Modified
 
-- `docs/indicator_catalog.md`: v0.2 → v0.3 expansion (+300 lines approx)
+- `docs/indicator_catalog.md`: Major update - Category 16 added (~300 lines)
+- `requirements.txt`: Added ~15 lines of new dependencies
+- `.claude/context/session_context.md`: This handoff file
 
 ---
 
 ## Next Session Should
 
-### Feature Engineering Terminal
-1. **User review of indicator catalog v0.3** - verify new features are correctly documented
-2. **Commit documentation** (indicator_catalog.md v0.3)
-3. **Begin tier assignment** if not already done (a50/a100/a200/a500/a1000/a2000)
-4. **Start implementation** of high-priority features (Sharpe, Sortino first)
+1. **Commit the indicator catalog changes** (user decision)
+   ```bash
+   git add -A
+   git commit -m "docs: Indicator Catalog v0.4 - Advanced Mathematical Features"
+   ```
 
-### Architecture Terminal
-1. Fix Lag-Llama checkpoint loading issue (gluonts.torch.modules.loss missing)
-2. Continue Task 1: Environment Setup
-3. Begin Task 2: Lag-Llama Integration
+2. **Optionally install new dependencies** (when implementing)
+   ```bash
+   pip install antropy nolds MFDFA hfda EMD-signal PyWavelets PyRQA
+   # giotto-tda is heavy, install only when implementing TDA features
+   ```
+
+3. **Continue Foundation Model Investigation** (main branch work)
+   - Task 2: Lag-Llama integration
+   - Or switch back to Phase 6C feature implementation
+
+4. **Future: Implement Category 16 features**
+   - Phase 0: VRP features (no new deps needed, uses existing VIX)
+   - Phase 1: Fractal/polynomial/ergodic (antropy, nolds, numpy)
+   - Phase 2: RQA, EMD (pyrqa, PyEMD)
+   - Phase 3: TDA (giotto-tda - heavy)
 
 ---
 
@@ -96,11 +108,10 @@ Two parallel work streams active:
 **This session:**
 - No Memory MCP updates (documentation-only session)
 
-**Still valid from previous session:**
-- `Indicator_Catalog_Revision_Plan_20260123` - Plan that was executed
+**Still valid from previous sessions:**
+- `Foundation_Decoder_Investigation_20260122` - Architecture investigation plan
 - `Feature_Engineering_Core_Principle_20260122` - Core principle
-- `Feature_Exploration_Session2_20260122` - Feature leads
-- `Foundation_Decoder_Investigation_20260122` - Architecture investigation
+- `Indicator_Catalog_Revision_Plan_20260123` - v0.4 plan (now implemented)
 
 ---
 
@@ -152,6 +163,19 @@ Always use unless new ablation evidence supersedes:
 - Every slope needs acceleration
 - Neural nets learn thresholds from continuous values (no need for is_january, etc.)
 
-### Current Focus (Two Streams)
-1. **Architecture Investigation** (other terminal): Foundation models & decoder architectures
-2. **Feature Engineering** (this terminal): Phase 6C - **Indicator catalog v0.3 COMPLETE, ready for review**
+### Current Focus
+1. **Architecture Investigation** (this branch): Foundation models & decoder architectures
+   - Task 1 COMPLETE
+   - Task 2 NEXT: Lag-Llama integration
+2. **Feature Engineering** (parallel work): Phase 6C - Indicator catalog v0.4 COMPLETE
+
+---
+
+## Tier Distribution Summary (v0.4 additions)
+
+| Tier | New Features | Examples |
+|------|--------------|----------|
+| a100 | ~8 | VRP, implied/realized ratio (use existing VIX data) |
+| a200 | ~55 | Higuchi FD, TDA Betti curves, polynomial channels |
+| a500 | ~45 | Lyapunov, RQA, EMD/HHT, MFDFA, DCCA |
+| a1000 | ~10 | Multi-fBm, embedding dimension |
