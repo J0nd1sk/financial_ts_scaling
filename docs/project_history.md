@@ -558,6 +558,41 @@ Post-training analysis examining precision/recall tradeoffs across probability t
 
 **Conclusion:** Confirms data-limited regime finding. With only 25 features, parameter scaling provides minimal benefit. Feature expansion (Phase 6C) is the logical next step.
 
+### 6.15 Foundation Model & Decoder Architecture Investigation (2026-01-22)
+
+**Motivation**: Phase 6A concluded with a data-limited regime finding (+1.7% scaling benefit). Before proceeding to feature scaling (Phase 6C), we investigate whether the architectural choice of encoder-only PatchTST is itself a limitation.
+
+**Key Insight**: PatchTST uses bidirectional (encoder) attention. Decoder architectures use causal attention and may:
+- Extract different temporal patterns
+- Benefit from pre-training on diverse time series (foundation models)
+- Be more sample-efficient through transfer learning
+
+**Models Under Investigation**:
+
+| Model | Architecture | Pre-trained | Source |
+|-------|-------------|-------------|--------|
+| Lag-Llama | Decoder-only | ✅ General TS | Salesforce |
+| TimesFM | Decoder-only | ✅ General TS | Google |
+| iTransformer | Inverted attention | ❌ | Tsinghua |
+| TimeMixer | MLP (no attention) | ❌ | ICLR 2024 |
+
+**Research Questions**:
+1. Can foundation models improve over from-scratch PatchTST via transfer learning?
+2. Does decoder attention outperform encoder attention for classification?
+3. Is self-attention even necessary (TimeMixer is pure MLP)?
+
+**Experimental Design**:
+- Same data/splits/metrics as Phase 6A for fair comparison
+- 8 experiments: 4 models × 2 horizons (H1, H3)
+- Success criterion: ≥5% AUC improvement over PatchTST baseline
+
+**Decision Criteria**:
+- If foundation models help → incorporate into main project
+- If architecture doesn't matter → return to feature scaling (Phase 6C)
+
+**Branch**: `experiment/foundation-decoder-investigation`
+**Plan**: `docs/foundation_decoder_investigation_plan.md`
+
 ---
 
 ## 7. Deferred and Discarded Ideas

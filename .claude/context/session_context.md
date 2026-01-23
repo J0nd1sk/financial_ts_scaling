@@ -1,18 +1,19 @@
-# Session Handoff - 2026-01-22 ~01:00 UTC
+# Session Handoff - 2026-01-22 ~10:30 UTC
 
 ## Current State
 
 ### Branch & Git
-- **Branch**: main
-- **Last commit**: `8e06765` docs: head dropout ablation results - no benefit, keep at 0.0
-- **Uncommitted changes**:
-  - Modified: session_context.md, results.json
-  - New: 11 experiment output dirs, threshold_sweep.csv, threshold_sweep_plots.png, threshold_sweep.py, test_threshold_sweep.py
-- **Ahead of origin**: 2 commits (not pushed)
+- **Branch**: `experiment/foundation-decoder-investigation` (NEW - this terminal)
+- **Main branch status**: `47d7481` docs: documentation cleanup and Phase 6A corrections
+- **Uncommitted changes on main**:
+  - `CLAUDE.md` (+Feature Engineering Principle section)
+  - `docs/feature_engineering_exploration.md` (+719 lines)
+- **This branch changes**: Plan doc + updates to phase_plans, history, tracker
 
-### Task Status
-- **Completed**: Phase 6A threshold sweep analysis
-- **Status**: Ready for Phase 6B/6C feature scaling
+### Active Work Streams
+Two parallel work streams active:
+1. **This terminal**: Foundation Model & Decoder Architecture Investigation
+2. **Other terminal**: Phase 6C Feature Engineering exploration
 
 ---
 
@@ -23,63 +24,76 @@
 
 ---
 
-## Completed This Session
+## Completed This Session (Architecture Investigation Terminal)
 
-1. **Session restore** from previous handoff
-2. **Phase 6A experiments verified complete** (all 12 models trained)
-3. **Threshold sweep script** (`scripts/threshold_sweep.py`):
-   - TDD: 5 new tests in `tests/test_threshold_sweep.py`
-   - Sweeps probability thresholds 0.1-0.8
-   - Computes precision/recall/F1/AUC at each threshold
-   - Output: `outputs/phase6a_final/threshold_sweep.csv` (96 rows)
-4. **Threshold sweep visualization** (`outputs/phase6a_final/threshold_sweep_plots.png`):
-   - Precision vs threshold (all models)
-   - Recall vs threshold (all models)
-   - Precision-Recall curves by horizon
-   - AUC bar chart by budget×horizon
-5. **Phase 6A analysis complete** - key findings documented
-
----
-
-## Key Findings (Phase 6A Complete)
-
-### AUC by Model
-| Horizon | 2M | 20M | 200M |
-|---------|-----|------|------|
-| H1 | 0.707 | 0.717 | 0.724 |
-| H2 | 0.640 | 0.639 | 0.642 |
-| H3 | 0.621 | 0.618 | 0.631 |
-| H5 | 0.609 | 0.599 | 0.613 |
-
-### Key Conclusions
-- **Parameter scaling provides minimal benefit** (200M only +1.7% over 2M)
-- **Data-limited regime confirmed** - more parameters don't help
-- **Shorter horizons easier** (H1 AUC ~0.72 vs H5 AUC ~0.61)
-- **H5 models best calibrated** for threshold selection (pred range 0.26-0.90)
-- **H1 models poorly calibrated** (predictions rarely exceed 0.5)
+1. **Session restore** - Verified environment, reviewed Phase 6A conclusions
+2. **Architecture research** - Investigated decoder vs encoder for time series:
+   - TimesFM (Google): Decoder-only, open source, fine-tunable
+   - Lag-Llama (Salesforce): Decoder-only, probabilistic, open source
+   - iTransformer: Inverted attention (ICLR 2024 Spotlight)
+   - TimeMixer: Pure MLP, no attention
+   - LENS: Financial-specific, NO public weights
+3. **Created investigation plan** - `docs/foundation_decoder_investigation_plan.md`
+4. **Updated documentation**:
+   - `docs/project_phase_plans.md` - Added stage section
+   - `docs/project_history.md` - Added section 6.15
+   - `.claude/context/phase_tracker.md` - Added stage tracking
+5. **Created git branch** - `experiment/foundation-decoder-investigation`
 
 ---
 
-## Files Modified This Session
+## Investigation Overview (This Terminal)
 
-- `scripts/threshold_sweep.py` (NEW - 250 lines)
-- `tests/test_threshold_sweep.py` (NEW - 5 tests)
-- `outputs/phase6a_final/threshold_sweep.csv` (NEW - 96 rows)
-- `outputs/phase6a_final/threshold_sweep_plots.png` (NEW - visualization)
-- `outputs/phase6a_final/phase6a_*/results.json` (from background experiments)
-- `.claude/context/session_context.md` (this file)
+### Motivation
+Phase 6A found data-limited regime: 200M only +1.7% over 2M. Question: Is encoder-only PatchTST architecture the limitation?
+
+### Models to Evaluate
+| Model | Type | Priority |
+|-------|------|----------|
+| Lag-Llama | Decoder, Foundation | Tier 1 |
+| TimesFM | Decoder, Foundation | Tier 1 |
+| iTransformer | Inverted attention | Tier 2 |
+| TimeMixer | MLP (no attention) | Tier 2 |
+
+### Success Criteria
+- ≥5% AUC improvement over PatchTST → Pursue this path
+- Within ±2% → Return to feature scaling (Phase 6C)
+
+---
+
+## Feature Engineering Work (Other Terminal)
+
+### Core Principle (User-Established)
+**THE #1 GOAL**: Give the neural network the ability to discern signal from noise.
+- Raw indicator values are NOISE
+- Relationships and dynamics are SIGNAL
+
+### Key User Insights Captured
+1. Volume-price confluence matters SIGNIFICANTLY
+2. Nested channels - Price can be in parabolic channel inside larger range-bound channel
+3. Entropy ≠ volatility - Entropy = predictability, volatility = magnitude
+4. Hurst 0.4-0.6 likely = range-bound, not random walk
+5. Elliott Wave maps accumulation → impulse → distribution cycle
+6. Self-fulfilling prophecy - Explicitly encode trader-used combinations
+
+### Research Discoveries
+- SMC Python library: github.com/joshyattridge/smart-money-concepts
+- Entropy measures can detect regime instability BEFORE price shows it
 
 ---
 
 ## Memory Entities Updated
 
-- `ThresholdSweepScript_Plan_20260121` (created): Planning decision for threshold sweep implementation
-- `Phase6A_ThresholdSweep_Finding_20260122` (created): Threshold sweep experimental findings
-- `Phase6A_Conclusion_DataLimited_20260122` (created): Phase 6A conclusion - data-limited regime
+**This session (architecture):**
+- `Foundation_Decoder_Investigation_20260122` - Investigation rationale and plan
 
-**Still valid from previous sessions:**
-- `Finding_2M_HeadCountComparison_20260121` - h=8 best at 2M scale
-- `Finding_2Mvs20M_InverseScaling_20260121` - 2M comparable to 20M
+**From feature engineering session:**
+- `Feature_Engineering_Core_Principle_20260122` - Core principle and expanded categories
+- `Feature_Exploration_Riffs_20260122` - Agent's riffs on user leads
+- `Feature_Exploration_Session2_20260122` - Session 2 detailed leads and findings
+
+**Still valid:**
+- `Phase6A_Conclusion_DataLimited_20260122` - Data-limited regime confirmed
 - `Target_Calculation_Definitive_Rule` - HIGH-based targets
 
 ---
@@ -92,17 +106,15 @@
 
 ---
 
-## Next Session Should
+## Next Session Should (Architecture Terminal)
 
-1. **Begin Phase 6B/6C: Feature Scaling**
-   - Expand from 20 indicators to 50/100/200+ features
-   - No new data acquisition needed - generate from existing OHLCV
-2. **Plan feature tier expansion**:
-   - Tier a50: Add more MAs, oscillators, volume indicators
-   - Tier a100: Add Fibonacci, Ichimoku, more RSI variants
-   - Tier a200+: Comprehensive indicator library
-3. **Commit Phase 6A artifacts** (threshold sweep script, results, plots)
-4. **Consider**: Which horizons to focus on for feature scaling experiments
+1. **Commit current changes** - Plan doc and documentation updates
+2. **Start Task 1: Environment Setup**
+   - Install GluonTS for Lag-Llama
+   - Install TimesFM
+   - Verify MPS compatibility
+   - Create `src/models/foundation/` module
+3. **Begin Task 2: Lag-Llama Integration** (highest priority)
 
 ---
 
@@ -112,8 +124,7 @@
 source venv/bin/activate
 make test
 git status
-# Commit new threshold sweep artifacts:
-git add -A && git commit -m "feat: threshold sweep script and Phase 6A analysis"
+git branch --show-current
 ```
 
 ---
@@ -145,10 +156,10 @@ Always use unless new ablation evidence supersedes:
 - **Learning Rate**: 1e-4
 - **Context Length**: 80 days
 - **Normalization**: RevIN only (no z-score)
-- **Splitter**: SimpleSplitter (442 val samples, not ChunkSplitter's 19)
+- **Splitter**: SimpleSplitter (442 val samples)
 - **Head dropout**: 0.0 (ablation showed no benefit)
 - **Metrics**: AUC, accuracy, precision, recall, pred_range (all required)
 
-### Current Focus
-- Phase 6A complete - data-limited regime confirmed
-- Next: Feature scaling (more indicators, not more parameters)
+### Current Focus (Two Streams)
+1. **Architecture Investigation** (this terminal): Foundation models & decoder architectures
+2. **Feature Engineering** (other terminal): Phase 6C feature exploration

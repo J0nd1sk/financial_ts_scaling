@@ -405,6 +405,31 @@
   - Funnel/hourglass/bottleneck designs
   - Deferred to Phase 6B or 6C
 
+## Stage: Foundation Model & Decoder Architecture Investigation 🔄 IN PROGRESS (2026-01-22)
+
+**Branch:** `experiment/foundation-decoder-investigation`
+**Plan:** `docs/foundation_decoder_investigation_plan.md`
+**Motivation:** Phase 6A showed data-limited regime; investigate if encoder-only architecture is the bottleneck
+
+**Research Questions:**
+1. Can foundation models (Lag-Llama, TimesFM) outperform from-scratch PatchTST?
+2. Does decoder attention extract different signal than encoder attention?
+3. Is attention even necessary? (TimeMixer is pure MLP)
+
+**Tasks:**
+- ⏳ Task 1: Environment setup (GluonTS, TimesFM deps)
+- ⏳ Task 2: Lag-Llama integration & fine-tuning
+- ⏳ Task 3: TimesFM integration & fine-tuning
+- ⏳ Task 4: iTransformer implementation
+- ⏳ Task 5: TimeMixer implementation
+- ⏳ Task 6: Analysis & decision
+
+**Success Criteria:** ≥5% AUC improvement over PatchTST baseline
+
+**Decision:** Roll findings into main project if successful; return to Phase 6C otherwise
+
+---
+
 ## Phase 6B: Horizon Scaling ⏸️ NOT STARTED
 - 64 runs (reuse 6A HPO)
 - Hold: 20 features, SPY

@@ -102,6 +102,43 @@ Development methodology is defined in:
 
 ---
 
+# Stage: Foundation Model & Decoder Architecture Investigation 🔄 IN PROGRESS
+
+**Branch:** `experiment/foundation-decoder-investigation`
+**Plan Document:** `docs/foundation_decoder_investigation_plan.md`
+**Status:** Planning phase
+
+## Motivation
+
+Phase 6A revealed a **data-limited regime**: parameter scaling (2M→200M) provided only +1.7% AUC improvement. This detour investigates whether the limitation stems from architectural choices (encoder-only PatchTST) rather than just feature poverty.
+
+## Research Questions
+
+1. Can **foundation models** (pre-trained on billions of time points) improve financial prediction through transfer learning?
+2. Does **decoder** attention extract different signal than **encoder** attention?
+3. Are probabilistic outputs (Lag-Llama) better suited for threshold classification?
+
+## Models to Evaluate
+
+| Model | Type | Priority | Status |
+|-------|------|----------|--------|
+| Lag-Llama | Decoder, Foundation | Tier 1 | ⏳ Pending |
+| TimesFM | Decoder, Foundation | Tier 1 | ⏳ Pending |
+| iTransformer | Inverted attention | Tier 2 | ⏳ Pending |
+| TimeMixer | MLP (no attention) | Tier 2 | ⏳ Pending |
+| PatchTST | Encoder (baseline) | Control | ✅ Complete |
+
+## Success Criteria
+
+- Foundation model beats PatchTST by ≥5% AUC → Pursue transfer learning path
+- All models within ±2% → Architecture doesn't matter, return to feature scaling
+
+## Timeline
+
+Estimated 20-36 hours across 6 implementation tasks.
+
+---
+
 # Phase 6B: Horizon Scaling ⏸️ PENDING
 
 **Objective:** Expand horizon coverage using Phase 6A architectures
