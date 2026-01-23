@@ -40,6 +40,7 @@ checkpoints/
 outputs/checkpoints/
 models/saved/
 models/checkpoints/
+models/pretrained/
 
 # Data files - DO NOT COMMIT
 data/raw/

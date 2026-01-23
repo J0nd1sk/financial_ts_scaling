@@ -50,3 +50,8 @@ psutil>=7.0.0
 tqdm>=4.66.0
 pyyaml>=6.0.0
 python-dotenv>=1.0.0
+
+# Foundation Models (Phase: Decoder Investigation)
+gluonts[torch]>=0.14.0,<0.16
+huggingface-hub>=0.20.0
+packaging>=21.0  # For version comparison in tests
