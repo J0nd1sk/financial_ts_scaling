@@ -1,100 +1,85 @@
-# Session Handoff - 2026-01-22 ~10:30 UTC
+# Session Handoff - 2026-01-23 ~15:00 UTC
 
 ## Current State
 
 ### Branch & Git
-- **Branch**: `experiment/foundation-decoder-investigation` (NEW - this terminal)
-- **Main branch status**: `47d7481` docs: documentation cleanup and Phase 6A corrections
-- **Uncommitted changes on main**:
-  - `CLAUDE.md` (+Feature Engineering Principle section)
-  - `docs/feature_engineering_exploration.md` (+719 lines)
-- **This branch changes**: Plan doc + updates to phase_plans, history, tracker
+- **Branch**: `experiment/foundation-decoder-investigation`
+- **Last commit**: `e25e680` docs: Foundation Model & Decoder Architecture Investigation plan
+- **Uncommitted changes**:
+  - `.claude/context/session_context.md` (this file)
+  - `docs/feature_engineering_exploration.md` (from previous session)
+  - `docs/indicator_catalog.md` (**v0.3 COMPLETE this session**)
+  - `requirements.txt` (from previous session)
+  - `src/models/foundation/` (new directory - untracked)
+  - `tests/test_foundation_setup.py` (new file - untracked)
 
 ### Active Work Streams
 Two parallel work streams active:
-1. **This terminal**: Foundation Model & Decoder Architecture Investigation
-2. **Other terminal**: Phase 6C Feature Engineering exploration
+1. **Architecture Terminal**: Foundation Model & Decoder Architecture Investigation
+2. **Feature Terminal (THIS SESSION)**: Phase 6C Feature Engineering - **Indicator catalog v0.3 COMPLETE**
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-22
-- Result: **476 passed**, 2 warnings
-- Failing: none
+- Last `make test`: 2026-01-23 (this session)
+- Result: **490 passed**, 1 failed, 2 skipped, 8 warnings
+- Failing: `test_lag_llama_checkpoint_loads` (pre-existing, unrelated to this session)
+  - Cause: `ModuleNotFoundError: No module named 'gluonts.torch.modules.loss'`
+  - This is a dependency issue with the Lag-Llama checkpoint, not related to indicator catalog
 
 ---
 
-## Completed This Session (Architecture Investigation Terminal)
+## Completed This Session
 
-1. **Session restore** - Verified environment, reviewed Phase 6A conclusions
-2. **Architecture research** - Investigated decoder vs encoder for time series:
-   - TimesFM (Google): Decoder-only, open source, fine-tunable
-   - Lag-Llama (Salesforce): Decoder-only, probabilistic, open source
-   - iTransformer: Inverted attention (ICLR 2024 Spotlight)
-   - TimeMixer: Pure MLP, no attention
-   - LENS: Financial-specific, NO public weights
-3. **Created investigation plan** - `docs/foundation_decoder_investigation_plan.md`
-4. **Updated documentation**:
-   - `docs/project_phase_plans.md` - Added stage section
-   - `docs/project_history.md` - Added section 6.15
-   - `.claude/context/phase_tracker.md` - Added stage tracking
-5. **Created git branch** - `experiment/foundation-decoder-investigation`
+1. **Indicator Catalog v0.3 Expansion** - COMPLETE
+   - Added **Category 14: Risk-Adjusted Metrics** (~28 features)
+     - Sharpe Ratio (20d, 60d, 252d + slopes/accels)
+     - Sortino Ratio (20d, 60d, 252d + slopes/accels)
+     - VaR (95%, 99% at 20d + derivatives)
+     - CVaR / Expected Shortfall
+     - Risk regime features
+   - Added **Category 15: Signal Processing** (~15 features, optional)
+     - VMD (Variational Mode Decomposition)
+     - Wavelet features
+     - FFT features
+   - Added **QQE** to Category 2 (~8 features)
+   - Added **Schaff Trend Cycle (STC)** to Category 2 (~7 features)
+   - Added **DeMarker indicator** to Category 2 (~5 features)
+   - Added **Donchian Channel** to Category 5 (~6 features)
+   - Added **Daily return enhancements** to Category 8 (~3 features)
+   - Added **Expectancy metrics** to Category 8 (~5 features)
+   - Updated grand total table
+   - Added verification checklist
 
----
+### Document Stats
+- Previous (v0.2): ~1,895 features
+- New (v0.3): ~1,972 features
+- **Net increase: +77 features (~4%)**
 
-## Investigation Overview (This Terminal)
-
-### Motivation
-Phase 6A found data-limited regime: 200M only +1.7% over 2M. Question: Is encoder-only PatchTST architecture the limitation?
-
-### Models to Evaluate
-| Model | Type | Priority |
-|-------|------|----------|
-| Lag-Llama | Decoder, Foundation | Tier 1 |
-| TimesFM | Decoder, Foundation | Tier 1 |
-| iTransformer | Inverted attention | Tier 2 |
-| TimeMixer | MLP (no attention) | Tier 2 |
-
-### Success Criteria
-- ≥5% AUC improvement over PatchTST → Pursue this path
-- Within ±2% → Return to feature scaling (Phase 6C)
+### Tier Distribution of New Features
+- **a100 (high priority):** ~42 features (Sharpe, Sortino, QQE, STC, Expectancy, Daily returns)
+- **a200 (medium priority):** ~35 features (VaR, CVaR, Donchian, DeMarker, VMD, Wavelet, FFT)
 
 ---
 
-## Feature Engineering Work (Other Terminal)
+## Files Modified
 
-### Core Principle (User-Established)
-**THE #1 GOAL**: Give the neural network the ability to discern signal from noise.
-- Raw indicator values are NOISE
-- Relationships and dynamics are SIGNAL
-
-### Key User Insights Captured
-1. Volume-price confluence matters SIGNIFICANTLY
-2. Nested channels - Price can be in parabolic channel inside larger range-bound channel
-3. Entropy ≠ volatility - Entropy = predictability, volatility = magnitude
-4. Hurst 0.4-0.6 likely = range-bound, not random walk
-5. Elliott Wave maps accumulation → impulse → distribution cycle
-6. Self-fulfilling prophecy - Explicitly encode trader-used combinations
-
-### Research Discoveries
-- SMC Python library: github.com/joshyattridge/smart-money-concepts
-- Entropy measures can detect regime instability BEFORE price shows it
+- `docs/indicator_catalog.md`: v0.2 → v0.3 expansion (+300 lines approx)
 
 ---
 
-## Memory Entities Updated
+## Next Session Should
 
-**This session (architecture):**
-- `Foundation_Decoder_Investigation_20260122` - Investigation rationale and plan
+### Feature Engineering Terminal
+1. **User review of indicator catalog v0.3** - verify new features are correctly documented
+2. **Commit documentation** (indicator_catalog.md v0.3)
+3. **Begin tier assignment** if not already done (a50/a100/a200/a500/a1000/a2000)
+4. **Start implementation** of high-priority features (Sharpe, Sortino first)
 
-**From feature engineering session:**
-- `Feature_Engineering_Core_Principle_20260122` - Core principle and expanded categories
-- `Feature_Exploration_Riffs_20260122` - Agent's riffs on user leads
-- `Feature_Exploration_Session2_20260122` - Session 2 detailed leads and findings
-
-**Still valid:**
-- `Phase6A_Conclusion_DataLimited_20260122` - Data-limited regime confirmed
-- `Target_Calculation_Definitive_Rule` - HIGH-based targets
+### Architecture Terminal
+1. Fix Lag-Llama checkpoint loading issue (gluonts.torch.modules.loss missing)
+2. Continue Task 1: Environment Setup
+3. Begin Task 2: Lag-Llama Integration
 
 ---
 
@@ -106,15 +91,16 @@ Phase 6A found data-limited regime: 200M only +1.7% over 2M. Question: Is encode
 
 ---
 
-## Next Session Should (Architecture Terminal)
+## Memory Entities Updated
 
-1. **Commit current changes** - Plan doc and documentation updates
-2. **Start Task 1: Environment Setup**
-   - Install GluonTS for Lag-Llama
-   - Install TimesFM
-   - Verify MPS compatibility
-   - Create `src/models/foundation/` module
-3. **Begin Task 2: Lag-Llama Integration** (highest priority)
+**This session:**
+- No Memory MCP updates (documentation-only session)
+
+**Still valid from previous session:**
+- `Indicator_Catalog_Revision_Plan_20260123` - Plan that was executed
+- `Feature_Engineering_Core_Principle_20260122` - Core principle
+- `Feature_Exploration_Session2_20260122` - Feature leads
+- `Foundation_Decoder_Investigation_20260122` - Architecture investigation
 
 ---
 
@@ -124,7 +110,7 @@ Phase 6A found data-limited regime: 200M only +1.7% over 2M. Question: Is encode
 source venv/bin/activate
 make test
 git status
-git branch --show-current
+make verify
 ```
 
 ---
@@ -160,6 +146,12 @@ Always use unless new ablation evidence supersedes:
 - **Head dropout**: 0.0 (ablation showed no benefit)
 - **Metrics**: AUC, accuracy, precision, recall, pred_range (all required)
 
+### Feature Engineering Principles
+- Signed features consolidate information (one feature with sign, not two separate)
+- Continuous > binary for neural networks
+- Every slope needs acceleration
+- Neural nets learn thresholds from continuous values (no need for is_january, etc.)
+
 ### Current Focus (Two Streams)
-1. **Architecture Investigation** (this terminal): Foundation models & decoder architectures
-2. **Feature Engineering** (other terminal): Phase 6C feature exploration
+1. **Architecture Investigation** (other terminal): Foundation models & decoder architectures
+2. **Feature Engineering** (this terminal): Phase 6C - **Indicator catalog v0.3 COMPLETE, ready for review**
