@@ -1,117 +1,160 @@
-# Session Handoff - 2026-01-23 ~14:00 UTC
+# Session Handoff - 2026-01-23 (Late Session)
 
 ## Current State
 
 ### Branch & Git
 - **Branch**: `experiment/foundation-decoder-investigation`
-- **Last commit**: `688e7f1` docs: Indicator Catalog v0.3 - risk metrics, signal processing, expanded indicators
+- **Last commit**: `ea73990` feat: Implement tier a50 indicators (30 new, 50 total)
 - **Uncommitted changes**:
-  - `.claude/context/session_context.md` (this file)
-  - `.claude/context/phase_tracker.md`
-  - `docs/indicator_catalog.md` - **UPDATED TO v0.4**
-  - `requirements.txt` - **ADDED ADVANCED MATH DEPENDENCIES**
-  - `docs/foundation_decoder_investigation_plan.md`
-  - `tmp.txt`
+  - `src/models/foundation/lag_llama.py` - **MODIFIED THIS SESSION**: Added forecast mode, get_distribution_params(), compute_nll_loss()
+  - `tests/test_lag_llama.py` - **MODIFIED THIS SESSION**: Added 6 new tests for forecast mode (ALL PASSING NOW)
+  - `docs/indicator_catalog.md` - From previous session
+  - `experiments/foundation/train_lagllama_h1_close.py` - From previous session
+  - `experiments/foundation/train_lagllama_h1_proj.py` - From previous session
+  - `.claude/context/session_context.md` - This file
+- **Untracked files**:
+  - `experiments/foundation/train_lagllama_h1_headonly.py` - From previous session
+  - `outputs/foundation/` - Experiment outputs
 
 ### Task Status
-- **Working on**: Indicator Catalog v0.4 - Advanced Mathematical Features
-- **Status**: COMPLETE - documentation phase done
+- **Working on**: FD-01d - Lag-Llama Forecast-Then-Threshold approach
+- **Status**: Tasks 1-2 COMPLETE, Task 3 (experiment script) APPROVED but not yet created
 
 ---
 
 ## Test Status
-- Last `make test`: 2026-01-23 (this session)
-- Result: **489 passed, 2 skipped, 8 warnings**
-- All tests passing
+- Last `make test`: 2026-01-23
+- Result: **553 passed**, 2 skipped, 19 warnings
+- **ALL TESTS PASSING** - Previous failing test fixed this session
 
 ---
 
 ## Completed This Session
 
-### Indicator Catalog v0.4 - Advanced Mathematical Features
+### FD-01d Implementation (Tasks 1-2)
 
-**docs/indicator_catalog.md updated:**
-- Version: 0.3 → 0.4
-- Added Category 16: Advanced Mathematical Features (~118 new features)
-  - 16.1 Fractal Analysis (~17): Higuchi FD, Katz FD, MFDFA, Lévy alpha, FDI
-  - 16.2 Chaos Theory (~8): Lyapunov exponent, correlation dimension
-  - 16.3 RQA (~11): Determinism, laminarity, crisis indicators
-  - 16.4 Spectral/EMD (~10): EMD decomposition, Hilbert transform
-  - 16.5 TDA (~11): Betti curves, persistence entropy
-  - 16.6 Cross-Correlation (~4): DCCA, MF-DCCA
-  - 16.7 Ergodic Economics (~6): Time-average growth, Kelly fraction
-  - 16.8 Polynomial Channels (~13): Quadratic, cubic, quintic regression
-  - 16.9 Stochastic Extensions (~8): Rolling Hurst, DFA, mean reversion
-  - 16.10 VRP (~8): Volatility risk premium (Girsanov-derived)
-  - 16.11 Risk Resilience (~6): Recovery speed (BSDE-inspired)
-- Updated Grand Total: ~2,090 features (was ~1,972)
-- Updated verification checklist with new indicator tables
-- Updated Next Steps with phased library integration
+**Objective**: Use Lag-Llama for forecasting (its pretrained task) instead of classification, then threshold at inference.
 
-**requirements.txt updated:**
-- Added antropy>=0.1.6 (Higuchi, Katz, Petrosian FD)
-- Added nolds>=0.6.0 (Lyapunov, correlation dim, DFA)
-- Added MFDFA>=0.4.3 (Multifractal DFA)
-- Added hfda>=0.2.0 (Alternative Higuchi FD)
-- Added EMD-signal>=1.6.0 (PyEMD)
-- Added PyWavelets>=1.4.0 (Wavelet decomposition)
-- Added PyRQA>=8.2.0 (RQA features)
-- giotto-tda commented (optional, heavy)
-- py-DCCA noted (install from GitHub)
+**Task 1: Added 6 New Tests (TDD RED → GREEN)**
+1. `TestLagLlamaForecastMode::test_forecast_mode_returns_raw_forecast`
+2. `TestLagLlamaForecastMode::test_forecast_mode_output_varies`
+3. `TestLagLlamaDistributionParams::test_get_distribution_params_shapes`
+4. `TestLagLlamaNLLLoss::test_compute_nll_loss_scalar`
+5. `TestLagLlamaNLLLoss::test_compute_nll_loss_has_gradient`
+6. `TestLagLlamaTrainerIntegration::test_classification_mode_unchanged`
+
+**Task 2: LagLlamaWrapper Modifications**
+
+Changes to `src/models/foundation/lag_llama.py`:
+
+1. **New parameter**: `mode: Literal["classification", "forecast"] = "classification"`
+   - `"classification"`: Returns P(X > threshold) via CDF (existing behavior)
+   - `"forecast"`: Returns raw `loc` (predicted value) without clamping
+
+2. **New method**: `get_distribution_params(x) -> (df, loc, scale)`
+   - Returns StudentT distribution parameters from backbone
+   - df shape: `(batch, internal_context_len)` (58 for Lag-Llama)
+   - loc/scale shape: `(batch, 1)` (forecast-specific)
+
+3. **New method**: `compute_nll_loss(x, target) -> scalar`
+   - Computes negative log-likelihood for StudentT distribution
+   - Native loss function for Lag-Llama fine-tuning
+   - Takes last position of df to match loc/scale shapes
+
+4. **Modified**: `forward()` refactored
+   - Uses `get_distribution_params()` internally
+   - Handles shape mismatches correctly
+   - Returns `loc` directly for forecast mode
+
+**Bug Fixed**: Shape mismatch between df `(batch, 58)` and loc/scale `(batch, 1)` - now correctly uses last position of df.
 
 ---
 
-## Files Modified
+## Pending (Approved, Not Started)
 
-- `docs/indicator_catalog.md`: Major update - Category 16 added (~300 lines)
-- `requirements.txt`: Added ~15 lines of new dependencies
-- `.claude/context/session_context.md`: This handoff file
+### Task 3: Create Experiment Script FD-01d
+**File**: `experiments/foundation/train_lagllama_h1_forecast.py` (NEW)
+
+**Status**: **APPROVED** by user just before handoff request
+
+**Key Config**:
+```python
+MODE = "forecast"
+CONTEXT_LENGTH = 1150
+NUM_FEATURES = 1  # Univariate (close returns only)
+THRESHOLD = 0.01
+EPOCHS = 30
+LR = 1e-4
+BATCH_SIZE = 4
+```
+
+**Key Differences from FD-01b**:
+1. **Target**: Returns (`close[t+1]/close[t] - 1`) instead of binary
+2. **Loss**: NLL via `model.compute_nll_loss()` instead of BCE
+3. **Eval**: Threshold forecasts at 1% for AUC comparison
+
+### Task 4: Run Experiment and Analyze
+- Compare to baselines: FD-01b AUC 0.576, PatchTST AUC 0.718
+- Success: AUC >= 0.74 (5% improvement over PatchTST)
+- Fallback: If fails, pivot to TimesFM
+
+---
+
+## Key Decisions Made
+
+1. **Forecast-then-threshold approach**: Train Lag-Llama on its native forecasting task, then threshold predictions at inference for classification metrics.
+
+2. **NLL loss for fine-tuning**: Use StudentT negative log-likelihood (native loss) instead of BCE.
+
+3. **Shape handling**: df from backbone is `(batch, 58)`, loc/scale are `(batch, 1)` - use last position of df for consistency.
+
+---
+
+## FD-01d Plan Summary
+
+**Key Insight**: Classification approach (FD-01b) produced near-constant predictions. Lag-Llama was pretrained for forecasting, not classification. Using its native task may give better results.
+
+**Success Criteria**:
+| Metric | Target | Rationale |
+|--------|--------|-----------|
+| Val AUC | >= 0.74 | 5% improvement over PatchTST (0.718) |
+| Forecast range | > 0.05 spread | Must show variation (not near-constant) |
+| Recall | > 0% | Must predict some positives |
+| Val NLL | Decreasing | Model should improve with fine-tuning |
+
+**Fallback**: If FD-01d fails, pivot to TimesFM investigation.
+
+---
+
+## Files Modified This Session
+| File | Lines Changed | Description |
+|------|---------------|-------------|
+| `src/models/foundation/lag_llama.py` | ~80 added | mode param, get_distribution_params(), compute_nll_loss(), forward() refactor |
+| `tests/test_lag_llama.py` | ~120 added | 6 new tests for forecast mode and NLL loss |
 
 ---
 
 ## Next Session Should
 
-1. **Commit the indicator catalog changes** (user decision)
+1. **Create experiment script** (Task 3 - APPROVED):
    ```bash
-   git add -A
-   git commit -m "docs: Indicator Catalog v0.4 - Advanced Mathematical Features"
+   # File: experiments/foundation/train_lagllama_h1_forecast.py
    ```
 
-2. **Optionally install new dependencies** (when implementing)
+2. **Run FD-01d experiment**:
    ```bash
-   pip install antropy nolds MFDFA hfda EMD-signal PyWavelets PyRQA
-   # giotto-tda is heavy, install only when implementing TDA features
+   ./venv/bin/python experiments/foundation/train_lagllama_h1_forecast.py
    ```
 
-3. **Continue Foundation Model Investigation** (main branch work)
-   - Task 2: Lag-Llama integration
-   - Or switch back to Phase 6C feature implementation
+3. **Analyze results**:
+   - Check `outputs/foundation/lagllama_h1_forecast/results.json`
+   - Compare AUC to baselines (FD-01b: 0.576, PatchTST: 0.718)
+   - Check forecast range (must vary, not constant)
 
-4. **Future: Implement Category 16 features**
-   - Phase 0: VRP features (no new deps needed, uses existing VIX)
-   - Phase 1: Fractal/polynomial/ergodic (antropy, nolds, numpy)
-   - Phase 2: RQA, EMD (pyrqa, PyEMD)
-   - Phase 3: TDA (giotto-tda - heavy)
-
----
-
-## Data Versions
-
-- Raw manifest: SPY.OHLCV.daily (verified)
-- Processed manifest: SPY_dataset_a20.parquet (verified)
-- Pending registrations: none
-
----
-
-## Memory Entities Updated
-
-**This session:**
-- No Memory MCP updates (documentation-only session)
-
-**Still valid from previous sessions:**
-- `Foundation_Decoder_Investigation_20260122` - Architecture investigation plan
-- `Feature_Engineering_Core_Principle_20260122` - Core principle
-- `Indicator_Catalog_Revision_Plan_20260123` - v0.4 plan (now implemented)
+4. **Decision point**:
+   - If AUC >= 0.74: Lag-Llama viable, consider FD-01e
+   - If AUC < 0.70 but forecast varies: Lag-Llama forecasts don't rank well
+   - If forecast near-constant: Fundamental architecture mismatch, pivot to TimesFM
 
 ---
 
@@ -123,6 +166,18 @@ make test
 git status
 make verify
 ```
+
+---
+
+## Experiment Baselines
+
+| Experiment | AUC | Notes |
+|------------|-----|-------|
+| PatchTST H1 | 0.718 | Target baseline to beat |
+| FD-01a (zero-shot) | 0.499 | Random performance |
+| FD-01b (fine-tune classification) | 0.576 | Near-constant predictions |
+| FD-01c (head-only) | 0.512 | Failed |
+| **FD-01d (forecast)** | **TBD** | Current experiment |
 
 ---
 
@@ -151,31 +206,14 @@ make verify
 Always use unless new ablation evidence supersedes:
 - **Dropout**: 0.5
 - **Learning Rate**: 1e-4
-- **Context Length**: 80 days
-- **Normalization**: RevIN only (no z-score)
-- **Splitter**: SimpleSplitter (442 val samples)
+- **Context Length**: 80 days (PatchTST) / 1150 days (Lag-Llama)
+- **Normalization**: RevIN only (no z-score) for PatchTST
+- **Splitter**: SimpleSplitter (442 val samples) - except Lag-Llama needs custom splitting
 - **Head dropout**: 0.0 (ablation showed no benefit)
 - **Metrics**: AUC, accuracy, precision, recall, pred_range (all required)
 
-### Feature Engineering Principles
-- Signed features consolidate information (one feature with sign, not two separate)
-- Continuous > binary for neural networks
-- Every slope needs acceleration
-- Neural nets learn thresholds from continuous values (no need for is_january, etc.)
-
-### Current Focus
-1. **Architecture Investigation** (this branch): Foundation models & decoder architectures
-   - Task 1 COMPLETE
-   - Task 2 NEXT: Lag-Llama integration
-2. **Feature Engineering** (parallel work): Phase 6C - Indicator catalog v0.4 COMPLETE
-
----
-
-## Tier Distribution Summary (v0.4 additions)
-
-| Tier | New Features | Examples |
-|------|--------------|----------|
-| a100 | ~8 | VRP, implied/realized ratio (use existing VIX data) |
-| a200 | ~55 | Higuchi FD, TDA Betti curves, polynomial channels |
-| a500 | ~45 | Lyapunov, RQA, EMD/HHT, MFDFA, DCCA |
-| a1000 | ~10 | Multi-fBm, embedding dimension |
+### Foundation Model Investigation
+- PatchTST baseline: H1 AUC 0.718 (target to beat: 0.74 = 5% improvement)
+- Lag-Llama classification: FAILED (all experiments < 0.60 AUC)
+- **Current**: FD-01d forecast approach - implementation complete, experiment pending
+- **Fallback**: TimesFM via Colab (decoder-based)

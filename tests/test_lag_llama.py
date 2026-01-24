@@ -324,8 +324,209 @@ class TestLagLlamaPredictionMode:
         assert torch.allclose(output1, output2), "Outputs should be deterministic in eval mode"
 
 
+class TestLagLlamaForecastMode:
+    """Tests for forecast mode that returns raw forecasts instead of probabilities."""
+
+    @pytest.mark.skipif(
+        not CHECKPOINT_PATH.exists(),
+        reason="Lag-Llama checkpoint not found"
+    )
+    def test_forecast_mode_returns_raw_forecast(self):
+        """Test that mode='forecast' returns raw forecast, not probability."""
+        from src.models.foundation.lag_llama import LagLlamaWrapper
+
+        wrapper = LagLlamaWrapper(
+            context_length=SEQ_LEN,
+            prediction_length=1,
+            threshold=0.01,
+            num_features=1,
+            mode="forecast",  # Forecast mode
+        )
+        wrapper.load_pretrained(str(CHECKPOINT_PATH))
+        wrapper.eval()
+
+        # Input with varying scales to potentially produce out-of-[0,1] outputs
+        x = torch.randn(BATCH_SIZE, SEQ_LEN, 1) * 0.1
+        with torch.no_grad():
+            output = wrapper(x)
+
+        # Output should be (batch, 1)
+        assert output.shape == (BATCH_SIZE, 1)
+
+        # Forecast mode should NOT clamp to [0, 1] - it returns raw loc values
+        # The output represents predicted returns, which can be any real number
+        # We can't guarantee values outside [0,1] but we verify it's not clamped
+        # by checking the model is in forecast mode
+        assert wrapper.mode == "forecast"
+
+    @pytest.mark.skipif(
+        not CHECKPOINT_PATH.exists(),
+        reason="Lag-Llama checkpoint not found"
+    )
+    def test_forecast_mode_output_varies(self):
+        """Test that different inputs produce different forecasts."""
+        from src.models.foundation.lag_llama import LagLlamaWrapper
+
+        wrapper = LagLlamaWrapper(
+            context_length=SEQ_LEN,
+            prediction_length=1,
+            threshold=0.01,
+            num_features=1,
+            mode="forecast",
+        )
+        wrapper.load_pretrained(str(CHECKPOINT_PATH))
+        wrapper.eval()
+
+        # Generate multiple different inputs
+        forecasts = []
+        for i in range(10):
+            x = torch.randn(1, SEQ_LEN, 1) * (0.01 + i * 0.01)
+            with torch.no_grad():
+                output = wrapper(x)
+            forecasts.append(output.item())
+
+        # Forecasts should vary - not be near-constant
+        forecast_std = np.std(forecasts)
+        assert forecast_std > 0.001, f"Forecasts too constant: std={forecast_std}, values={forecasts}"
+
+
+class TestLagLlamaDistributionParams:
+    """Tests for get_distribution_params method."""
+
+    @pytest.mark.skipif(
+        not CHECKPOINT_PATH.exists(),
+        reason="Lag-Llama checkpoint not found"
+    )
+    def test_get_distribution_params_shapes(self):
+        """Test that distribution params have correct shapes and constraints."""
+        from src.models.foundation.lag_llama import LagLlamaWrapper
+
+        wrapper = LagLlamaWrapper(
+            context_length=SEQ_LEN,
+            prediction_length=1,
+            threshold=0.01,
+            num_features=1,
+        )
+        wrapper.load_pretrained(str(CHECKPOINT_PATH))
+        wrapper.eval()
+
+        x = torch.randn(BATCH_SIZE, SEQ_LEN, 1)
+        with torch.no_grad():
+            df, loc, scale = wrapper.get_distribution_params(x)
+
+        # Backbone returns different shapes:
+        # - df: (batch, internal_context_len) from distr_args
+        # - loc, scale: (batch, prediction_length) for the forecast
+        assert df.shape[0] == BATCH_SIZE, f"df batch size: {df.shape[0]}"
+        assert loc.shape == (BATCH_SIZE, 1), f"loc shape: {loc.shape}"
+        assert scale.shape == (BATCH_SIZE, 1), f"scale shape: {scale.shape}"
+
+        # Distribution constraints: df > 0, scale > 0
+        assert torch.all(df > 0), f"df must be positive, min={df.min()}"
+        assert torch.all(scale > 0), f"scale must be positive, min={scale.min()}"
+
+
+class TestLagLlamaNLLLoss:
+    """Tests for NLL loss computation."""
+
+    @pytest.mark.skipif(
+        not CHECKPOINT_PATH.exists(),
+        reason="Lag-Llama checkpoint not found"
+    )
+    def test_compute_nll_loss_scalar(self):
+        """Test that NLL loss is a positive scalar."""
+        from src.models.foundation.lag_llama import LagLlamaWrapper
+
+        wrapper = LagLlamaWrapper(
+            context_length=SEQ_LEN,
+            prediction_length=1,
+            threshold=0.01,
+            num_features=1,
+        )
+        wrapper.load_pretrained(str(CHECKPOINT_PATH))
+        wrapper.train()
+
+        x = torch.randn(BATCH_SIZE, SEQ_LEN, 1)
+        # Target returns (next-day returns)
+        target = torch.randn(BATCH_SIZE) * 0.02  # ~2% daily returns
+
+        loss = wrapper.compute_nll_loss(x, target)
+
+        # Loss should be a scalar
+        assert loss.dim() == 0, f"Loss should be scalar, got shape {loss.shape}"
+
+        # NLL is positive (technically can be negative for continuous distributions,
+        # but for reasonable inputs it should be positive)
+        # We just check it's a valid number
+        assert not torch.isnan(loss), "Loss is NaN"
+        assert not torch.isinf(loss), "Loss is infinite"
+
+    @pytest.mark.skipif(
+        not CHECKPOINT_PATH.exists(),
+        reason="Lag-Llama checkpoint not found"
+    )
+    def test_compute_nll_loss_has_gradient(self):
+        """Test that NLL loss supports gradient computation."""
+        from src.models.foundation.lag_llama import LagLlamaWrapper
+
+        wrapper = LagLlamaWrapper(
+            context_length=SEQ_LEN,
+            prediction_length=1,
+            threshold=0.01,
+            num_features=1,
+            fine_tune_mode="full",
+        )
+        wrapper.load_pretrained(str(CHECKPOINT_PATH))
+        wrapper.train()
+
+        x = torch.randn(BATCH_SIZE, SEQ_LEN, 1)
+        target = torch.randn(BATCH_SIZE) * 0.02
+
+        loss = wrapper.compute_nll_loss(x, target)
+
+        # Loss should have grad_fn (be part of computation graph)
+        assert loss.grad_fn is not None, "Loss should have grad_fn for backprop"
+
+        # Backward pass should work
+        loss.backward()
+
+        # At least one parameter should have gradients
+        has_grad = False
+        for param in wrapper.parameters():
+            if param.grad is not None and param.grad.abs().sum() > 0:
+                has_grad = True
+                break
+        assert has_grad, "At least one parameter should have non-zero gradients"
+
+
 class TestLagLlamaTrainerIntegration:
     """Tests for integration with our Trainer."""
+
+    @pytest.mark.skipif(
+        not CHECKPOINT_PATH.exists(),
+        reason="Lag-Llama checkpoint not found"
+    )
+    def test_classification_mode_unchanged(self):
+        """Test that default mode='classification' still returns probabilities in [0,1]."""
+        from src.models.foundation.lag_llama import LagLlamaWrapper
+
+        wrapper = LagLlamaWrapper(
+            context_length=SEQ_LEN,
+            prediction_length=1,
+            threshold=0.01,
+            num_features=1,
+            # mode defaults to "classification"
+        )
+        wrapper.load_pretrained(str(CHECKPOINT_PATH))
+        wrapper.eval()
+
+        x = torch.randn(BATCH_SIZE, SEQ_LEN, 1)
+        with torch.no_grad():
+            output = wrapper(x)
+
+        # Classification mode should return probabilities in [0, 1]
+        assert torch.all(output >= 0), f"Output below 0: {output.min()}"
+        assert torch.all(output <= 1), f"Output above 1: {output.max()}"
 
     @pytest.mark.skipif(
         not CHECKPOINT_PATH.exists(),

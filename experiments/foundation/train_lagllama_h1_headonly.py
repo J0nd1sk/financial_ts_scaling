@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 """
-Foundation Investigation: Lag-Llama H1, Close-only (FD-01a)
+Foundation Investigation: Lag-Llama H1, Head-Only Fine-Tuning (FD-01c)
 
-Foundation model (decoder-only) fine-tuning for threshold classification.
-Uses only Close price as input (univariate mode).
+Foundation model (decoder-only) with FROZEN backbone - only trains projection layer.
+Uses all 20 features with learnable projection to univariate.
+
+Hypothesis: Full fine-tuning may cause catastrophic forgetting of pretrained
+representations. Head-only fine-tuning preserves backbone knowledge while
+adapting output to our task.
 
 Baseline to beat (PatchTST):
     H1 2M: AUC 0.706
     H1 200M: AUC 0.718
 
-Success criteria: AUC >= 0.74 (5% improvement)
+Comparison (FD-01b full fine-tuning):
+    Val AUC: 0.576
+    Pred Range: [0.15, 0.24] (near-constant)
+
+Success criteria: AUC >= 0.74 (5% improvement over PatchTST)
 """
 import sys
 import json
@@ -34,7 +42,7 @@ from src.models.foundation.lag_llama import LagLlamaWrapper
 # EXPERIMENT CONFIGURATION
 # ============================================================================
 
-EXPERIMENT_NAME = "lagllama_h1_close"
+EXPERIMENT_NAME = "lagllama_h1_headonly"
 HORIZON = 1
 
 # Lag-Llama requires minimum context of 1124 (max_lag=1092 + 32)
@@ -46,6 +54,7 @@ LEARNING_RATE = 1e-4
 # Data
 DATA_PATH = PROJECT_ROOT / "data/processed/v1/SPY_dataset_a20.parquet"
 CHECKPOINT_PATH = PROJECT_ROOT / "models/pretrained/lag-llama.ckpt"
+NUM_FEATURES = 20  # All features
 
 # Output
 OUTPUT_DIR = PROJECT_ROOT / "outputs/foundation" / EXPERIMENT_NAME
@@ -55,25 +64,45 @@ OUTPUT_DIR = PROJECT_ROOT / "outputs/foundation" / EXPERIMENT_NAME
 # DATA LOADING
 # ============================================================================
 
-def create_close_only_dataset(df, context_length, horizon, threshold=0.01):
-    """Create dataset using only Close prices (univariate).
+def get_feature_columns(df):
+    """Get the 20 feature columns (exclude Date, High for targets)."""
+    exclude = {"Date", "High"}
+    return [c for c in df.columns if c not in exclude][:NUM_FEATURES]
+
+
+def create_multivariate_dataset(df, context_length, horizon, threshold=0.01):
+    """Create dataset using all features with per-feature normalization.
 
     For Lag-Llama's long context (1150 days), we allow context windows to
     span region boundaries. The key constraint is that PREDICTION TARGETS
     must fall strictly within each region (no look-ahead bias).
 
-    Regions:
-        - Train: targets before 2023-01-01
-        - Val: targets in 2023-01-01 to 2024-12-31
-        - Test: targets from 2025-01-01 onwards
+    Features are z-score normalized using training set statistics.
     """
-    close_prices = df["Close"].values
+    feature_cols = get_feature_columns(df)
+    features = df[feature_cols].values.astype(np.float32)
     high_prices = df["High"].values
+    close_prices = df["Close"].values
     dates = pd.to_datetime(df["Date"])
 
     # Define region boundaries by target date
     val_start = pd.Timestamp("2023-01-01")
     test_start = pd.Timestamp("2025-01-01")
+
+    # Find training region for normalization stats
+    train_mask = dates < val_start
+    train_features = features[train_mask]
+
+    # Compute normalization params from training data only
+    feature_mean = train_features.mean(axis=0)
+    feature_std = train_features.std(axis=0)
+    feature_std[feature_std < 1e-8] = 1.0  # Prevent division by zero
+
+    # Normalize all features
+    features_norm = (features - feature_mean) / feature_std
+
+    print(f"  Feature stats (train): mean={feature_mean[:3]}..., std={feature_std[:3]}...")
+    print(f"  Normalized range: [{features_norm.min():.2f}, {features_norm.max():.2f}]")
 
     train_X, train_y = [], []
     val_X, val_y = [], []
@@ -81,14 +110,11 @@ def create_close_only_dataset(df, context_length, horizon, threshold=0.01):
 
     # Iterate through all possible prediction points
     for pred_idx in range(context_length, len(df) - horizon):
-        # Context window: [pred_idx - context_length, pred_idx)
-        # Target window: [pred_idx, pred_idx + horizon)
-
         context_start = pred_idx - context_length
         target_date = dates.iloc[pred_idx]
 
-        # Input: Close prices for context window
-        x = close_prices[context_start:pred_idx].reshape(-1, 1)
+        # Input: Normalized features for context window
+        x = features_norm[context_start:pred_idx]
 
         # Target: Did high price exceed threshold within horizon?
         future_highs = high_prices[pred_idx:pred_idx + horizon]
@@ -110,6 +136,7 @@ def create_close_only_dataset(df, context_length, horizon, threshold=0.01):
         np.array(train_X), np.array(train_y),
         np.array(val_X), np.array(val_y),
         np.array(test_X), np.array(test_y),
+        {"mean": feature_mean, "std": feature_std},
     )
 
 
@@ -200,7 +227,7 @@ def evaluate_model(model, dataloader, device):
 
 def main():
     print("=" * 70)
-    print(f"FOUNDATION INVESTIGATION: Lag-Llama / H{HORIZON} / Close-only (FD-01a)")
+    print(f"FOUNDATION INVESTIGATION: Lag-Llama / H{HORIZON} / Head-Only Fine-Tuning (FD-01c)")
     print("=" * 70)
 
     device = "mps" if torch.backends.mps.is_available() else "cpu"
@@ -217,13 +244,14 @@ def main():
     # Load data
     print(f"\nLoading {DATA_PATH}...")
     df = pd.read_parquet(DATA_PATH)
+    feature_cols = get_feature_columns(df)
     print(f"Data: {len(df)} rows, {df['Date'].min()} to {df['Date'].max()}")
+    print(f"Features ({len(feature_cols)}): {feature_cols[:5]}...")
 
     # Create datasets with long context spanning region boundaries
-    # (Lag-Llama requires 1150 days context, longer than val/test regions)
-    print(f"\nCreating datasets (Close-only univariate, context={CONTEXT_LENGTH})...")
+    print(f"\nCreating datasets ({NUM_FEATURES} features, context={CONTEXT_LENGTH})...")
     print("Note: Context windows may span into earlier regions; targets are strictly per-region")
-    train_X, train_y, val_X, val_y, test_X, test_y = create_close_only_dataset(
+    train_X, train_y, val_X, val_y, test_X, test_y, norm_params = create_multivariate_dataset(
         df, CONTEXT_LENGTH, HORIZON
     )
     print(f"Train: {train_X.shape}, Val: {val_X.shape}, Test: {test_X.shape}")
@@ -235,14 +263,15 @@ def main():
     val_loader = create_dataloader(val_X, val_y, BATCH_SIZE, shuffle=False)
     test_loader = create_dataloader(test_X, test_y, BATCH_SIZE, shuffle=False)
 
-    # Initialize model
-    print(f"\nInitializing Lag-Llama wrapper...")
+    # Initialize model with feature projection and HEAD-ONLY fine-tuning
+    print(f"\nInitializing Lag-Llama wrapper with HEAD-ONLY fine-tuning...")
+    print("(Backbone frozen, only feature projection layer trains)")
     model = LagLlamaWrapper(
         context_length=CONTEXT_LENGTH,
         prediction_length=1,
         threshold=0.01,  # 1% threshold
-        num_features=1,  # Close only - univariate
-        fine_tune_mode="full",  # Full fine-tuning
+        num_features=NUM_FEATURES,  # Enables learnable projection 20->1
+        fine_tune_mode="head_only",  # FROZEN backbone, only projection trains
         dropout=0.1,
     )
 
@@ -251,11 +280,23 @@ def main():
     model.load_pretrained(str(CHECKPOINT_PATH))
     model = model.to(device)
 
+    # Verify freeze status - log trainable vs total parameters
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total_params = sum(p.numel() for p in model.parameters())
+    frozen_params = total_params - trainable_params
+    print(f"\nParameter counts:")
+    print(f"  Trainable:  {trainable_params:,} ({100*trainable_params/total_params:.4f}%)")
+    print(f"  Frozen:     {frozen_params:,} ({100*frozen_params/total_params:.4f}%)")
+    print(f"  Total:      {total_params:,}")
+
     config = model.get_config()
     print(f"Model config: {config}")
 
-    # Optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
+    # Optimizer (only trains non-frozen parameters)
+    optimizer = torch.optim.AdamW(
+        filter(lambda p: p.requires_grad, model.parameters()),
+        lr=LEARNING_RATE
+    )
 
     # Training loop
     print(f"\nTraining for {EPOCHS} epochs...")
@@ -277,7 +318,6 @@ def main():
         if val_auc > best_val_auc:
             best_val_auc = val_auc
             patience_counter = 0
-            # Save best model
             torch.save(model.state_dict(), OUTPUT_DIR / "best_model.pt")
         else:
             patience_counter += 1
@@ -317,9 +357,12 @@ def main():
 
     # Compare to baseline
     baseline_auc = 0.718  # PatchTST 200M H1
+    fd01b_auc = 0.576  # FD-01b (full fine-tuning)
     if val_metrics['auc']:
-        improvement = (val_metrics['auc'] - baseline_auc) / baseline_auc * 100
-        print(f"\nVs PatchTST baseline (0.718): {improvement:+.1f}%")
+        improvement_vs_patchtst = (val_metrics['auc'] - baseline_auc) / baseline_auc * 100
+        improvement_vs_fd01b = (val_metrics['auc'] - fd01b_auc) / fd01b_auc * 100
+        print(f"\nVs PatchTST baseline (0.718): {improvement_vs_patchtst:+.1f}%")
+        print(f"Vs FD-01b full fine-tuning (0.576): {improvement_vs_fd01b:+.1f}%")
         if val_metrics['auc'] >= 0.74:
             print("SUCCESS: Exceeds 5% improvement target!")
         else:
@@ -328,16 +371,24 @@ def main():
     # Save results
     results = {
         "experiment": EXPERIMENT_NAME,
-        "experiment_id": "FD-01a",
+        "experiment_id": "FD-01c",
         "model": "Lag-Llama",
-        "input_mode": "close_only",
+        "input_mode": "feature_projection",
+        "fine_tune_mode": "head_only",
+        "num_features": NUM_FEATURES,
         "horizon": HORIZON,
         "context_length": CONTEXT_LENGTH,
         "hyperparameters": {
             "learning_rate": LEARNING_RATE,
             "batch_size": BATCH_SIZE,
             "epochs": EPOCHS,
-            "fine_tune_mode": "full",
+            "fine_tune_mode": "head_only",
+        },
+        "parameter_counts": {
+            "trainable": trainable_params,
+            "frozen": frozen_params,
+            "total": total_params,
+            "trainable_pct": 100 * trainable_params / total_params,
         },
         "splits": {
             "train": len(train_X),
@@ -352,7 +403,9 @@ def main():
         "test_metrics": test_metrics,
         "baseline_comparison": {
             "patchtst_200m_h1": 0.718,
-            "improvement_pct": improvement if val_metrics['auc'] else None,
+            "fd01b_full_finetune": 0.576,
+            "improvement_vs_patchtst_pct": improvement_vs_patchtst if val_metrics['auc'] else None,
+            "improvement_vs_fd01b_pct": improvement_vs_fd01b if val_metrics['auc'] else None,
         },
         "timestamp": datetime.now().isoformat(),
     }

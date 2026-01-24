@@ -26,7 +26,9 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 
 from src.models.foundation.lag_llama import LagLlamaWrapper
-from src.data.dataset import SimpleSplitter
+# Note: Not using SimpleSplitter due to Lag-Llama's 1150-day context requirement
+# Instead, we create samples where prediction targets are in val/test periods,
+# but context windows can span into earlier data (no look-ahead bias)
 
 # ============================================================================
 # EXPERIMENT CONFIGURATION
@@ -60,39 +62,74 @@ def get_feature_columns(df):
     return [c for c in df.columns if c not in exclude][:NUM_FEATURES]
 
 
-def create_multivariate_dataset(df, split_indices, context_length, horizon, threshold=0.01):
-    """Create dataset using all features with projection."""
+def create_multivariate_dataset(df, context_length, horizon, threshold=0.01):
+    """Create dataset using all features with per-feature normalization.
+
+    For Lag-Llama's long context (1150 days), we allow context windows to
+    span region boundaries. The key constraint is that PREDICTION TARGETS
+    must fall strictly within each region (no look-ahead bias).
+
+    Features are z-score normalized using training set statistics.
+    """
     feature_cols = get_feature_columns(df)
-    features = df[feature_cols].values
+    features = df[feature_cols].values.astype(np.float32)
     high_prices = df["High"].values
     close_prices = df["Close"].values
+    dates = pd.to_datetime(df["Date"])
 
-    def create_split(indices):
-        X_list = []
-        y_list = []
+    # Define region boundaries by target date
+    val_start = pd.Timestamp("2023-01-01")
+    test_start = pd.Timestamp("2025-01-01")
 
-        for i in indices:
-            end_idx = i + context_length
-            if end_idx + horizon > len(features):
-                continue
+    # Find training region for normalization stats
+    train_mask = dates < val_start
+    train_features = features[train_mask]
 
-            # Input: All features, shape (context_length, num_features)
-            x = features[i:end_idx]
+    # Compute normalization params from training data only
+    feature_mean = train_features.mean(axis=0)
+    feature_std = train_features.std(axis=0)
+    feature_std[feature_std < 1e-8] = 1.0  # Prevent division by zero
 
-            # Target: Did high price exceed threshold within horizon?
-            future_highs = high_prices[end_idx:end_idx + horizon]
-            current_close = close_prices[end_idx - 1]
-            target = 1 if np.max(future_highs) >= current_close * (1 + threshold) else 0
+    # Normalize all features
+    features_norm = (features - feature_mean) / feature_std
 
-            X_list.append(x)
-            y_list.append(target)
+    print(f"  Feature stats (train): mean={feature_mean[:3]}..., std={feature_std[:3]}...")
+    print(f"  Normalized range: [{features_norm.min():.2f}, {features_norm.max():.2f}]")
 
-        return np.array(X_list), np.array(y_list)
+    train_X, train_y = [], []
+    val_X, val_y = [], []
+    test_X, test_y = [], []
 
-    train_X, train_y = create_split(split_indices.train_indices)
-    val_X, val_y = create_split(split_indices.val_indices)
+    # Iterate through all possible prediction points
+    for pred_idx in range(context_length, len(df) - horizon):
+        context_start = pred_idx - context_length
+        target_date = dates.iloc[pred_idx]
 
-    return train_X, train_y, val_X, val_y
+        # Input: Normalized features for context window
+        x = features_norm[context_start:pred_idx]
+
+        # Target: Did high price exceed threshold within horizon?
+        future_highs = high_prices[pred_idx:pred_idx + horizon]
+        current_close = close_prices[pred_idx - 1]
+        target = 1 if np.max(future_highs) >= current_close * (1 + threshold) else 0
+
+        # Assign to appropriate split based on target date
+        if target_date < val_start:
+            train_X.append(x)
+            train_y.append(target)
+        elif target_date < test_start:
+            val_X.append(x)
+            val_y.append(target)
+        else:
+            test_X.append(x)
+            test_y.append(target)
+
+    return (
+        np.array(train_X), np.array(train_y),
+        np.array(val_X), np.array(val_y),
+        np.array(test_X), np.array(test_y),
+        {"mean": feature_mean, "std": feature_std},
+    )
 
 
 def create_dataloader(X, y, batch_size, shuffle=True):
@@ -199,32 +236,24 @@ def main():
     # Load data
     print(f"\nLoading {DATA_PATH}...")
     df = pd.read_parquet(DATA_PATH)
-    print(f"Data: {len(df)} rows, Features: {get_feature_columns(df)[:5]}...")
+    feature_cols = get_feature_columns(df)
+    print(f"Data: {len(df)} rows, {df['Date'].min()} to {df['Date'].max()}")
+    print(f"Features ({len(feature_cols)}): {feature_cols[:5]}...")
 
-    # Create splits
-    splitter = SimpleSplitter(
-        dates=df["Date"],
-        context_length=CONTEXT_LENGTH,
-        horizon=HORIZON,
-        val_start="2023-01-01",
-        test_start="2025-01-01",
+    # Create datasets with long context spanning region boundaries
+    print(f"\nCreating datasets ({NUM_FEATURES} features, context={CONTEXT_LENGTH})...")
+    print("Note: Context windows may span into earlier regions; targets are strictly per-region")
+    train_X, train_y, val_X, val_y, test_X, test_y, norm_params = create_multivariate_dataset(
+        df, CONTEXT_LENGTH, HORIZON
     )
-    split_indices = splitter.split()
-
-    print(f"\nSplits: train={len(split_indices.train_indices)}, "
-          f"val={len(split_indices.val_indices)}, test={len(split_indices.test_indices)}")
-
-    # Create datasets
-    print(f"\nCreating datasets ({NUM_FEATURES} features with projection)...")
-    train_X, train_y, val_X, val_y = create_multivariate_dataset(
-        df, split_indices, CONTEXT_LENGTH, HORIZON
-    )
-    print(f"Train: {train_X.shape}, Val: {val_X.shape}")
+    print(f"Train: {train_X.shape}, Val: {val_X.shape}, Test: {test_X.shape}")
     print(f"Train positive rate: {train_y.mean():.3f}")
     print(f"Val positive rate: {val_y.mean():.3f}")
+    print(f"Test positive rate: {test_y.mean():.3f}")
 
     train_loader = create_dataloader(train_X, train_y, BATCH_SIZE, shuffle=True)
     val_loader = create_dataloader(val_X, val_y, BATCH_SIZE, shuffle=False)
+    test_loader = create_dataloader(test_X, test_y, BATCH_SIZE, shuffle=False)
 
     # Initialize model with feature projection
     print(f"\nInitializing Lag-Llama wrapper with feature projection...")
@@ -280,11 +309,13 @@ def main():
     # Load best model and final evaluation
     model.load_state_dict(torch.load(OUTPUT_DIR / "best_model.pt", weights_only=True))
     val_metrics = evaluate_model(model, val_loader, device)
+    test_metrics = evaluate_model(model, test_loader, device)
 
     print(f"\n" + "=" * 70)
     print("RESULTS")
     print("=" * 70)
     print(f"Training time: {elapsed/60:.1f} min")
+
     print(f"\nValidation (2023-2024, {val_metrics['n_samples']} samples):")
     print(f"  AUC: {val_metrics['auc']:.4f}" if val_metrics['auc'] else "  AUC: N/A")
     print(f"  Accuracy: {val_metrics['accuracy']:.4f}")
@@ -293,6 +324,15 @@ def main():
     print(f"  F1: {val_metrics['f1']:.4f}")
     print(f"  Pred Range: [{val_metrics['pred_min']:.4f}, {val_metrics['pred_max']:.4f}]")
     print(f"  Class Balance: {val_metrics['class_balance']:.3f}")
+
+    print(f"\nTest/Backtest (2025+, {test_metrics['n_samples']} samples):")
+    print(f"  AUC: {test_metrics['auc']:.4f}" if test_metrics['auc'] else "  AUC: N/A")
+    print(f"  Accuracy: {test_metrics['accuracy']:.4f}")
+    print(f"  Precision: {test_metrics['precision']:.4f}")
+    print(f"  Recall: {test_metrics['recall']:.4f}")
+    print(f"  F1: {test_metrics['f1']:.4f}")
+    print(f"  Pred Range: [{test_metrics['pred_min']:.4f}, {test_metrics['pred_max']:.4f}]")
+    print(f"  Class Balance: {test_metrics['class_balance']:.3f}")
 
     # Compare to baseline
     baseline_auc = 0.718  # PatchTST 200M H1
@@ -322,12 +362,14 @@ def main():
         "splits": {
             "train": len(train_X),
             "val": len(val_X),
+            "test": len(test_X),
         },
         "training": {
             "training_time_min": elapsed / 60,
             "best_val_auc": best_val_auc,
         },
         "val_metrics": val_metrics,
+        "test_metrics": test_metrics,
         "baseline_comparison": {
             "patchtst_200m_h1": 0.718,
             "improvement_pct": improvement if val_metrics['auc'] else None,

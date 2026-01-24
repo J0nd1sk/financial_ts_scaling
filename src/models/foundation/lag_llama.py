@@ -125,6 +125,7 @@ class LagLlamaWrapper(FoundationModel, nn.Module):
         num_features: int = 1,
         fine_tune_mode: Literal["head_only", "full"] = "full",
         dropout: float = 0.1,
+        mode: Literal["classification", "forecast"] = "classification",
     ) -> None:
         """Initialize the Lag-Llama wrapper.
 
@@ -137,6 +138,8 @@ class LagLlamaWrapper(FoundationModel, nn.Module):
                 is added to map to univariate.
             fine_tune_mode: "head_only" freezes backbone, "full" trains all.
             dropout: Dropout rate for classification head.
+            mode: Output mode. "classification" returns P(X > threshold),
+                "forecast" returns raw loc (predicted value).
         """
         nn.Module.__init__(self)
 
@@ -146,6 +149,7 @@ class LagLlamaWrapper(FoundationModel, nn.Module):
         self.num_features = num_features
         self.fine_tune_mode = fine_tune_mode
         self.dropout_rate = dropout
+        self.mode = mode
 
         # Backbone will be loaded from checkpoint
         self.backbone: nn.Module | None = None
@@ -240,14 +244,16 @@ class LagLlamaWrapper(FoundationModel, nn.Module):
         )
         return past_time_feat, future_time_feat
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through Lag-Llama for binary classification.
+    def get_distribution_params(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Get StudentT distribution parameters from backbone.
 
         Args:
             x: Input tensor of shape (batch, seq_len, num_features).
 
         Returns:
-            Probability tensor of shape (batch, 1) representing P(return > threshold).
+            Tuple of (df, loc, scale) tensors, each of shape (batch, seq_len).
 
         Raises:
             RuntimeError: If backbone is not loaded.
@@ -259,14 +265,13 @@ class LagLlamaWrapper(FoundationModel, nn.Module):
 
         # Project multivariate to univariate if needed
         if self.feature_projection is not None:
-            # x: (batch, seq_len, num_features) -> (batch, seq_len, 1)
             x = self.feature_projection(x)
         x = x.squeeze(-1)  # (batch, seq_len)
 
         # Prepare inputs for backbone
         device = x.device
-        past_target = x  # (batch, seq_len)
-        past_observed = torch.ones_like(past_target)  # All observed
+        past_target = x
+        past_observed = torch.ones_like(past_target)
         past_time_feat, future_time_feat = self._prepare_time_features(
             batch_size, seq_len, device
         )
@@ -279,26 +284,80 @@ class LagLlamaWrapper(FoundationModel, nn.Module):
             future_time_feat=future_time_feat,
         )
 
-        # Extract StudentT distribution parameters
         # distr_args is a tuple of (df,) for StudentT
-        # loc and scale are already returned by the backbone
-        df = distr_args[0]  # Degrees of freedom
+        df = distr_args[0]
 
-        # Compute P(X > threshold) using differentiable CDF
-        # Standardize: z = (threshold - loc) / scale
+        return df, loc, scale
+
+    def compute_nll_loss(
+        self, x: torch.Tensor, target: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute negative log-likelihood loss for target under predicted distribution.
+
+        Uses the StudentT distribution from the backbone to compute NLL of
+        the target values. This is the native loss function for Lag-Llama.
+
+        Args:
+            x: Input tensor of shape (batch, seq_len, num_features).
+            target: Target values of shape (batch,) - the actual next-step values.
+
+        Returns:
+            Scalar NLL loss tensor.
+        """
+        df, loc, scale = self.get_distribution_params(x)
+
+        # df is (batch, internal_context_len), take last position
+        # loc and scale are already (batch, 1), squeeze to (batch,)
+        df_last = df[:, -1]  # (batch,)
+        loc_last = loc.squeeze(-1)  # (batch,)
+        scale_last = scale.squeeze(-1)  # (batch,)
+
+        # Construct StudentT distribution
+        # PyTorch StudentT uses (df, loc, scale) parameterization
+        dist = torch.distributions.StudentT(df=df_last, loc=loc_last, scale=scale_last)
+
+        # Compute negative log probability
+        log_prob = dist.log_prob(target)
+        nll = -log_prob.mean()
+
+        return nll
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass through Lag-Llama.
+
+        Args:
+            x: Input tensor of shape (batch, seq_len, num_features).
+
+        Returns:
+            If mode="classification": Probability tensor of shape (batch, 1)
+                representing P(return > threshold).
+            If mode="forecast": Raw forecast tensor of shape (batch, 1)
+                representing the predicted value (loc).
+
+        Raises:
+            RuntimeError: If backbone is not loaded.
+        """
+        df, loc, scale = self.get_distribution_params(x)
+
+        # loc and scale are (batch, 1), df is (batch, internal_context_len)
+        # For forecast/classification, we need scalar params per sample
+        df_last = df[:, -1:]  # (batch, 1)
+
+        if self.mode == "forecast":
+            # Return raw loc (predicted value)
+            # loc is already (batch, 1)
+            return loc
+
+        # Classification mode: compute P(X > threshold)
         eps = 1e-8
-        z = (self.threshold - loc) / (scale + eps)
+        z = (self.threshold - loc) / (scale + eps)  # (batch, 1)
 
-        # Get CDF at threshold
-        prob_below = _differentiable_studentt_cdf(z, df)
+        # Get CDF at threshold using last df value
+        prob_below = _differentiable_studentt_cdf(z, df_last)  # (batch, 1)
         prob_above = 1 - prob_below
 
-        # Take only the last position (forecast) from each batch
-        # Shape: (batch, context_length) -> (batch, 1)
-        prob = prob_above[:, -1:]
-
         # Clamp to valid probability range
-        prob = torch.clamp(prob, min=0.0, max=1.0)
+        prob = torch.clamp(prob_above, min=0.0, max=1.0)
 
         return prob
 
@@ -315,6 +374,7 @@ class LagLlamaWrapper(FoundationModel, nn.Module):
             "num_features": self.num_features,
             "fine_tune_mode": self.fine_tune_mode,
             "dropout": self.dropout_rate,
+            "mode": self.mode,
             "max_lag": self.max_lag,
             "backbone_loaded": self.backbone is not None,
         }
