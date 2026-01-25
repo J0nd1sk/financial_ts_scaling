@@ -1,0 +1,169 @@
+# Session Handoff - 2026-01-24 11:00
+
+## Current State
+
+### Branch & Git
+- **Branch**: `experiment/foundation-decoder-investigation`
+- **Last commit**: `e854cb4` feat: Add comprehensive tier_a50 validation script
+- **Uncommitted changes**:
+  - `src/features/tier_a100.py` - Chunk 3 implemented (NEW)
+  - `tests/features/test_tier_a100.py` - 19 new tests (NEW)
+  - Other files from previous sessions (TimesFM notebook, phase6c scripts, etc.)
+
+### Task Status
+- **Working on**: tier_a100 feature tier implementation (Chunk 3 complete)
+- **Status**: Chunk 3 COMPLETE, ready for Chunk 4
+
+---
+
+## Test Status
+- Last `make test`: 2026-01-24 11:00
+- Result: **598 passed**, 2 skipped
+- **ALL TESTS PASSING**
+
+---
+
+## Completed This Session
+
+### tier_a100 Chunk 3 - Standard Oscillators (ranks 57-64)
+1. ✅ Wrote 19 failing tests for Chunk 3 (TDD RED)
+2. ✅ Added 8 indicator names to A100_ADDITION_LIST
+3. ✅ Implemented `_compute_standard_oscillators()` helper (~70 lines)
+4. ✅ Integrated into `build_feature_dataframe()`
+5. ✅ Updated module docstring
+6. ✅ All 598 tests passing (TDD GREEN)
+
+**Indicators implemented:**
+| Rank | Name | Range | Source |
+|------|------|-------|--------|
+| 57 | demarker_value | [0, 1] | Manual |
+| 58 | demarker_from_half | [-0.5, +0.5] | Derived |
+| 59 | stoch_k_14 | [0, 100] | talib.STOCH |
+| 60 | stoch_d_14 | [0, 100] | talib.STOCH |
+| 61 | stoch_extreme_dist | [0, 30] | Derived |
+| 62 | cci_14 | unbounded | talib.CCI |
+| 63 | mfi_14 | [0, 100] | talib.MFI |
+| 64 | williams_r_14 | [-100, 0] | talib.WILLR |
+
+**Counts:**
+- A100_ADDITION_LIST: 14 indicators (Chunks 1-3)
+- FEATURE_LIST: 64 total features (50 a50 + 14 new)
+
+---
+
+## Pending (Remaining tier_a100 Chunks)
+
+| Chunk | Ranks | Indicators | Status |
+|-------|-------|------------|--------|
+| 4 | 65-73 | VRP + Risk metrics (9) | ⏳ NEXT |
+| 5 | 74-80 | MA extensions (7) | ⏳ |
+| 6 | 81-85 | Advanced volatility (5) | ⏳ |
+| 7 | 86-90 | Trend indicators (5) | ⏳ |
+| 8 | 91-100 | Volume + Momentum + S/R (10) | ⏳ |
+
+**36 more indicators to complete tier_a100**
+
+---
+
+## Next Session Should
+
+### Priority 1: Continue tier_a100 Implementation
+1. Read/create plan for Chunk 4 (VRP + Risk metrics, ranks 65-73)
+2. Follow TDD workflow: tests first, then implementation
+3. Same pattern as Chunk 3
+
+### After All Chunks Complete
+- Update `docs/indicator_catalog.md` with all 100 indicators
+- Commit tier_a100 implementation
+
+---
+
+## Files Modified This Session
+- `src/features/tier_a100.py`:
+  - Added `import talib`
+  - Added 8 indicator names to A100_ADDITION_LIST
+  - Added `_compute_standard_oscillators()` helper function
+  - Integrated call in `build_feature_dataframe()`
+  - Updated docstring with Chunk 3 descriptions
+- `tests/features/test_tier_a100.py`:
+  - Updated docstring
+  - Added `test_a100_addition_list_chunk3_count()`
+  - Added `test_chunk3_indicators_in_list()`
+  - Added `TestStandardOscillators` class with 17 test methods
+
+---
+
+## Key Decisions Made
+
+### DeMarker Manual Implementation
+- **Decision**: Implement DeMarker manually (not in talib)
+- **Formula**: SMA(DeMax,14) / (SMA(DeMax,14) + SMA(DeMin,14))
+- **Division by zero**: Fill with 0.5 (neutral value)
+
+### Stochastic Configuration
+- fastk_period=14, slowk_period=3, slowd_period=3
+- SMA smoothing (matype=0)
+
+---
+
+## Foundation Model Investigation Status (Context from Previous Sessions)
+
+| Experiment | AUC | Status |
+|------------|-----|--------|
+| PatchTST H1 | 0.718 | Baseline |
+| Lag-Llama (all modes) | 0.499-0.576 | Failed |
+| TimesFM TFM-01 | Pending | Colab notebook ready |
+
+TimesFM notebook: `experiments/foundation/TimesFM_SPY_Experiments.ipynb`
+
+---
+
+## Data Versions
+- Raw manifest: SPY/DIA/QQQ OHLCV daily (v1)
+- Processed manifest: SPY/DIA/QQQ features a20 (v1)
+- Pending registrations: none
+
+## Memory Entities Updated
+No Memory entities updated this session.
+
+---
+
+## Commands to Run First
+
+```bash
+source venv/bin/activate
+make test
+git status
+```
+
+---
+
+## User Preferences (Authoritative)
+
+### Development Approach
+- TDD: tests first, always
+- Planning sessions before implementation
+- Uses tmux for long-running experiments
+
+### Context Durability
+- Document in multiple places: Memory MCP + context files + docs/
+- Code comments are secondary, not primary durability
+
+### Documentation Philosophy
+- Flat docs/ structure (no subdirs except research_paper/, archive/)
+- Precision in language - never reduce fidelity
+- Consolidate rather than delete - preserve historical context
+
+### Communication Standards
+- Precision over brevity
+- Never summarize away important details
+- Evidence-based claims
+
+### Hyperparameters (Fixed - Ablation-Validated)
+Always use unless new ablation evidence supersedes:
+- **Dropout**: 0.5
+- **Learning Rate**: 1e-4
+- **Context Length**: 80 days
+- **Normalization**: RevIN only (no z-score)
+- **Splitter**: SimpleSplitter (442 val samples)
+- **Metrics**: AUC, accuracy, precision, recall, pred_range (all required)

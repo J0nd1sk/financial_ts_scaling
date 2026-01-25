@@ -1,0 +1,68 @@
+{
+  "experiment": "lagllama_h1_headonly",
+  "experiment_id": "FD-01c",
+  "model": "Lag-Llama",
+  "input_mode": "feature_projection",
+  "fine_tune_mode": "head_only",
+  "num_features": 20,
+  "horizon": 1,
+  "context_length": 1150,
+  "hyperparameters": {
+    "learning_rate": 0.0001,
+    "batch_size": 32,
+    "epochs": 30,
+    "fine_tune_mode": "head_only"
+  },
+  "parameter_counts": {
+    "trainable": 1409,
+    "frozen": 2449299,
+    "total": 2450708,
+    "trainable_pct": 0.05749358960757463
+  },
+  "splits": {
+    "train": 6187,
+    "val": 502,
+    "test": 260
+  },
+  "training": {
+    "training_time_min": 1.83217191696167,
+    "best_val_auc": 0.538235294117647
+  },
+  "val_metrics": {
+    "loss": 0.8562455661594868,
+    "auc": 0.538235294117647,
+    "accuracy": 0.20318725099601595,
+    "precision": 0.20318725099601595,
+    "recall": 1.0,
+    "f1": 0.33774834437086093,
+    "pred_min": 0.5880961418151855,
+    "pred_max": 0.657666802406311,
+    "pred_mean": 0.6124488711357117,
+    "pred_std": 0.015027271583676338,
+    "n_positive_preds": 502,
+    "n_samples": 502,
+    "class_balance": 0.2031872570514679
+  },
+  "test_metrics": {
+    "loss": 0.9105155600441827,
+    "auc": 0.6190190790130856,
+    "accuracy": 0.18076923076923077,
+    "precision": 0.18076923076923077,
+    "recall": 1.0,
+    "f1": 0.30618892508143325,
+    "pred_min": 0.6095936298370361,
+    "pred_max": 0.6593649983406067,
+    "pred_mean": 0.6322072148323059,
+    "pred_std": 0.014132258482277393,
+    "n_positive_preds": 260,
+    "n_samples": 260,
+    "class_balance": 0.18076923489570618
+  },
+  "baseline_comparison": {
+    "patchtst_200m_h1": 0.718,
+    "fd01b_full_finetune": 0.576,
+    "improvement_vs_patchtst_pct": -25.036867114533834,
+    "improvement_vs_fd01b_pct": -6.556372549019605
+  },
+  "timestamp": "2026-01-23T16:35:29.276104"
+}

@@ -1,0 +1,76 @@
+{
+  "experiment": "lagllama_h1_forecast",
+  "experiment_id": "FD-01d",
+  "model": "Lag-Llama",
+  "mode": "forecast",
+  "loss": "NLL (StudentT)",
+  "num_features": 1,
+  "horizon": 1,
+  "context_length": 1150,
+  "threshold": 0.01,
+  "hyperparameters": {
+    "learning_rate": 0.0001,
+    "batch_size": 4,
+    "epochs": 30,
+    "fine_tune_mode": "full"
+  },
+  "normalization": {
+    "mean": 0.00043342748540453613,
+    "std": 0.012042984366416931
+  },
+  "splits": {
+    "train": 6187,
+    "val": 502,
+    "test": 260
+  },
+  "training": {
+    "training_time_min": 11.383284215132395,
+    "best_val_nll": 1.193561864277673,
+    "best_val_auc": 0.39372549019607844
+  },
+  "val_metrics": {
+    "nll": 1.193561864277673,
+    "auc": 0.39372549019607844,
+    "accuracy": 0.796812749003984,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "forecast_min": 0.01307756919413805,
+    "forecast_max": 0.044763147830963135,
+    "forecast_mean": 0.030381493270397186,
+    "forecast_std": 0.006954413838684559,
+    "pred_return_min": 0.0005909204483032227,
+    "pred_return_max": 0.0009725093841552734,
+    "pred_return_mean": 0.0007993113249540329,
+    "pred_return_std": 8.3751896454487e-05,
+    "n_positive_preds": 0,
+    "n_samples": 502,
+    "class_balance": 0.20318725099601595
+  },
+  "test_metrics": {
+    "nll": 1.2681106292284452,
+    "auc": 0.37034262311457394,
+    "accuracy": 0.8192307692307692,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "forecast_min": 0.012810305692255497,
+    "forecast_max": 0.03863588348031044,
+    "forecast_mean": 0.022481895983219147,
+    "forecast_std": 0.005000994075089693,
+    "pred_return_min": 0.0005877017974853516,
+    "pred_return_max": 0.0008987188339233398,
+    "pred_return_mean": 0.0007041766075417399,
+    "pred_return_std": 6.022689558449201e-05,
+    "n_positive_preds": 0,
+    "n_samples": 260,
+    "class_balance": 0.18076923076923077
+  },
+  "baseline_comparison": {
+    "patchtst_200m_h1": 0.718,
+    "fd01b_classification": 0.576,
+    "improvement_vs_patchtst_pct": -45.16358075263531,
+    "improvement_vs_fd01b_pct": -31.644880174291934
+  },
+  "timestamp": "2026-01-23T23:31:45.502224"
+}

@@ -1,0 +1,59 @@
+{
+  "experiment": "lagllama_h1_proj",
+  "experiment_id": "FD-01b",
+  "model": "Lag-Llama",
+  "input_mode": "feature_projection",
+  "num_features": 20,
+  "horizon": 1,
+  "context_length": 1150,
+  "hyperparameters": {
+    "learning_rate": 0.0001,
+    "batch_size": 32,
+    "epochs": 30,
+    "fine_tune_mode": "full"
+  },
+  "splits": {
+    "train": 6187,
+    "val": 502,
+    "test": 260
+  },
+  "training": {
+    "training_time_min": 1.0697659174601237,
+    "best_val_auc": 0.5762990196078432
+  },
+  "val_metrics": {
+    "loss": 0.5007051695138216,
+    "auc": 0.5762990196078432,
+    "accuracy": 0.796812749003984,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "pred_min": 0.14657509326934814,
+    "pred_max": 0.23905432224273682,
+    "pred_mean": 0.19834189116954803,
+    "pred_std": 0.030402405187487602,
+    "n_positive_preds": 0,
+    "n_samples": 502,
+    "class_balance": 0.2031872570514679
+  },
+  "test_metrics": {
+    "loss": 0.44209445350699955,
+    "auc": 0.6143242433323345,
+    "accuracy": 0.8192307692307692,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "pred_min": 0.0966423749923706,
+    "pred_max": 0.14696884155273438,
+    "pred_mean": 0.11999674886465073,
+    "pred_std": 0.0171855129301548,
+    "n_positive_preds": 0,
+    "n_samples": 260,
+    "class_balance": 0.18076923489570618
+  },
+  "baseline_comparison": {
+    "patchtst_200m_h1": 0.718,
+    "improvement_pct": -19.735512589436873
+  },
+  "timestamp": "2026-01-23T15:50:38.055572"
+}

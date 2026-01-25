@@ -1,9 +1,68 @@
 # Indicator Catalog - Exhaustive Feature Enumeration
 
 **Purpose:** Systematic enumeration of ALL possible indicators for Phase 6C feature scaling.
-**Status:** DRAFT v0.4 - advanced mathematical features added
+**Status:** DRAFT v0.6 - count-based tier system added
 **Created:** 2026-01-22
 **Revised:** 2026-01-23
+
+---
+
+## Tier Assignments
+
+**See:** `docs/indicator_tier_analysis.md` v1.0 for the complete priority ranking system.
+
+| Tier | Indicator Count | Description |
+|------|-----------------|-------------|
+| a20 | 20 | Base tier (implemented) |
+| a50 | 50 | +30 high-signal additions |
+| a100 | 100 | +50 core TA coverage |
+| a200 | 200 | +100 standard TA toolkit |
+| a500 | 500 | +300 extended coverage |
+| a1000 | 1000 | +500 comprehensive coverage |
+| a2000 | 2000 | +1000 near-complete |
+| aFULL | ~2209 | Everything |
+
+**Design Decision:** OHLCV (5 columns) are always present but NOT counted toward tier totals. Tiers measure indicator scaling only.
+
+**Cumulative Property:** Each tier is a strict superset of all lower tiers.
+
+---
+
+## Revision Notes (v0.6)
+
+**Key changes from v0.5:**
+- Added tier assignment system with count-based naming (a20, a50, a100, etc.)
+- See `docs/indicator_tier_analysis.md` for complete priority ranking
+- Tier name now equals exact indicator count
+
+---
+
+## Revision Notes (v0.5)
+
+**Key changes from v0.4:**
+- Added **Category 17: Volume Flow Analysis** (~23 features)
+  - 17.1 Klinger Volume Oscillator (KVO) features (~12): Full KVO implementation with signal, histogram, divergence
+  - 17.2 Volume Delta Approximations (~11): Candlestick-based delta proxies (true delta requires tick data)
+- Added **Category 18: Fibonacci-Based Range Analysis** (~28 features)
+  - 18.1 Fibonacci Range Features (~13): Price position within HH-LL range, Fib level distances
+  - 18.2 IronBot Trend State Features (~15): Fib-based trend thresholds, breakout proximity
+- Added **Category 19: Q-Trend Indicators** (~24 features)
+  - 19.1 Quantitative Trend (ATR-Based) (~11): ATR band positions and dynamics
+  - 19.2 Trend Quality (Q-Indicator) (~13): Signal-to-noise ratio, semicycle analysis
+- Added **Category 20: Elliott Wave Proxies** (~36 features)
+  - 20.1 ZigZag-Based Wave Features (~16): Swing count, amplitude, direction
+  - 20.2 Fibonacci Retracement Wave Features (~12): Retracement depth, extension targets
+  - 20.3 Wave Degree Approximation (~8): Multi-threshold zigzag for wave degree
+- Added **Category 21: Composite Trend-Volume** (~8 features)
+  - Trend-volume alignment, divergence composites, smart money flow proxies
+- Total new features: ~119
+- Updated grand total: ~2,209 features
+
+**Research Notes:**
+- **Volume Delta**: True implementation requires tick-level bid/ask data (unavailable). Using candlestick-based approximation `Volume × sign(Close - Open)` instead.
+- **Elliott Wave**: True implementation requires complex pattern recognition. Using ZigZag + Fibonacci proxies as wave estimators.
+- **IronBot**: Extracted Fibonacci range logic from TradingView IronBot v3 system.
+- **Q-Trend**: Two variants implemented - ATR-based bands and signal-to-noise quality indicator.
 
 ---
 
@@ -1659,27 +1718,440 @@ Tier breakdown:
 
 ---
 
+## Category 17: Volume Flow Analysis
+
+**NEW in v0.5** - Volume flow indicators for measuring buying/selling pressure dynamics.
+
+**Note:** True Volume Delta requires tick-level bid/ask data to distinguish buying vs selling pressure. With daily OHLCV only, we use candlestick-based approximations that capture similar directional intent.
+
+### 17.1 Klinger Volume Oscillator (KVO) Features (~12 features)
+
+**KVO** measures long-term money flow trend vs short-term fluctuations.
+
+**Formula:**
+- Volume Force (VF) = Volume × sign(TypicalPrice[t] - TypicalPrice[t-1])
+- KVO = EMA(34, VF) - EMA(55, VF)
+- Signal = EMA(13, KVO)
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `kvo_value` | KVO line value (signed, EMA34 - EMA55 of VF) | a200 |
+| `kvo_signal` | EMA(13) of KVO | a200 |
+| `kvo_histogram` | KVO - Signal (signed) | a200 |
+| `kvo_histogram_slope` | Histogram momentum | a200 |
+| `kvo_histogram_acceleration` | Histogram momentum shift | a200 |
+| `kvo_slope` | KVO rate of change | a200 |
+| `kvo_slope_acceleration` | KVO momentum shift | a200 |
+| `days_since_kvo_zero_cross` | Signed: + if KVO > 0, - if KVO < 0 | a200 |
+| `days_since_kvo_signal_cross` | Signed: + bullish cross, - bearish cross | a200 |
+| `kvo_divergence_score` | Price direction vs KVO direction disagreement | a200 |
+| `kvo_percentile_60d` | KVO position in 60-day history | a200 |
+| `kvo_extreme_dist` | Normalized position (-1 to +1 based on extremes) | a200 |
+
+**Interpretation:**
+- **KVO > 0**: Accumulation (buying pressure dominant)
+- **KVO < 0**: Distribution (selling pressure dominant)
+- **KVO crossing signal**: Momentum shift signal
+- **Divergence**: Price making highs while KVO declining = bearish divergence
+
+### 17.2 Volume Delta Approximations (~10 features)
+
+**Note:** These are approximations since true delta requires tick data. The candlestick-based approach uses `sign(Close - Open)` as a proxy for net buying/selling.
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `volume_delta_approx` | Volume × sign(Close - Open) | a200 |
+| `volume_delta_approx_cum_5d` | 5-day cumulative delta | a200 |
+| `volume_delta_approx_cum_20d` | 20-day cumulative delta | a200 |
+| `volume_delta_approx_slope` | Delta momentum | a200 |
+| `volume_delta_approx_acceleration` | Delta momentum shift | a200 |
+| `buying_pressure_ratio` | (Close - Low) / (High - Low) | a100 |
+| `buying_pressure_ratio_5d_avg` | 5-day smoothed pressure | a100 |
+| `buying_pressure_slope` | Pressure trend | a100 |
+| `buying_pressure_acceleration` | Pressure momentum shift | a100 |
+| `volume_delta_divergence` | Price direction vs delta disagreement | a200 |
+| `days_since_delta_regime_change` | Signed days: + accumulation regime, - distribution | a200 |
+
+**Interpretation:**
+- **Buying Pressure Ratio > 0.5**: Closes in upper half of range (bullish)
+- **Buying Pressure Ratio < 0.5**: Closes in lower half of range (bearish)
+- **Cumulative Delta Rising**: Sustained buying pressure
+- **Delta Divergence**: Price vs volume pressure disagreement
+
+### 17.3 Category 17 Feature Count
+
+```
+17.1 KVO Features: ~12 features
+17.2 Volume Delta Approximations: ~11 features
+
+TOTAL CATEGORY 17 FEATURES: ~23
+
+Tier breakdown:
+- a100: 4 (buying pressure ratio features + acceleration)
+- a200: 19 (KVO + delta approximations)
+```
+
+---
+
+## Category 18: Fibonacci-Based Range Analysis
+
+**NEW in v0.5** - Fibonacci levels within price ranges for trend state and breakout detection.
+
+**Inspired by:** IronBot v3 TradingView system, which uses Fibonacci thresholds within HH-LL ranges to define trend states.
+
+**Parameters:**
+- `analysis_window` (default: 44 bars) - Lookback for Highest High / Lowest Low
+
+### 18.1 Fibonacci Range Features (~12 features)
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `fib_range_position` | (Close - LL) / (HH - LL), position 0-1 in range | a100 |
+| `fib_range_position_slope` | Movement rate within range | a100 |
+| `fib_range_position_acceleration` | Momentum within range | a100 |
+| `pct_from_fib_236` | Signed % distance from 23.6% level | a200 |
+| `pct_from_fib_382` | Signed % distance from 38.2% level | a200 |
+| `pct_from_fib_500` | Signed % distance from 50% level | a200 |
+| `pct_from_fib_618` | Signed % distance from 61.8% level | a200 |
+| `pct_from_fib_786` | Signed % distance from 78.6% level | a200 |
+| `nearest_fib_distance` | Min absolute distance to any Fib level | a200 |
+| `fib_zone_score` | Zone score: -1 (discount) to +1 (premium) | a100 |
+| `fib_zone_slope` | Zone transition rate | a100 |
+| `fib_zone_acceleration` | Zone transition momentum shift | a100 |
+| `days_in_current_fib_zone` | Days in current Fib zone | a200 |
+
+**Interpretation:**
+- **Range Position 0-0.236**: Deep discount zone
+- **Range Position 0.236-0.382**: Discount zone
+- **Range Position 0.382-0.618**: Fair value zone
+- **Range Position 0.618-0.786**: Premium zone
+- **Range Position 0.786-1.0**: Deep premium zone
+
+### 18.2 IronBot Trend State Features (~14 features)
+
+**IronBot Logic:**
+- `highTrendLimit = LL + Range × 0.786`
+- `lowTrendLimit = LL + Range × 0.236`
+- Bullish when Close > highTrendLimit
+- Bearish when Close < lowTrendLimit
+- Neutral otherwise
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `ironbot_trend_state` | +1 bullish, 0 neutral, -1 bearish | a100 |
+| `pct_from_high_trend_limit` | Signed % from bullish threshold (78.6%) | a200 |
+| `pct_from_low_trend_limit` | Signed % from bearish threshold (23.6%) | a200 |
+| `ironbot_trend_strength` | Distance beyond threshold (0 if neutral) | a200 |
+| `days_since_trend_state_change` | Signed: + bullish duration, - bearish duration | a200 |
+| `trend_state_duration` | Absolute days in current state | a200 |
+| `trend_state_with_ema_confirm` | IronBot state AND EMA200 agreement | a100 |
+| `ema_trend_alignment_score` | IronBot + EMA confluence (-1 to +1) | a100 |
+| `breakout_proximity_upper` | % distance to upper limit | a200 |
+| `breakout_proximity_lower` | % distance to lower limit | a200 |
+| `breakout_proximity_slope` | Approaching/retreating from breakout | a200 |
+| `breakout_proximity_acceleration` | Breakout approach momentum shift | a200 |
+| `fib_range_width` | (HH - LL) / Close, range as % of price | a200 |
+| `fib_range_width_slope` | Range expansion/contraction rate | a200 |
+| `fib_range_width_acceleration` | Range regime shift | a200 |
+
+**Interpretation:**
+- **trend_state_with_ema_confirm = 1**: Strong bullish (IronBot bullish + price > EMA200)
+- **ema_trend_alignment = -1**: Max bearish confluence
+- **Narrow range + approaching limit**: Potential breakout setup
+
+### 18.3 Category 18 Feature Count
+
+```
+18.1 Fibonacci Range Features: ~13 features
+18.2 IronBot Trend State: ~15 features
+
+TOTAL CATEGORY 18 FEATURES: ~28
+
+Tier breakdown:
+- a100: 9 (range position, zone score, trend state, EMA confluence + accelerations)
+- a200: 19 (Fib distances, breakout proximity, range dynamics + accelerations)
+```
+
+---
+
+## Category 19: Q-Trend Indicators
+
+**NEW in v0.5** - Quantitative trend quality and ATR-based trend indicators.
+
+**Two Variants:**
+1. **Quantitative Trend (Q-Trend)**: ATR-based bands around price midline
+2. **Trend Quality (Q-Indicator)**: Signal-to-noise ratio measure
+
+### 19.1 Quantitative Trend (ATR-Based) (~10 features)
+
+**Formula (TradingView Q-Trend):**
+- Midline = (Highest High + Lowest Low) / 2 over period
+- Upper Band = Midline + ATR × multiplier
+- Lower Band = Midline - ATR × multiplier
+- Bullish when Close > Upper Band, Bearish when Close < Lower Band
+
+**Parameters:**
+- `period` (default: 20)
+- `atr_multiplier` (default: 1.5)
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `qtrend_direction` | +1 above upper, -1 below lower, 0 in band | a100 |
+| `pct_from_qtrend_upper` | Signed % distance from upper band | a200 |
+| `pct_from_qtrend_lower` | Signed % distance from lower band | a200 |
+| `qtrend_position` | Position within bands (0-1) | a100 |
+| `qtrend_position_slope` | Movement rate within bands | a100 |
+| `qtrend_position_acceleration` | Position momentum shift | a100 |
+| `days_since_qtrend_flip` | Signed days since trend flip | a200 |
+| `qtrend_band_width` | Band width as % of price | a200 |
+| `qtrend_band_width_slope` | Volatility trend | a200 |
+| `qtrend_band_width_acceleration` | Volatility momentum shift | a200 |
+| `qtrend_strength` | Distance beyond band (0 if inside) | a200 |
+
+**Interpretation:**
+- **Position approaching 1**: Near upper band (overbought risk)
+- **Position approaching 0**: Near lower band (oversold risk)
+- **Band width expanding**: Volatility increasing
+- **Trend strength high**: Strong trend, extended from mean
+
+### 19.2 Trend Quality (Q-Indicator) (~12 features)
+
+**Formula (ProRealCode Q-Indicator):**
+- Semicycle = Trend swing from peak to trough or vice versa
+- Trend = Sum of absolute semicycle heights
+- Noise = Sum of deviations from trend
+- Q = Trend / (Trend + Noise)
+
+**Interpretation:**
+- **Q > 0.6**: High quality trend (low noise)
+- **Q < 0.4**: Low quality (noisy, choppy)
+- **Q approaching 0.5**: Random walk behavior
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `q_indicator` | Trend / (Trend + Noise) ratio | a200 |
+| `q_indicator_slope` | Quality trend | a200 |
+| `q_indicator_acceleration` | Quality momentum shift | a200 |
+| `q_indicator_percentile_60d` | Q position in 60-day history | a200 |
+| `q_indicator_regime_score` | -1 noisy to +1 clean | a200 |
+| `semicycle_avg_amplitude` | Average trend swing magnitude | a200 |
+| `semicycle_avg_duration` | Average semicycle length (days) | a200 |
+| `semicycle_count_20d` | Semicycles in last 20 days (choppiness) | a200 |
+| `trend_noise_ratio` | Signal-to-noise ratio | a200 |
+| `trend_noise_ratio_slope` | SNR trend | a200 |
+| `trend_noise_ratio_acceleration` | SNR momentum shift | a200 |
+| `days_since_q_regime_change` | Signed days in quality regime | a200 |
+| `q_entropy_composite` | Q × (1 - entropy) for trend+order signal | a500 |
+
+**Interpretation:**
+- **High semicycle count**: Choppy market
+- **High avg amplitude + low count**: Strong trending
+- **Q regime change**: Transition from trending to ranging or vice versa
+
+### 19.3 Category 19 Feature Count
+
+```
+19.1 Quantitative Trend: ~11 features
+19.2 Trend Quality (Q-Indicator): ~13 features
+
+TOTAL CATEGORY 19 FEATURES: ~24
+
+Tier breakdown:
+- a100: 4 (direction, position, slope, acceleration)
+- a200: 19 (distances, Q-indicator metrics, semicycle features + accelerations)
+- a500: 1 (entropy composite)
+```
+
+---
+
+## Category 20: Elliott Wave Proxies
+
+**NEW in v0.5** - Wave-based features using ZigZag and Fibonacci analysis as proxies for Elliott Wave patterns.
+
+**Important:** True Elliott Wave requires complex pattern recognition (5-wave impulse + 3-wave corrective with specific rules). This is beyond simple rolling features. Instead, we use:
+1. ZigZag-based swing detection for wave counting
+2. Fibonacci retracement/extension for wave validation
+3. Multi-threshold zigzags for wave degree approximation
+
+**Parameters:**
+- `zigzag_threshold` (default: 5% - minimum swing for pivot)
+- Multi-threshold: 3% (minor), 5% (intermediate), 8% (major)
+
+### 20.1 ZigZag-Based Wave Features (~14 features)
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `zigzag_swing_count_20d` | Number of pivots in last 20 days | a200 |
+| `zigzag_avg_swing_pct` | Average swing magnitude (%) | a200 |
+| `zigzag_avg_swing_duration` | Average swing length (days) | a200 |
+| `zigzag_current_swing_pct` | Current swing progress (%) | a200 |
+| `zigzag_current_swing_pct_slope` | Current wave momentum | a200 |
+| `zigzag_current_swing_pct_acceleration` | Wave momentum shift | a200 |
+| `zigzag_last_swing_direction` | +1 up swing, -1 down swing | a100 |
+| `days_since_zigzag_pivot` | Days since last pivot | a200 |
+| `zigzag_swing_ratio` | Current swing / previous swing | a200 |
+| `zigzag_swing_ratio_vs_fib` | How close ratio is to Fib number | a500 |
+| `impulse_correction_score` | Estimated impulse vs corrective wave | a500 |
+| `wave_completeness_proxy` | Estimated % through current wave | a500 |
+| `zigzag_trend_alignment` | Wave direction vs overall trend | a200 |
+| `consecutive_same_direction_swings` | Count of same-direction waves | a200 |
+| `zigzag_slope` | Overall wave trajectory | a200 |
+| `zigzag_slope_acceleration` | Wave trajectory momentum shift | a200 |
+
+**Interpretation:**
+- **High swing count + low amplitude**: Choppy, corrective pattern
+- **Low swing count + high amplitude**: Impulse-like pattern
+- **Swing ratio near 0.618 or 0.382**: Fibonacci alignment (wave validation)
+- **Consecutive same-direction**: Extended impulse wave
+
+### 20.2 Fibonacci Retracement Wave Features (~10 features)
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `retracement_depth` | Current retrace as % of prior swing | a200 |
+| `retracement_depth_slope` | Retracement momentum | a200 |
+| `retracement_depth_acceleration` | Retracement momentum shift | a200 |
+| `retracement_fib_zone` | Nearest Fib level (23.6, 38.2, 50, 61.8, 78.6) | a200 |
+| `pct_from_retracement_382` | Distance from 38.2% retrace level | a200 |
+| `pct_from_retracement_618` | Distance from 61.8% retrace level | a200 |
+| `extension_beyond_100` | Wave extension past 100% (%) | a500 |
+| `extension_fib_target` | Distance to 127.2% or 161.8% target | a500 |
+| `wave_invalidation_proximity` | % to wave invalidation point | a200 |
+| `wave_invalidation_proximity_slope` | Approaching/retreating from invalidation | a200 |
+| `wave_invalidation_proximity_acceleration` | Invalidation approach momentum shift | a200 |
+| `fib_cluster_score` | S/R confluence at Fib levels | a500 |
+
+**Interpretation:**
+- **Retrace 38.2-61.8%**: Normal correction zone
+- **Retrace > 78.6%**: Deep correction (weak trend)
+- **Extension > 127.2%**: Extended wave 3 or 5
+- **Cluster score high**: Strong S/R at multiple Fib levels
+
+### 20.3 Wave Degree Approximation (~8 features)
+
+**Multi-threshold ZigZag** for different wave degrees:
+- Minor waves: 3% threshold
+- Intermediate waves: 5% threshold
+- Major waves: 8% threshold
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `wave_degree_alignment` | Multi-degree trend confluence | a500 |
+| `minor_wave_count` | 3% threshold swing count (20d) | a500 |
+| `intermediate_wave_position` | Position in 5% degree wave | a500 |
+| `major_wave_direction` | 8% threshold trend direction | a200 |
+| `wave_nesting_score` | Fractal pattern alignment | a500 |
+| `days_since_major_pivot` | Days since 8% threshold pivot | a200 |
+| `wave_extension_count` | Waves extending past 100% | a500 |
+| `wave_truncation_count` | Waves failing to reach 100% | a500 |
+
+**Interpretation:**
+- **All degrees aligned**: Strong trend at multiple scales
+- **Minor choppy, major trending**: Corrective phase within impulse
+- **Extension count high**: Market tends to extend (strong trends)
+- **Truncation count high**: Weak trends, frequent reversals
+
+### 20.4 Category 20 Feature Count
+
+```
+20.1 ZigZag Wave Features: ~16 features
+20.2 Fibonacci Retracement: ~12 features
+20.3 Wave Degree: ~8 features
+
+TOTAL CATEGORY 20 FEATURES: ~36
+
+Tier breakdown:
+- a100: 1 (swing direction)
+- a200: 20 (swing metrics, retracement, invalidation + accelerations)
+- a500: 15 (Fib ratios, wave degree, extensions)
+```
+
+---
+
+## Category 21: Composite Trend-Volume Features
+
+**NEW in v0.5** - Combined features that synthesize trend and volume information.
+
+| Feature | Description | Tier |
+|---------|-------------|------|
+| `trend_volume_alignment` | sign(price_slope) × sign(volume_slope) | a100 |
+| `kvo_price_divergence` | Price direction vs KVO divergence score | a200 |
+| `volume_delta_ma_alignment` | Delta direction vs MA slope alignment | a200 |
+| `buying_pressure_trend_score` | Buying pressure × trend direction | a200 |
+| `volume_breakout_quality` | Volume spike × breakout strength | a200 |
+| `smart_money_flow_proxy` | OBV divergence + delta composite | a200 |
+| `accumulation_distribution_score` | A/D line confluence with price | a200 |
+| `volume_momentum_composite` | KVO + delta weighted combination | a200 |
+
+**Interpretation:**
+- **trend_volume_alignment = 1**: Price and volume moving together (healthy trend)
+- **trend_volume_alignment = -1**: Price and volume diverging (warning)
+- **Smart money flow positive**: Institutional accumulation proxy
+- **Breakout quality high**: Volume-confirmed breakout
+
+### Category 21 Feature Count
+
+```
+TOTAL CATEGORY 21 FEATURES: ~8
+
+Tier breakdown:
+- a100: 1 (alignment)
+- a200: 7 (composites)
+```
+
+---
+
 ## Grand Total Estimate
 
-| Category | Features (v0.4) | Change from v0.3 | Notes |
+| Category | Features (v0.5) | Change from v0.4 | Notes |
 |----------|-----------------|------------------|-------|
-| Moving Averages | 780 | 0 | No changes |
-| Oscillators | 416 | 0 | No changes |
-| Volatility | 257 | 0 | No changes |
-| Volume | 169 | 0 | No changes |
-| Trend Indicators | 58 | 0 | No changes |
-| Support/Resistance | 49 | 0 | No changes |
-| Candlestick | 57 | 0 | No changes |
-| Momentum | 40 | 0 | No changes |
-| Calendar | 16 | 0 | No changes |
-| Entropy | 34 | 0 | No changes |
-| Regime | 25 | 0 | No changes |
-| Multi-Timeframe | 11 | 0 | No changes |
-| SMC | 17 | 0 | No changes |
-| Risk-Adjusted | 28 | 0 | No changes |
-| Signal Processing | 15 | 0 | No changes |
-| **Advanced Math (NEW)** | **~118** | **+118** | **Fractal, chaos, TDA, ergodic, VRP** |
-| **TOTAL** | **~2,090** | **+118** | **~6% increase with advanced features** |
+| 1. Moving Averages | 780 | 0 | No changes |
+| 2. Oscillators | 416 | 0 | No changes |
+| 3. Volatility | 257 | 0 | No changes |
+| 4. Volume | 169 | 0 | No changes |
+| 5. Trend Indicators | 58 | 0 | No changes |
+| 6. Support/Resistance | 49 | 0 | No changes |
+| 7. Candlestick | 57 | 0 | No changes |
+| 8. Momentum | 40 | 0 | No changes |
+| 9. Calendar | 16 | 0 | No changes |
+| 10. Entropy | 34 | 0 | No changes |
+| 11. Regime | 25 | 0 | No changes |
+| 12. Multi-Timeframe | 11 | 0 | No changes |
+| 13. SMC | 17 | 0 | No changes |
+| 14. Risk-Adjusted | 28 | 0 | No changes |
+| 15. Signal Processing | 15 | 0 | No changes |
+| 16. Advanced Math | ~118 | 0 | Fractal, chaos, TDA, ergodic, VRP |
+| **17. Volume Flow (NEW)** | **~23** | **+23** | **KVO, Volume Delta approximations** |
+| **18. Fibonacci Range (NEW)** | **~28** | **+28** | **IronBot-style Fib range features** |
+| **19. Q-Trend (NEW)** | **~24** | **+24** | **ATR-based + Trend Quality** |
+| **20. Elliott Wave Proxies (NEW)** | **~36** | **+36** | **ZigZag, Fib retracement, wave degree** |
+| **21. Composite Trend-Volume (NEW)** | **~8** | **+8** | **Combined trend-volume signals** |
+| **TOTAL** | **~2,209** | **+119** | **~6% increase with v0.5 features** |
+
+**Key Changes in v0.5:**
+- Added Category 17: Volume Flow Analysis (~23 features)
+  - **KVO** (~12): Klinger Volume Oscillator with signal, histogram, divergence
+  - **Volume Delta** (~11): Candlestick-based approximations (tick data unavailable)
+- Added Category 18: Fibonacci-Based Range Analysis (~28 features)
+  - **Fibonacci Range** (~13): Position within HH-LL range, Fib level distances
+  - **IronBot Trend State** (~15): Fib-based trend thresholds, EMA confluence
+- Added Category 19: Q-Trend Indicators (~24 features)
+  - **Quantitative Trend** (~11): ATR-based band system
+  - **Trend Quality** (~13): Signal-to-noise ratio, semicycle analysis
+- Added Category 20: Elliott Wave Proxies (~36 features)
+  - **ZigZag Wave** (~16): Swing detection, amplitude, direction
+  - **Fib Retracement** (~12): Retracement depth, extension targets
+  - **Wave Degree** (~8): Multi-threshold zigzag approximation
+- Added Category 21: Composite Trend-Volume (~8 features)
+  - Combined trend-volume alignment, divergence, smart money flow
+
+**Tier Distribution (v0.5 additions):**
+
+| Tier | New Features | Examples |
+|------|--------------|----------|
+| a100 | ~18 | buying_pressure_ratio, fib_range_position, trend_volume_alignment |
+| a200 | ~85 | KVO features, IronBot trend, ZigZag swings, Q-indicator + accelerations |
+| a500 | ~16 | Wave degree, Fib ratios, extension targets, entropy composite |
 
 **Key Changes in v0.4:**
 - Added Category 16: Advanced Mathematical Features (~118 features)
@@ -1740,6 +2212,11 @@ Understanding lookback requirements is critical for training data availability.
 | Regime | 60 days | ~3 months | HMM training window |
 | Multi-Timeframe | 52 weeks | ~1 year | Weekly indicators |
 | SMC | 20 days | ~1 month | Order block detection |
+| Volume Flow | 55 days | ~3 months | KVO EMA55 is longest |
+| Fibonacci Range | 44 days | ~2 months | Default analysis window |
+| Q-Trend | 60 days | ~3 months | Q-indicator lookback |
+| Elliott Wave Proxies | 60 days | ~3 months | ZigZag + wave degree |
+| Composite Trend-Volume | 55 days | ~3 months | Inherits from KVO |
 
 **Maximum Overall Lookback:** 252 days (~1 year)
 
@@ -1758,20 +2235,25 @@ Understanding lookback requirements is critical for training data availability.
 4. ✅ **Donchian Channel Added:** Enables entropy-filtered breakout strategies
 5. ✅ **Expectancy Metrics Added:** Fundamental performance features
 6. ✅ **Advanced Mathematical Features Added:** Fractal, chaos, TDA, ergodic, VRP in Category 16
-7. **Implementation Phase:** Begin coding feature calculations
-8. **Library Integration:** Install new dependencies when implementing Category 16
-   - Phase 0: VRP features (no new deps, uses existing VIX data)
-   - Phase 1: antropy, nolds, numpy (a200 features)
-   - Phase 2: MFDFA, PyEMD, pyrqa (a500 features)
-   - Phase 3: giotto-tda (a1000 TDA features, computationally heavy)
-9. **Tier Validation:** Verify a100 features are highest-signal during Phase 6C
+7. ✅ **Volume Flow Added:** KVO, Volume Delta approximations in Category 17
+8. ✅ **Fibonacci Range Added:** IronBot-style features in Category 18
+9. ✅ **Q-Trend Added:** ATR-based and Trend Quality indicators in Category 19
+10. ✅ **Elliott Wave Proxies Added:** ZigZag, Fib retracement, wave degree in Category 20
+11. ✅ **Composite Trend-Volume Added:** Combined signals in Category 21
+12. **Implementation Phase:** Begin coding feature calculations
+13. **Library Integration:** Install new dependencies when implementing advanced features
+    - Phase 0: VRP features (no new deps, uses existing VIX data)
+    - Phase 1: antropy, nolds, numpy (a200 features)
+    - Phase 2: MFDFA, PyEMD, pyrqa (a500 features)
+    - Phase 3: giotto-tda (a1000 TDA features, computationally heavy)
+14. **Tier Validation:** Verify a100 features are highest-signal during Phase 6C
 
 ---
 
 ## Verification Checklist
 
 **Catalog Integrity:**
-- [x] Total feature count: ~2,090 (v0.4)
+- [x] Total feature count: ~2,209 (v0.5)
 - [x] No duplicate feature names (verified by naming convention consistency)
 - [x] All new features follow naming conventions
 - [x] All slopes have corresponding accelerations
@@ -1824,23 +2306,44 @@ Understanding lookback requirements is critical for training data availability.
 | VRP | 16.10 | 8 | a100-a200 | None (VIX data) |
 | Risk Resilience | 16.11 | 6 | a200-a500 | custom |
 
+**New Indicator Verification (v0.5 - Categories 17-21):**
+
+| Indicator Group | Section | Features | Tier | Library Req. |
+|-----------------|---------|----------|------|--------------|
+| KVO | 17.1 | 12 | a200 | pandas-ta, numpy |
+| Volume Delta Approx | 17.2 | 11 | a100-a200 | numpy |
+| Fibonacci Range | 18.1 | 13 | a100-a200 | numpy |
+| IronBot Trend State | 18.2 | 15 | a100-a200 | numpy |
+| Quantitative Trend | 19.1 | 11 | a100-a200 | numpy |
+| Trend Quality (Q) | 19.2 | 13 | a200-a500 | numpy |
+| ZigZag Wave | 20.1 | 16 | a100-a500 | numpy (custom zigzag) |
+| Fib Retracement Wave | 20.2 | 12 | a200-a500 | numpy |
+| Wave Degree | 20.3 | 8 | a200-a500 | numpy (multi-threshold) |
+| Composite Trend-Volume | 21 | 8 | a100-a200 | numpy |
+
 **Library Dependencies Summary:**
-- `pandas-ta`: QQE, STC, DeMarker, Donchian (already in requirements)
+- `pandas-ta`: QQE, STC, DeMarker, Donchian, KVO (already in requirements)
 - `vmdpy` or `PyEMD`: VMD features
 - `PyWavelets`: Wavelet features
 - `scipy`: FFT features (already available)
-- `antropy>=0.1.6`: Higuchi, Katz, Petrosian FD (new)
-- `nolds>=0.6.0`: Lyapunov, correlation dim, DFA (new)
-- `MFDFA>=0.4.3`: Multifractal DFA (new)
-- `hfda>=0.2.0`: Alternative Higuchi FD (new)
-- `PyEMD>=1.6.0`: EMD, EEMD, CEEMDAN (new)
-- `pyrqa>=8.2.0`: RQA features (new)
-- `giotto-tda>=0.6.0`: Persistent homology (new, optional, heavy)
-- `py-DCCA`: DCCA features (new, install from GitHub)
+- `numpy`: Fibonacci range, Q-trend, ZigZag, composites (already available)
+- `antropy>=0.1.6`: Higuchi, Katz, Petrosian FD
+- `nolds>=0.6.0`: Lyapunov, correlation dim, DFA
+- `MFDFA>=0.4.3`: Multifractal DFA
+- `hfda>=0.2.0`: Alternative Higuchi FD
+- `PyEMD>=1.6.0`: EMD, EEMD, CEEMDAN
+- `pyrqa>=8.2.0`: RQA features
+- `giotto-tda>=0.6.0`: Persistent homology (optional, heavy)
+- `py-DCCA`: DCCA features (install from GitHub)
+
+**v0.5 Notes:**
+- Categories 17-21 require NO new dependencies (only pandas-ta and numpy)
+- Volume Delta is an approximation (true delta requires tick data)
+- Elliott Wave features are proxies (true EW requires pattern recognition)
 
 ---
 
-*Document Version: 0.4 DRAFT*
+*Document Version: 0.5 DRAFT*
 *Created: 2026-01-22*
 *Revised: 2026-01-23*
-*Status: Expanded with advanced mathematical features (fractal, chaos, TDA, ergodic, VRP)*
+*Status: Expanded with volume flow, Fibonacci range, Q-trend, Elliott Wave proxies, composites*

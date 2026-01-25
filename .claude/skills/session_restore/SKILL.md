@@ -1,11 +1,11 @@
 ---
 name: session_restore
-description: Restore context from previous session and verify environment. Use at the start of any new session, when user says "restore", "where were we", or "continue". Reads saved context, verifies environment, and confirms priorities before proceeding.
+description: Restore context from previous session and verify environment. Use at the start of any new session, when user says "restore", "where were we", or "continue". Reads saved context, verifies environment, and confirms priorities before proceeding. Supports multiple parallel workstreams.
 ---
 
-# Session Restore Skill
+# Session Restore Skill (Multi-Workstream)
 
-Restore context and verify readiness for continued work.
+Restore context and verify readiness for continued work across parallel workstreams.
 
 ## When to Use
 
@@ -14,140 +14,181 @@ Restore context and verify readiness for continued work.
 - After any interruption or context loss
 - When uncertain about current state
 
+## Workstream System
+
+This project supports up to 3 parallel workstreams (terminals):
+
+| ID | Current Name | Typical Focus |
+|----|--------------|---------------|
+| ws1 | tier_a100 | Feature implementation |
+| ws2 | foundation | Foundation model investigation |
+| ws3 | (available) | Phase 6C experiments, etc. |
+
+**Files:**
+- `.claude/context/global_context.md` - Summary of all workstreams
+- `.claude/context/workstreams/ws{N}_context.md` - Detailed per-workstream context
+
 ## Execution Steps
 
-1. **Read Context Files**
+### 1. Read Global Context
 
-   ```bash
-   cat .claude/context/session_context.md
-   cat .claude/context/phase_tracker.md
-   ```
+Read `.claude/context/global_context.md` to understand:
+- Active workstreams and their status
+- Shared git/test state
+- Cross-workstream coordination notes
 
-   If files don't exist, inform user and start fresh.
+### 2. Show Active Workstreams Summary
 
-2. **Query Memory MCP for Relevant Knowledge** (additive - context files remain primary)
+```
+ Active Workstreams:
 
-   After reading context files, retrieve Memory entities listed in the "Memory Entities Updated" section:
+| ID | Name | Status | Last Update | Summary |
+|----|------|--------|-------------|---------|
+| ws1 | tier_a100 | active | 2026-01-24 11:00 | Chunk 3 complete, Chunk 4 next |
+| ws2 | foundation | paused | 2026-01-24 09:00 | TimesFM Colab ready |
+```
 
-   ```
-   # Extract entity names from session_context.md "Memory Entities Updated" section
-   # Then retrieve them directly:
-   mcp__memory__open_nodes({
-     "names": ["Entity1", "Entity2", ...]  # exact names from context file
-   })
-   ```
+### 3. Auto-Detect Workstream
 
-   If no entities listed or section missing, optionally search by phase:
-   ```
-   mcp__memory__search_nodes({
-     "query": "Phase[N]"  # e.g., "Phase5" - use underscores, match naming convention
-   })
-   ```
+Attempt to detect which workstream this session is for:
 
-   Look for:
-   - Lessons from same phase or similar tasks
-   - Patterns that apply to pending work
-   - Decisions that might affect current priorities
-   - Anti-patterns to avoid
+**Detection heuristics (in order):**
+1. **User's first message/task**: Look for keywords
+   - "tier_a100", "indicators", "chunk" → ws1
+   - "foundation", "lag-llama", "timesfm" → ws2
+   - "phase6c", "experiments", "scaling" → ws3
+2. **File mentions**:
+   - `tier_a100.py` → ws1
+   - `experiments/foundation/*` → ws2
+3. **Recent activity**: If only one workstream active in last 24h, default to it
+4. **Fallback**: Ask user
 
-   Include relevant findings in summary to user. Examples:
-   - "📚 Memory: Retrieved 3 entities from last session..."
-   - "⚠️ Reminder: [lesson from entity observations]"
-   - "✅ Pattern to apply: [successful approach from entity]"
+### 4. Confirm Workstream Selection
 
-   **Note**: This supplements (not replaces) context files. Memory provides agent-queryable knowledge; context files remain authoritative.
+```
+ Detected workstream: ws1 (tier_a100)
 
-3. **Verify Environment**
-   
-   ```bash
-   source venv/bin/activate
-   make test
-   git status
-   make verify
-   git branch --show-current
-   ```
+Based on: [detection reason]
 
-3. **Check for Drift**
-   
-   Compare current git state to saved state:
-   - Same branch?
-   - Any new commits since handoff?
-   - Any uncommitted changes?
+Correct? [y/n/other]
+```
 
-4. **Summarize to User**
-   
-   Present clear summary:
-   
-   ```
-   ## Session Restored
-   
-   ### Previous Session: [date/time]
-   
-   **Last Working On:** [task]
-   **Status:** [in progress / blocked / complete]
-   
-   **Git State:**
-   - Branch: [branch]
-   - [matches saved / drifted: describe]
-   
-   **Test Status:**
-   - Saved: [pass/fail]
-   - Current: [pass/fail from make test]
-   
-   **Data Manifests:**
-   - Raw: [latest entry summary or "none"]
-   - Processed: [latest entry summary or "none"]
-   
-   ### Pending Work
-   1. [item from saved context]
-   2. [item]
-   
-   ### Recommended Next Steps
-   1. [from saved "Next Session Should"]
-   2. [item]
-   ```
+If user says "n" or specifies another, switch to that workstream.
 
-5. **Confirm Priorities**
-   
-   Ask user:
-   ```
-   Priorities from last session were:
-   1. [priority]
-   2. [priority]
-   
-   Continue with these, or redirect?
-   ```
+### 5. Read Workstream Context
 
-6. **Wait for Confirmation**
-   
-   Do NOT proceed until user confirms direction.
+Read `.claude/context/workstreams/ws{N}_context.md` for detailed context:
+- Current task and status
+- Progress summary
+- Key decisions
+- Next session priorities
+
+### 6. Verify Environment
+
+```bash
+source venv/bin/activate
+make test
+git status
+make verify
+git branch --show-current
+```
+
+### 7. Check for Drift
+
+Compare current git state to saved state:
+- Same branch?
+- Any new commits since handoff?
+- Any uncommitted changes?
+
+### 8. Query Memory MCP (if entities listed)
+
+If workstream context lists Memory entities:
+```
+mcp__memory__open_nodes({
+  "names": ["Entity1", "Entity2", ...]
+})
+```
+
+Include relevant findings in summary.
+
+### 9. Show Cross-Workstream Coordination
+
+From global context, highlight:
+- Blocking dependencies that affect this workstream
+- Shared resources with other workstreams
+- Files owned by multiple workstreams
+
+### 10. Summarize to User
+
+```
+ Session Restored - ws[N]: [name]
+
+## Previous Session: [date/time]
+
+**Current Task:** [task]
+**Status:** [in progress / blocked / complete]
+
+**Git State:**
+- Branch: [branch]
+- [matches saved / drifted: describe]
+
+**Test Status:**
+- Saved: [pass/fail]
+- Current: [pass/fail from make test]
+
+**Data Manifests:**
+- Raw: [latest entry summary]
+- Processed: [latest entry summary]
+
+## Progress Summary
+- Completed: [N items]
+- Pending: [N items]
+
+## Cross-Workstream Notes
+- [ws2] foundation: [status - independent/blocking/etc.]
+- Shared files: [any coordination notes]
+
+## Recommended Next Steps (from saved context)
+1. [priority 1]
+2. [priority 2]
+
+---
+Continue with these priorities? Or redirect?
+```
+
+### 11. Confirm Priorities
+
+Wait for user confirmation before proceeding.
+
+**Do NOT proceed until user confirms direction.**
 
 ## Output Format
 
 ```
-🔄 Session Restore
+ Session Restore - ws[N]: [name]
 
-📂 Context loaded from: .claude/context/session_context.md
-📅 Last session: [date/time]
+ Context loaded:
+  - Global: .claude/context/global_context.md
+  - Workstream: .claude/context/workstreams/ws[N]_context.md
+ Last session: [date/time]
 
-## Previous State
+## Workstream State
+- ID: ws[N]
+- Name: [name]
 - Task: [task name]
 - Status: [status]
-- Branch: [branch] ✅ matches / ⚠️ changed to [new]
+- Branch: [branch]  matches /  changed
 
 ## Environment Check
-- venv: ✅ activated
-- make test: ✅ pass / ❌ [N] failing
-- git status: ✅ clean / ⚠️ [N] uncommitted files
-- make verify: ✅ pass / ❌ errors
+- venv:  activated
+- make test:  pass /  [N] failing
+- git status:  clean /  [N] uncommitted files
+- make verify:  pass /  errors
 
-## Data Manifests
-- Raw: [latest dataset/file/md5 or "no entries"]
-- Processed: [latest dataset/version/tier or "none"]
-
-## Memory Retrieved
-- [EntityName]: [key lesson/pattern/decision from observations]
-- (or "No Memory entities listed in context file")
+## Other Active Workstreams
+| ID | Name | Status | Relationship |
+|----|------|--------|--------------|
+| ws[X] | [name] | [status] | [independent/blocks this/blocked by] |
 
 ## Pending from Last Session
 1. [item]
@@ -161,14 +202,27 @@ Restore context and verify readiness for continued work.
 Continue with these priorities? Or redirect?
 ```
 
-## If Context Files Missing
+## If Global Context Missing
 
 ```
-⚠️ No saved session context found
+ No global context found
+
+Checked: .claude/context/global_context.md
+
+ Falling back to legacy context...
+```
+
+Then try `.claude/context/session_context.md` (legacy format).
+
+## If All Context Files Missing
+
+```
+ No saved session context found
 
 Files checked:
-- .claude/context/session_context.md: not found
-- .claude/context/phase_tracker.md: not found
+- .claude/context/global_context.md: not found
+- .claude/context/workstreams/: empty or not found
+- .claude/context/session_context.md: not found (legacy)
 
 Starting fresh. Current state:
 - Branch: [branch]
@@ -178,9 +232,22 @@ Starting fresh. Current state:
 What would you like to work on?
 ```
 
+## Workstream Selection Quick Reference
+
+| User Says | Workstream |
+|-----------|------------|
+| "continue tier_a100" | ws1 |
+| "work on indicators" | ws1 |
+| "foundation models" | ws2 |
+| "timesfm experiments" | ws2 |
+| "phase 6c" | ws3 |
+| (no specific mention) | Ask or use most recently active |
+
 ## Critical Notes
 
 - Always run `make test` during restore
 - Always confirm priorities before proceeding
 - Note any state drift clearly
 - Do not assume saved priorities are still valid
+- Show cross-workstream coordination notes - important for parallel work
+- If user's task doesn't match detected workstream, switch immediately

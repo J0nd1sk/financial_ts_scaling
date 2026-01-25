@@ -1,11 +1,11 @@
 ---
 name: session_handoff
-description: Capture complete session state for continuity. Use when ending a session, context window approaching limit (~80%), switching task areas, or user requests handoff. Creates structured context dump for next session restoration.
+description: Capture complete session state for continuity. Use when ending a session, context window approaching limit (~80%), switching task areas, or user requests handoff. Creates structured context dump for next session restoration. Supports multiple parallel workstreams.
 ---
 
-# Session Handoff Skill
+# Session Handoff Skill (Multi-Workstream)
 
-Capture current session state for seamless continuation.
+Capture current session state for seamless continuation across parallel workstreams.
 
 ## When to Use
 
@@ -15,187 +15,231 @@ Capture current session state for seamless continuation.
 - Before switching to significantly different task area
 - Before any extended break
 
+## Workstream System
+
+This project supports up to 3 parallel workstreams (terminals), each with its own context:
+
+| ID | Current Name | Typical Focus |
+|----|--------------|---------------|
+| ws1 | tier_a100 | Feature implementation |
+| ws2 | foundation | Foundation model investigation |
+| ws3 | (available) | Phase 6C experiments, etc. |
+
+**Files:**
+- `.claude/context/global_context.md` - Summary of all workstreams
+- `.claude/context/workstreams/ws{N}_context.md` - Detailed per-workstream context
+
 ## Execution Steps
 
-1. **Gather Git State**
-   ```bash
-   git branch --show-current
-   git log -1 --oneline
-   git status --short
-   ```
+### 1. Determine Workstream
 
-2. **Check Test Status**
-   - When was `make test` last run?
-   - Did it pass or fail?
-   - Any failing tests to note?
+If not obvious from context, ask:
+```
+Which workstream is this session for?
+1. ws1 (tier_a100) - Feature implementation
+2. ws2 (foundation) - Foundation model investigation
+3. ws3 (new/other) - [specify name]
+```
 
-3. **Compile Session Summary**
-   - What task was in progress?
-   - What was completed this session?
-   - What remains pending?
-   - What files were modified?
+**Auto-detection heuristics:**
+- Keywords: "tier_a100" → ws1, "foundation"/"lag-llama"/"timesfm" → ws2, "phase6c" → ws3
+- Files modified: `tier_a100.py` → ws1, `experiments/foundation/*` → ws2
+- If uncertain, ask user
 
-4. **Capture Data Version Status**
-   - Latest raw manifest entry (dataset, file, md5, timestamp)
-   - Latest processed manifest entry (dataset, version, tier, md5)
-   - Any datasets waiting to be registered or checksums to recompute
+### 2. Gather Git State
 
-5. **Capture Decisions**
-   - Any architectural decisions made?
-   - Any approaches rejected and why?
+```bash
+git branch --show-current
+git log -1 --oneline
+git status --short
+```
 
-6. **Write Context File**
-   
-   Create/update `.claude/context/session_context.md`:
+### 3. Check Test Status
 
-   ```markdown
-   # Session Handoff - [YYYY-MM-DD HH:MM]
+- When was `make test` last run?
+- Did it pass or fail?
+- Any failing tests to note?
 
-   ## Current State
+### 4. Compile Session Summary
 
-   ### Branch & Git
-   - Branch: [branch name]
-   - Last commit: [hash] [message]
-   - Uncommitted: [files or "none"]
+- What task was in progress?
+- What was completed this session?
+- What remains pending?
+- What files were modified?
 
-   ### Task Status
-   - Working on: [task]
-   - Status: [in progress / blocked / complete]
+### 5. Capture Data Version Status
 
-   ## Test Status
-   - Last `make test`: [pass/fail at time]
-   - Failing: [tests or "none"]
+- Latest raw manifest entry (dataset, file, md5, timestamp)
+- Latest processed manifest entry (dataset, version, tier, md5)
+- Any datasets waiting to be registered
 
-   ## Completed This Session
-   1. [item]
+### 6. Capture Decisions
 
-   ## In Progress
-   - [task]: [what remains]
+- Any workstream-specific decisions made?
+- Any approaches rejected and why?
 
-   ## Pending
-   1. [next task]
+### 7. Update Workstream Context File
 
-   ## Files Modified
-   - `path/file.py`: [changes]
+Create/update `.claude/context/workstreams/ws{N}_context.md`:
 
-   ## Key Decisions
-   - [decision]: [rationale]
+```markdown
+# Workstream [N] Context: [Name]
+# Last Updated: [YYYY-MM-DD HH:MM]
 
-   ## Context for Next Session
-   [Important info that would be lost]
+## Identity
+- **ID**: ws[N]
+- **Name**: [descriptive name]
+- **Focus**: [brief focus description]
+- **Status**: active
 
-   ## Next Session Should
-   1. [priority 1]
-   2. [priority 2]
+---
 
-   ## Data Versions
-   - Raw manifest: [latest dataset/file/md5 or "no entries"]
-   - Processed manifest: [latest dataset/version/tier or "none"]
-   - Pending registrations: [list or "none"]
+## Current Task
+- **Working on**: [task]
+- **Status**: [in progress / blocked / complete]
 
-   ## Memory Entities Updated
-   List all Memory MCP entities created or updated this session:
-   - [EntityName1] (created|updated): [brief description]
-   - [EntityName2] (created|updated): [brief description]
+---
 
-   If none: "No Memory entities updated this session"
+## Progress Summary
 
-   ## Commands to Run
-   ```bash
-   source venv/bin/activate
-   make test
-   git status
-   make verify
-   ```
+### Completed
+[List completed items with dates]
 
-   ## User Preferences (Authoritative)
-   [MUST include complete section - copy from previous session or reconstruct from User_Preferences_Authoritative Memory entity]
-   ```
+### Pending
+[List pending items]
 
-7. **Verify User Preferences Section**
+---
 
-   Confirm the "User Preferences (Authoritative)" section is complete with all subsections:
-   - Development Approach (TDD, planning, tmux)
-   - Context Durability (Memory MCP, context files, docs/)
-   - Documentation Philosophy (consolidation, precision, flat structure)
-   - Communication Standards (precision, no summarizing away details)
+## Last Session Work ([date])
+[Detailed work from this session]
 
-   If previous session_context.md has this section, copy it verbatim.
-   If missing, query `User_Preferences_Authoritative` from Memory MCP to reconstruct.
+---
 
-   **NEVER reduce fidelity or summarize preferences.**
+## Files Owned/Modified
+- `path/to/file.py` - PRIMARY/SHARED
+  - [nature of changes]
 
-8. **Update Phase Tracker** (if progress made)
+---
 
-   Update `.claude/context/phase_tracker.md` with completion status.
+## Key Decisions (Workstream-Specific)
+- [Decision]: [Rationale]
 
-9. **Store Lessons in Memory MCP** (additive - context files remain primary)
+---
 
-   Extract and store key learnings from this session. **Track all entity names for session_context.md.**
+## Session History
+### [date]
+- [work done]
 
-   - **For NEW entities** (first time storing this knowledge):
-     ```
-     mcp__memory__create_entities({
-       "entities": [{
-         "name": "Phase[N]_[TaskName]_[Type]",  # e.g., "Phase5_VIX_Integration_Lesson"
-         "entityType": "lesson|pattern|decision",
-         "observations": [
-           "Lesson: [specific lesson]",
-           "Phase: [current phase]",
-           "Context: [when/why this applies]",
-           "Session: [YYYY-MM-DD]"
-         ]
-       }]
-     })
-     ```
+---
 
-   - **For EXISTING entities** (adding to prior knowledge):
-     ```
-     mcp__memory__add_observations({
-       "observations": [{
-         "entityName": "[existing entity name]",
-         "contents": [
-           "Pattern: [new pattern discovered]",
-           "Session: [YYYY-MM-DD]"
-         ]
-       }]
-     })
-     ```
+## Next Session Should
+1. [priority 1]
+2. [priority 2]
 
-   **Entity naming convention**: `Phase[N]_[Topic]_[Type]` using underscores, no spaces.
-   Examples:
-   - `Phase5_VIX_Volume_Handling_Decision`
-   - `Phase4_TDD_Pattern`
-   - `Mock_yfinance_Pattern`
+---
 
-   **CRITICAL**: After storing, record all entity names in session_context.md (see step 6 template).
+## Memory Entities (Workstream-Specific)
+- [EntityName]: [brief description]
+```
 
-   **Note**: This supplements (not replaces) decision_log.md. Memory MCP enables agent-queryable knowledge; decision_log.md remains the human-readable, version-controlled record.
+### 8. Update Global Context
 
-10. **Report to User**
-   - Confirm file written
-   - Summarize key state
-   - Warn of any uncommitted work
+Update `.claude/context/global_context.md`:
+
+1. **Update workstream row** in Active Workstreams table:
+   - Update Status (active/paused/inactive)
+   - Update Last Update timestamp
+   - Update Summary (brief current state)
+
+2. **Update Shared State** if changed:
+   - Branch & Git
+   - Test Status
+   - Data Versions
+
+3. **Update Cross-Workstream Coordination** if relevant:
+   - Blocking dependencies
+   - Shared resources
+   - File ownership changes
+
+4. **Prune stale workstreams**:
+   - Workstreams inactive >7 days: Remove from table (keep file)
+   - Workstreams inactive >3 days: Mark as "paused"
+
+### 9. Verify User Preferences Section
+
+Confirm `global_context.md` contains complete "User Preferences (Authoritative)" section with all subsections:
+- Development Approach (TDD, planning, tmux)
+- Context Durability (Memory MCP, context files, docs/)
+- Documentation Philosophy (consolidation, precision, flat structure)
+- Communication Standards (precision, no summarizing away details)
+- Hyperparameters (Fixed - Ablation-Validated)
+
+**NEVER reduce fidelity or summarize preferences.**
+
+### 10. Update Phase Tracker (if progress made)
+
+Update `.claude/context/phase_tracker.md` with completion status.
+
+### 11. Store Lessons in Memory MCP (optional)
+
+For significant learnings, create/update Memory entities:
+- Include workstream tag in entity name: `ws1_[Topic]_[Type]`
+- Example: `ws1_DeMarker_Implementation_Decision`
+
+Record entity names in workstream context file.
+
+### 12. Report to User
+
+```
+ Session handoff complete (ws[N]: [name])
+
+ State saved to:
+  - .claude/context/workstreams/ws[N]_context.md
+  - .claude/context/global_context.md
+
+ Summary:
+- Workstream: ws[N] ([name])
+- Task: [current task] ([status])
+- Tests: [pass/fail]
+- Uncommitted: [count] files
+
+ [Any warnings about uncommitted work]
+
+ Other active workstreams:
+- ws[X] ([name]): [brief status]
+```
 
 ## Output Format
 
 After writing files, report:
 
 ```
-✅ Session handoff complete
+ Session handoff complete (ws[N]: [name])
 
-📍 State saved to: .claude/context/session_context.md
-📊 Phase tracker: [updated/unchanged]
+ Workstream context: .claude/context/workstreams/ws[N]_context.md
+ Global context: .claude/context/global_context.md
+ Phase tracker: [updated/unchanged]
 
 Summary:
+- Workstream: ws[N] ([name]) - [status]
 - Branch: [branch]
-- Task: [current task] ([status])
 - Tests: [pass/fail]
-- Data manifests: [latest raw + processed summaries]
 - Uncommitted: [count] files
 
-⚠️ [Any warnings about uncommitted work]
+Cross-workstream notes:
+- [Any blocking dependencies or shared resource notes]
+
+ [Any warnings]
 ```
+
+## Workstream Lifecycle
+
+| Status | Criteria | Action |
+|--------|----------|--------|
+| active | Updated within 24h | Show in global, detailed context |
+| paused | No update 3-7 days | Mark paused in global, keep file |
+| inactive | No update >7 days | Remove from global table, keep file |
+| archived | User archives explicitly | Move to workstreams/archive/ |
 
 ## Critical Notes
 
@@ -203,3 +247,5 @@ Summary:
 - Include rejected approaches (valuable context)
 - Note any user preferences expressed during session
 - Be specific about "what remains" for in-progress tasks
+- Update BOTH workstream file AND global summary
+- Cross-workstream coordination notes are important for parallel work

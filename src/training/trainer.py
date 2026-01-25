@@ -91,6 +91,7 @@ class Trainer:
         norm_params: dict[str, tuple[float, float]] | None = None,
         use_revin: bool = False,
         high_prices: np.ndarray | None = None,
+        weight_decay: float = 0.0,
     ) -> None:
         """Initialize the trainer.
 
@@ -124,6 +125,7 @@ class Trainer:
             high_prices: Optional array of high prices for target calculation.
                 When provided, threshold targets use max(HIGH) instead of max(CLOSE).
                 This is the correct formulation: "Will HIGH reach X% above current CLOSE?"
+            weight_decay: L2 regularization weight decay for optimizer. Default 0.0.
         """
         # Validate early_stopping_metric
         valid_metrics = ("val_loss", "val_auc")
@@ -148,6 +150,7 @@ class Trainer:
         self.norm_params = norm_params
         self.use_revin = use_revin
         self.high_prices = high_prices
+        self.weight_decay = weight_decay
 
         # Set random seeds for reproducibility
         self._set_seeds(experiment_config.seed)
@@ -169,7 +172,7 @@ class Trainer:
 
         # Create optimizer
         self.optimizer = torch.optim.Adam(
-            self.model.parameters(), lr=learning_rate
+            self.model.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
 
         # Loss function (default BCE for binary classification)

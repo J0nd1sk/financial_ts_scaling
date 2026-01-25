@@ -423,15 +423,30 @@
   - Lag-Llama weights downloaded (28MB)
   - 13 tests added (11 pass, 2 skipped for TimesFM)
   - TimesFM deferred due to JAX/ARM incompatibility
-- ⏳ Task 2: Lag-Llama integration & fine-tuning ← NEXT
-- ⏸️ Task 3: TimesFM integration (deferred - JAX/ARM issues)
+- ❌ Task 2: Lag-Llama integration & fine-tuning - **FAILED** 2026-01-23
+  - All 4 experiments failed to beat PatchTST baseline (0.718 AUC)
+  - FD-01a (zero-shot): 0.499 AUC - random performance
+  - FD-01b (classification fine-tune): 0.576 AUC - near-constant predictions
+  - FD-01c (head-only): 0.538 AUC - frozen backbone insufficient
+  - FD-01d (forecast mode): 0.394 AUC - worse than random, near-constant
+  - **Conclusion**: Lag-Llama pretrained knowledge does not transfer to financial returns
+  - Results: `outputs/foundation/lagllama_h1_*/results.json`
+- ⏳ Task 3: TimesFM integration (Colab) ← NEXT
+  - Requires Colab due to JAX/ARM incompatibility on M4 Mac
+  - Decoder-based architecture (different from encoder-only PatchTST)
 - ⏳ Task 4: iTransformer implementation
 - ⏳ Task 5: TimeMixer implementation
 - ⏳ Task 6: Analysis & decision
 
-**Success Criteria:** ≥5% AUC improvement over PatchTST baseline
+**Success Criteria:** ≥5% AUC improvement over PatchTST baseline (0.718 → 0.754)
 
-**Decision:** Roll findings into main project if successful; return to Phase 6C otherwise
+**Lag-Llama Findings:**
+- Pretrained on general time series, not financial data
+- Collapses to predicting unconditional mean regardless of context
+- Near-constant predictions in all fine-tuning modes
+- Architecture mismatch: 1150-day context may be overkill for daily returns
+
+**Decision:** Lag-Llama ruled out. Pivot to TimesFM (decoder-based, Google foundation model)
 
 ---
 

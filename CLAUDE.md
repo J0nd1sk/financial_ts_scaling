@@ -26,7 +26,7 @@ Experimental research testing whether neural scaling laws apply to transformer m
 - Phases are defined in `phase_tracker.md` and rarely change
 - Stages may have their own temporary plan documents in `docs/`
 - Stage plan documents are deleted or archived when stage completes
-- Tasks are tracked in `session_context.md` and TodoWrite
+- Tasks are tracked in workstream context files (`workstreams/ws{N}_context.md`) and TodoWrite
 - Don't conflate levels — a stage is NOT a new phase
 
 **Example:**
@@ -120,7 +120,8 @@ Exceptions:
 
 - `docs/` contains all active project documentation (plans, designs, references)
 - No other subfolders (e.g., `docs/plans/`, `docs/drafts/`)
-- `.claude/context/` is for session state only (phase_tracker, session_context, decision_log)
+- `.claude/context/` is for session state (global_context, phase_tracker, decision_log, workstreams/)
+- `.claude/context/workstreams/` contains per-workstream context files (ws1, ws2, ws3)
 - `.claude/rules/` is for agent rules only
 - `.claude/skills/` is for Claude Code skills only
 
@@ -328,6 +329,13 @@ financial_ts_scaling/
 │   ├── rules/              # Modular rules
 │   ├── skills/             # Superpowers skills
 │   └── context/            # Session state (git-tracked)
+│       ├── global_context.md     # All workstreams summary
+│       ├── phase_tracker.md      # Phase progress
+│       ├── decision_log.md       # Architectural decisions
+│       └── workstreams/          # Per-workstream context
+│           ├── ws1_context.md    # Workstream 1 (e.g., tier_a100)
+│           ├── ws2_context.md    # Workstream 2 (e.g., foundation)
+│           └── ws3_context.md    # Workstream 3 (e.g., phase6c)
 ├── data/
 │   ├── raw/                # Immutable downloads
 │   ├── processed/          # Versioned processed data
@@ -349,54 +357,50 @@ financial_ts_scaling/
 
 ---
 
-## Session Handoff Protocol
+## Multi-Workstream Context System
 
-At session end or ~80% context, create handoff:
+This project supports **up to 3 parallel workstreams** (terminals) working simultaneously, each with independent context management.
 
-```markdown
-# Session Handoff - [DATE]
+### Workstream Structure
 
-## Current State
-- Branch: [current branch]
-- Last commit: [hash and message]
-- Uncommitted changes: [list]
+| ID | Example Name | Typical Focus |
+|----|--------------|---------------|
+| ws1 | tier_a100 | Feature implementation |
+| ws2 | foundation | Foundation model investigation |
+| ws3 | phase6c | Phase 6C experiments |
 
-## Task Status
-- Working on: [current task]
-- Completed this session: [list]
-- Blocked by: [if any]
+**Files:**
+- `global_context.md` - Summary of all workstreams, shared state, coordination notes
+- `workstreams/ws{N}_context.md` - Detailed per-workstream context
 
-## Test Status
-- Last `make test` result: [pass/fail]
-- Failing tests: [if any]
+### Session Handoff Protocol
 
-## Next Steps
-1. [Immediate next task]
-2. [Second priority]
+At session end or ~80% context:
 
-## Key Decisions Made
-- [Decision]: [Rationale]
+1. **Determine workstream** - Auto-detect or ask user
+2. **Update workstream context** - Write detailed state to `workstreams/ws{N}_context.md`
+3. **Update global context** - Update summary row and shared state in `global_context.md`
+4. **Update phase tracker** - If progress made
+5. **Report to user** - Confirm both files updated, note other workstreams
 
-## Files Modified
-- [path]: [nature of change]
-
-## Context for Next Session
-[Any important context that would be lost]
-```
-
-Save to: `.claude/context/session_context.md`
-
----
-
-## Session Restore Protocol
+### Session Restore Protocol
 
 At session start:
 
-1. Read `.claude/context/session_context.md`
-2. Read `.claude/context/phase_tracker.md`
-3. Run `make test` to verify environment
-4. Summarize state to user
-5. Confirm priorities before proceeding
+1. **Read global context** - Understand all active workstreams
+2. **Show workstreams summary** - Display active workstreams table
+3. **Auto-detect workstream** - From user's first message/task keywords
+4. **Confirm selection** - "Detected workstream: ws1 (tier_a100). Correct?"
+5. **Read workstream context** - Get detailed context for selected workstream
+6. **Verify environment** - Run `make test`, check git status
+7. **Show cross-workstream notes** - Blocking dependencies, shared resources
+8. **Confirm priorities** - Wait for user direction before proceeding
+
+### Cross-Workstream Coordination
+
+- **File Ownership**: Track which workstream owns which files (PRIMARY vs SHARED)
+- **Blocking Dependencies**: Document when one workstream blocks another
+- **Shared Resources**: Note when workstreams share resources requiring coordination
 
 ---
 

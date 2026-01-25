@@ -4,6 +4,43 @@
 
 Sessions end. Context windows fill. Continuity must be maintained.
 
+This project supports **multiple parallel workstreams** (up to 3 terminals working simultaneously) with independent context management.
+
+---
+
+## Workstream System
+
+### Directory Structure
+
+```
+.claude/context/
+├── global_context.md           # Summary of all workstreams (minimal, pruned)
+├── phase_tracker.md            # Global phase progress (unchanged)
+├── decision_log.md             # Global decisions (unchanged)
+└── workstreams/
+    ├── ws1_context.md          # Detailed context for workstream 1
+    ├── ws2_context.md          # Detailed context for workstream 2
+    └── ws3_context.md          # Detailed context for workstream 3
+```
+
+### Workstream Naming
+
+Each workstream gets a short identifier (ws1, ws2, ws3) and a descriptive name:
+- `ws1: tier_a100` (feature implementation)
+- `ws2: foundation` (foundation model investigation)
+- `ws3: phase6c` (Phase 6C experiments)
+
+Names are flexible and change as work evolves.
+
+### Workstream Lifecycle
+
+| Status | Criteria | Action |
+|--------|----------|--------|
+| active | Updated within 24h | Show in global, detailed context |
+| paused | No update 3-7 days | Mark paused in global, keep file |
+| inactive | No update >7 days | Remove from global table, keep file |
+| archived | User archives explicitly | Move to workstreams/archive/ |
+
 ---
 
 ## Handoff Triggers
@@ -19,77 +56,84 @@ Initiate handoff when:
 
 ## Handoff Protocol
 
-### Step 1: Capture State
+### Step 1: Determine Workstream
 
-Write to `.claude/context/session_context.md`:
+If not obvious from conversation context, ask:
+```
+Which workstream is this session for?
+1. ws1 (tier_a100)
+2. ws2 (foundation)
+3. ws3 (new/other)
+```
+
+**Auto-detection heuristics:**
+- Keywords: "tier_a100" → ws1, "foundation" → ws2, "phase6c" → ws3
+- Files modified: `tier_a100.py` → ws1, `experiments/foundation/*` → ws2
+
+### Step 2: Capture Workstream State
+
+Write to `.claude/context/workstreams/ws{N}_context.md`:
 
 ```markdown
-# Session Handoff - [YYYY-MM-DD HH:MM]
+# Workstream [N] Context: [Name]
+# Last Updated: [YYYY-MM-DD HH:MM]
 
-## Current State
+## Identity
+- **ID**: ws[N]
+- **Name**: [descriptive name]
+- **Focus**: [brief focus description]
+- **Status**: active
 
-### Branch & Git
-- Branch: [current branch name]
-- Last commit: [short hash] [message]
-- Uncommitted changes: [list files or "none"]
-- Staged files: [list or "none"]
+## Current Task
+- **Working on**: [task]
+- **Status**: [in progress / blocked / complete]
 
-### Task Status
-- Current task: [what you're working on]
-- Status: [in progress / blocked / ready for review]
-- Blockers: [if any]
+## Progress Summary
 
-## Test Status
-- Last `make test`: [timestamp]
-- Result: [pass / fail]
-- Failing tests: [list if any]
+### Completed
+[List completed items with dates]
 
-## Completed This Session
-1. [Task completed]
-2. [Task completed]
+### Pending
+[List pending items]
 
-## In Progress
-- [Task]: [status and what remains]
+## Last Session Work ([date])
+[Detailed work from this session]
 
-## Pending (Not Started)
-1. [Next task]
-2. [Following task]
+## Files Owned/Modified
+- `path/to/file.py` - PRIMARY/SHARED
+  - [nature of changes]
 
-## Files Modified This Session
-- `path/to/file.py`: [nature of changes]
-- `tests/test_file.py`: [what was added/modified]
-
-## Key Decisions Made
+## Key Decisions (Workstream-Specific)
 - [Decision]: [Rationale]
 
-## Important Context
-[Anything that would be lost without explicit capture:
-- Discoveries made during debugging
-- Rejected approaches and why
-- Dependencies between tasks
-- User preferences expressed]
+## Session History
+### [date]
+- [work done]
 
 ## Next Session Should
-1. [First priority]
-2. [Second priority]
-3. [Third priority]
+1. [priority 1]
+2. [priority 2]
 
-## Commands to Run First
-```bash
-source venv/bin/activate
-make test
-git status
-```
+## Memory Entities (Workstream-Specific)
+- [EntityName]: [brief description]
 ```
 
-### Data Version Snapshot
+### Step 3: Update Global Context
 
-- Record latest raw manifest entry (dataset, file name, md5, timestamp).
-- Record latest processed manifest entry (dataset, version, tier, md5).
-- Note pending downloads or processed dataset versions that still need manifest entries.
-- If manifests were updated this session, state which files changed.
+Update `.claude/context/global_context.md`:
 
-### Step 2: Update Phase Tracker
+1. **Update workstream row** in Active Workstreams table
+2. **Update Shared State** if changed (branch, tests, data versions)
+3. **Update Cross-Workstream Coordination** if relevant
+4. **Prune stale workstreams** (>7 days inactive → remove from table)
+
+### Step 4: Data Version Snapshot
+
+- Record latest raw manifest entry (dataset, file name, md5, timestamp)
+- Record latest processed manifest entry (dataset, version, tier, md5)
+- Note pending downloads or processed dataset versions that still need manifest entries
+
+### Step 5: Update Phase Tracker
 
 If phase progress changed, update `.claude/context/phase_tracker.md`:
 
@@ -100,22 +144,25 @@ If phase progress changed, update `.claude/context/phase_tracker.md`:
 - Task C: ⏸️ Pending
 ```
 
-### Step 2.5: Verify User Preferences Section
+### Step 6: Verify User Preferences Section
 
-Confirm session_context.md contains complete "User Preferences (Authoritative)" section with all subsections:
+Confirm `global_context.md` contains complete "User Preferences (Authoritative)" section with all subsections:
 - Development Approach (TDD, planning, tmux)
 - Context Durability (Memory MCP, context files, docs/)
 - Documentation Philosophy (consolidation, precision, flat structure)
 - Communication Standards (precision, no summarizing away details)
+- Hyperparameters (Fixed - Ablation-Validated)
 
 If section is missing or incomplete, reconstruct from `User_Preferences_Authoritative` Memory entity.
 
-### Step 3: Confirm
+### Step 7: Confirm
 
 Report to user:
-- Handoff file location
+- Workstream identified
+- Both files updated (workstream + global)
 - Summary of state
 - Any uncommitted work warning
+- Other active workstreams status
 
 ---
 
@@ -123,13 +170,23 @@ Report to user:
 
 ### At Session Start
 
-1. **Read context files**
+1. **Read global context**
    ```
-   .claude/context/session_context.md
-   .claude/context/phase_tracker.md
+   .claude/context/global_context.md
    ```
 
-2. **Verify environment**
+2. **Show active workstreams summary**
+
+3. **Auto-detect workstream** from user's first message/task
+
+4. **Confirm workstream selection** with user
+
+5. **Read workstream context**
+   ```
+   .claude/context/workstreams/ws{N}_context.md
+   ```
+
+6. **Verify environment**
    ```bash
    source venv/bin/activate
    make test
@@ -137,18 +194,20 @@ Report to user:
    make verify
    ```
 
-3. **Summarize to user**
-   - Where we left off
+7. **Show cross-workstream coordination notes**
+
+8. **Summarize to user**
+   - Workstream state
    - Current task status
    - Test status
-   - Data manifest status (latest entries, outstanding items)
+   - Other workstreams status
    - Proposed next steps
 
-4. **Confirm priorities**
+9. **Confirm priorities**
    - Do not assume previous priorities still hold
    - Ask user to confirm or redirect
 
-5. **Only then proceed**
+10. **Only then proceed**
 
 ---
 
@@ -156,9 +215,12 @@ Report to user:
 
 | File | Purpose | Git-tracked |
 |------|---------|-------------|
-| `.claude/context/session_context.md` | Latest session state | Yes |
+| `.claude/context/global_context.md` | All workstreams summary | Yes |
+| `.claude/context/workstreams/ws{N}_context.md` | Per-workstream detail | Yes |
 | `.claude/context/phase_tracker.md` | Phase progress | Yes |
 | `.claude/context/decision_log.md` | Architectural decisions | Yes |
+
+**Note:** `session_context.md` is the legacy format. New sessions use the multi-workstream structure.
 
 ---
 
@@ -180,6 +242,8 @@ When significant decisions are made, append to `.claude/context/decision_log.md`
 - [Alternative 2]: [Why rejected]
 
 **Implications**: [What this affects going forward]
+
+**Workstream**: [ws1/ws2/ws3/global]
 ```
 
 ---
@@ -199,10 +263,33 @@ Users can trigger protocols with:
 
 Before ending session, verify:
 
-- [ ] session_context.md updated
+- [ ] Workstream identified
+- [ ] workstreams/ws{N}_context.md updated
+- [ ] global_context.md updated
 - [ ] phase_tracker.md updated (if progress made)
 - [ ] decision_log.md updated (if decisions made)
 - [ ] All files saved
 - [ ] Git status clean (or uncommitted work noted)
 - [ ] Test status noted
 - [ ] Next priorities clear
+- [ ] Cross-workstream coordination notes updated
+
+---
+
+## Cross-Workstream Coordination
+
+### File Ownership
+
+Maintain file ownership in `global_context.md`:
+- PRIMARY: Workstream owns the file exclusively
+- SHARED: Multiple workstreams may modify
+
+### Blocking Dependencies
+
+Document when one workstream blocks another:
+- `[ws1 blocks ws3]`: tier_a100 features needed for Phase 6C experiments
+
+### Shared Resources
+
+Note when workstreams share resources that require coordination:
+- Both ws1 and ws3 modify `src/features/` - coordinate commits
