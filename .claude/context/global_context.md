@@ -4,20 +4,20 @@
 
 | ID | Name | Status | Last Update | Summary |
 |----|------|--------|-------------|---------|
-| ws1 | tier_a100 | active | 2026-01-25 | Chunk 7 complete (40/50), Chunk 8 next (final) |
-| ws2 | foundation | paused | 2026-01-24 17:30 | TimesFM notebook fixed, ready for Colab |
+| ws1 | tier_a100 | COMPLETE | 2026-01-25 | All 8 chunks done, 100 features total, uncommitted |
+| ws2 | foundation | active | 2026-01-25 09:30 | TFM-01 ran (AUC 0.364 anti-correlated), notebook needs fixing |
 | ws3 | phase6c | active | 2026-01-25 18:30 | Threshold sweeps done, need a20 sweeps for comparison |
 
 ## Shared State
 
 ### Branch & Git
 - **Branch**: `experiment/foundation-decoder-investigation`
-- **Last commit**: `e854cb4` feat: Add comprehensive tier_a50 validation script
-- **Uncommitted**: ~20 files (context system + tier_a100 + foundation experiments)
+- **Last commit**: `f7dd1f9` feat: Phase 6C threshold sweeps + multi-workstream context system
+- **Uncommitted**: tier_a100.py, context files, foundation notebook changes
 
 ### Test Status
-- Last `make test`: 2026-01-25 - **637 passed**, 2 skipped
-- All tests passing
+- Last `make test`: 2026-01-25 09:00 - **621 passed**, 2 failed, 2 skipped
+- 2 failing tests in test_tier_a100.py (Chunk 5 tests, TDD - tests ahead of implementation)
 
 ### Data Versions
 - Raw manifest: SPY/DIA/QQQ OHLCV daily (v1)
@@ -27,8 +27,7 @@
 ## Cross-Workstream Coordination
 
 ### Blocking Dependencies
-- [ws1 enables ws3]: tier_a100 features needed for Phase 6C a100 experiments
-- ws1 at 80% complete (40/50 indicators) - Chunk 8 is final
+- [ws1 COMPLETE - unblocks ws3]: tier_a100 now has 100 features, ready for Phase 6C a100 experiments
 - [ws3 needs a20 threshold sweeps]: Complete a20 vs a50 comparison blocked on a20 threshold analysis
 
 ### Shared Resources
@@ -45,8 +44,13 @@
 | `outputs/phase6c/*` | ws3 | - |
 | `outputs/phase6a_final/*` | ws3 (analysis) | - |
 
-### Key Research Finding (2026-01-25)
-**Scaling × Feature Interaction Effect**: At a20 features, 200M params wins. At a50 features, 20M wins. This is a novel finding for the research paper.
+### Key Research Findings
+
+**Scaling × Feature Interaction Effect (2026-01-25)**:
+At a20 features, 200M params wins. At a50 features, 20M wins. Novel finding for research paper.
+
+**Foundation Model Anti-Correlation (2026-01-25)**:
+TimesFM TFM-01 AUC = 0.364 (anti-correlated). Even inverted = 0.636, below PatchTST 0.718.
 
 ---
 

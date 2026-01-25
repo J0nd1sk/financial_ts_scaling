@@ -1,5 +1,5 @@
 # Workstream 2 Context: foundation
-# Last Updated: 2026-01-24 17:30
+# Last Updated: 2026-01-25 09:30
 
 ## Identity
 - **ID**: ws2
@@ -10,8 +10,8 @@
 ---
 
 ## Current Task
-- **Working on**: TimesFM API v2.5 migration + Colab execution
-- **Status**: Notebook updated, ready for Colab execution
+- **Working on**: TimesFM notebook restructuring for proper threshold analysis
+- **Status**: IN PROGRESS - notebook cells need reordering
 
 ---
 
@@ -26,118 +26,126 @@ Can pre-trained foundation models (Lag-Llama, TimesFM) beat task-specific PatchT
 |------------|-----|-----------|--------|--------|
 | **PatchTST H1** | **0.718** | 0.58 | 0.45 | BASELINE |
 | Lag-Llama (all modes) | 0.499-0.576 | ~0.50 | ~0.50 | FAILED |
-| TimesFM TFM-01 | Pending | - | - | **Notebook fixed, ready** |
+| TimesFM TFM-01 | **0.364** | 0.0 | 0.0 | **ANTI-CORRELATED** |
 
-### Lag-Llama Findings (FAILED)
-- Tested 4 configurations: forecast, encoder-mean, encoder-last, all-hidden
-- All variants performed at or below random chance
-- Hypothesis: Pre-trained on diverse domains, not specialized for financial patterns
-- Decision: Move to TimesFM
+### TimesFM TFM-01 Results (2026-01-25)
+**Critical Finding**: Model is ANTI-CORRELATED
+- Val AUC: 0.364 (< 0.5 = worse than random)
+- Inverted AUC: 0.636 (still below PatchTST 0.718)
+- 0 positive predictions on val (threshold 1% too high for predictions)
+- Prediction range: [-0.011, +0.006] (never reaches 1%)
 
 ---
 
-## Last Session Work (2026-01-24 17:30)
+## Last Session Work (2026-01-25)
 
-### TimesFM API v2.5 Migration Complete
-The original notebook used TimesFM 2.0 API which caused `AttributeError: module 'timesfm' has no attribute 'TimesFmHparams'`.
+### TFM-01 Ran in Colab - Results Analyzed
+1. User ran notebook in Colab, downloaded `timesfm_tfm-01_results.json`
+2. Discovered issues:
+   - Classification threshold (1%) was higher than any prediction
+   - Model produced 0 positive predictions
+   - AUC 0.364 indicates anti-correlation
 
-**Changes made to `TimesFM_SPY_Experiments.ipynb`:**
+### Notebook Restructuring (IN PROGRESS)
+User requested proper threshold sweeping and anti-correlation analysis. Changes made:
 
-| Cell | Change |
-|------|--------|
-| Cell 0 (markdown) | Updated "500M" → "200M" model description |
-| Cell 2 (install) | Added `pip install jax jaxlib -q` for covariates |
-| Cell 6 (config) | Added `MODEL_NAME = "TimesFM-2.5-200M-PyTorch"` |
-| Cell 10 (model init) | **Complete rewrite**: `TimesFM_2p5_200M_torch.from_pretrained()` + `ForecastConfig` + `compile()` |
-| Cell 12 (inference) | Updated `tfm.forecast(horizon=HORIZON, inputs=inputs)` |
-| Cell 14 (fine-tuning) | Rewritten with `TimesFMFinetuner`, `FinetuningConfig`, `TimeSeriesDataset` |
-| Cell 16 (covariates) | Updated `forecast_with_covariates()` call signature |
-| Cell 22 (multi-runner) | Updated model init to use new API |
-| Cell 23 (troubleshooting) | Added AttributeError fix, updated version info |
-| Cell 26 (HP sweep) | Updated `run_lr_sweep()` model init |
+**Added new cells:**
+- Cell 13: Threshold sweep on predicted returns (sweep prediction confidence levels)
+- Cell 14: Anti-correlation analysis (test inverted predictions)
+- Cell 16: Comprehensive export (gather ALL data at end)
 
-**API Change Summary:**
-```python
-# OLD (2.0, broken):
-tfm = timesfm.TimesFm(
-    hparams=timesfm.TimesFmHparams(backend="gpu", ...),
-    checkpoint=timesfm.TimesFmCheckpoint(huggingface_repo_id="...")
-)
+**Issues to fix next session:**
+1. **Threshold sweep code is MISSING** - Cell 24 has header but Cell 25 jumped to anti-correlation
+2. **Cell order is wrong** - Comprehensive export was in middle, needs to be LAST
+3. **Stubs to clean up** - Some placeholder cells remain
 
-# NEW (2.5, working):
-tfm = timesfm.TimesFM_2p5_200M_torch.from_pretrained("google/timesfm-2.5-200m-pytorch")
-tfm.compile(timesfm.ForecastConfig(max_context=80, max_horizon=1, ...))
-```
+### Files Modified This Session
+- `experiments/foundation/TimesFM_SPY_Experiments.ipynb` - PARTIAL (needs fixing)
+- `experiments/foundation/analyze_timesfm_thresholds.py` - NEW (local analysis script)
+- `outputs/foundation/timesfm_tfm-01_results.json` - Downloaded from Colab
 
 ---
 
 ## Files Owned/Modified
 - `experiments/foundation/` - PRIMARY
-  - `TimesFM_SPY_Experiments.ipynb` - **Updated for API v2.5**
+  - `TimesFM_SPY_Experiments.ipynb` - **NEEDS FIXING** (cell order wrong)
+  - `analyze_timesfm_thresholds.py` - Local threshold analysis script
   - `train_lagllama_h1_forecast.py` - Lag-Llama experiment script
 - `outputs/foundation/` - Results storage
+  - `timesfm_tfm-01_results.json` - TFM-01 results from Colab
 
 ---
 
 ## Key Decisions (Workstream-Specific)
 
-### Lag-Llama Abandoned
-- **Decision**: Stop investigating Lag-Llama after all configurations failed
-- **Rationale**: AUC 0.499-0.576 across all modes = no signal
-- **Alternative**: TimesFM may have different architecture better suited to financial data
+### TimesFM Anti-Correlation Discovery (2026-01-25)
+- **Finding**: TimesFM predicts OPPOSITE of correct direction
+- **Evidence**: AUC 0.364 < 0.5
+- **Implication**: Even inverted (AUC 0.636), still below PatchTST (0.718)
+- **Next step**: Complete threshold sweep to fully characterize behavior
 
-### TimesFM via Colab
-- **Decision**: Run TimesFM on Colab due to GPU requirements
-- **Rationale**: M4 MacBook Pro MPS not optimal for TimesFM
-- **Notebook**: `experiments/foundation/TimesFM_SPY_Experiments.ipynb`
-
-### TimesFM 2.5 API (2026-01-24)
-- **Decision**: Migrate from 2.0 to 2.5 API
-- **Rationale**: 2.0 API deprecated, causes AttributeError
-- **Model change**: 500M → 200M (2.5 only has 200M PyTorch)
-- **Still valid test**: 200M still much larger than Lag-Llama's ~7M
+### Notebook Restructure Requirements (2026-01-25)
+User specified:
+1. Threshold sweep on PREDICTED returns (not class threshold)
+2. Anti-correlation analysis with inverted predictions
+3. Comprehensive export at VERY END gathering ALL data
+4. Remove unnecessary appendix (no data output)
 
 ---
 
 ## Session History
 
+### 2026-01-25 (Current - Interrupted)
+- Analyzed TFM-01 results - discovered anti-correlation
+- Started notebook restructuring
+- **INTERRUPTED** - cells out of order, needs completion
+
 ### 2026-01-24 17:30
-- **Fixed TimesFM Colab notebook for API v2.5**
-- Updated 9 cells with new API patterns
+- Fixed TimesFM Colab notebook for API v2.5
 - Model: TimesFM-2.0-500M → TimesFM-2.5-200M
-- Notebook ready for Colab execution
 
 ### 2026-01-24 09:00
-- Completed Lag-Llama investigation
-- Created TimesFM Colab notebook (with 2.0 API - now outdated)
-- Paused workstream pending Colab execution
-
-### 2026-01-23
-- Set up foundation model investigation
-- Created experiment structure
-- Ran initial Lag-Llama tests
+- Completed Lag-Llama investigation (FAILED)
+- Created TimesFM Colab notebook
 
 ---
 
 ## Next Session Should
 
-### Priority 1: Execute TimesFM Experiments in Colab
-1. Upload `SPY_dataset_a20.parquet` to Colab
-2. Run TFM-01 (zero-shot, 80-context)
-3. **Verify no AttributeError** - new API should work
-4. Check for prediction collapse (spread > 0.001)
-5. Record AUC, precision, recall results
+### Priority 1: Fix Notebook Cell Order
+Current state (broken):
+```
+Cell 24: Threshold sweep header (Cell 13)
+Cell 25: Anti-correlation code (WRONG - should be threshold sweep code!)
+Cell 26: Export code (old export, should be comprehensive at end)
+Cell 27: Anti-correlation header (Cell 14)
+```
 
-### Verification Checklist (in Colab)
-- [ ] Cell 2 installs complete without errors
-- [ ] Cell 10 prints "Model loaded successfully"
-- [ ] Cell 12 produces varied predictions (not collapse)
-- [ ] AUC metric computable (even if low)
+Correct order needed:
+1. Cell 13 header → Threshold sweep CODE
+2. Cell 14 header → Anti-correlation CODE
+3. Cell 15/16 header → Comprehensive export CODE (LAST)
 
-### Based on Results
-- If TimesFM > 0.718 AUC: Investigate further, try TFM-03 (fine-tuning)
-- If TimesFM ~ 0.65-0.718: Try fine-tuning (TFM-03, TFM-04)
-- If TimesFM < 0.60 with collapse: Foundation models not suitable, conclude FD-01
+### Priority 2: Add Missing Threshold Sweep Code
+The sweep function exists but execution code is missing. Need:
+```python
+# Sweep thresholds spanning prediction range
+thresholds = np.linspace(pred_min, pred_max, 15)
+results = sweep_prediction_thresholds(val_preds, val_labels, thresholds)
+# Print table, find best F1/precision thresholds
+```
+
+### Priority 3: Re-run in Colab
+After fixing notebook:
+1. Run Cells 1-6 (setup, inference)
+2. Run Cell 13 (threshold sweep)
+3. Run Cell 14 (anti-correlation)
+4. Run Cell 16 (comprehensive export)
+5. Download results
+
+### Expected Output Files
+- `timesfm_tfm-01_comprehensive.json` - All data in one file
+- `timesfm_tfm-01_predictions.npz` - Raw predictions for local analysis
 
 ---
 

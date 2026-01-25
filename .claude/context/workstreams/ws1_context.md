@@ -5,13 +5,13 @@
 - **ID**: ws1
 - **Name**: tier_a100
 - **Focus**: Feature tier implementation - indicators ranked 51-100
-- **Status**: active
+- **Status**: COMPLETE
 
 ---
 
 ## Current Task
 - **Working on**: tier_a100 feature tier implementation
-- **Status**: Chunk 7 COMPLETE, Chunk 8 next (final chunk)
+- **Status**: ALL CHUNKS COMPLETE - tier_a100 done!
 
 ---
 
@@ -27,85 +27,97 @@
 | 5 | 74-80 | MA extensions (7) | 2026-01-24 |
 | 6 | 81-85 | Advanced volatility (5) | 2026-01-24 |
 | 7 | 86-90 | Trend indicators (5) | 2026-01-25 |
+| 8 | 91-100 | Volume + Momentum + S/R (10) | 2026-01-25 |
 
-**Total implemented**: 40 indicators (A100_ADDITION_LIST)
-**FEATURE_LIST total**: 90 features (50 a50 + 40 new)
+**Total implemented**: 50 indicators (A100_ADDITION_LIST)
+**FEATURE_LIST total**: 100 features (50 a50 + 50 new)
 
-### Pending Chunks
-| Chunk | Ranks | Indicators | Status |
-|-------|-------|------------|--------|
-| 8 | 91-100 | Volume + Momentum + S/R (10) | NEXT |
-
-**Remaining**: 10 indicators to complete tier_a100
+### Pending
+- Commit the changes
+- Update docs/indicator_catalog.md with Chunk 8 indicators (deferred per plan)
 
 ---
 
 ## Last Session Work (2026-01-25)
 
-### Chunk 7 Implementation (Trend Indicators)
-Implemented 5 trend indicators following TDD workflow:
+### Chunk 8 Implementation (Volume + Momentum + S/R)
+Implemented final 10 indicators following TDD workflow:
 
 **Indicators added:**
-1. `adx_slope` - 5-day change in ADX (trend strength momentum)
-   - Note: Changed from `adx_14` because it already exists in tier_a50
-2. `di_spread` - +DI minus -DI (directional bias) [-100, +100]
-3. `aroon_oscillator` - Aroon Up - Aroon Down (25-period) [-100, +100]
-4. `price_pct_from_supertrend` - % distance from SuperTrend (signed)
-5. `supertrend_direction` - +1 bullish, -1 bearish
+1. `obv_slope` - 5-day change in OBV (normalized by std)
+2. `volume_price_trend` - cumsum(Volume × pct_change(Close)), normalized
+3. `kvo_histogram` - KVO minus Signal (Klinger Volume Oscillator), normalized
+4. `accumulation_dist` - Accumulation/Distribution Line, normalized
+5. `expectancy_20d` - win_rate × avg_gain - (1-win_rate) × abs(avg_loss)
+6. `win_rate_20d` - Count(positive returns) / 20 [0, 1]
+7. `buying_pressure_ratio` - (Close - Low) / (High - Low) [0, 1]
+8. `fib_range_position` - (Close - Low_44d) / (High_44d - Low_44d) [0, 1]
+9. `prior_high_20d_dist` - (Close - High_20d) / High_20d × 100 [≤ 0]
+10. `prior_low_20d_dist` - (Close - Low_20d) / Low_20d × 100 [≥ 0]
+
+**Helper functions added:**
+- `_compute_volume_indicators(df)` - obv_slope, volume_price_trend, kvo_histogram, accumulation_dist, buying_pressure_ratio
+- `_compute_expectancy_metrics(close)` - expectancy_20d, win_rate_20d
+- `_compute_sr_indicators(df)` - fib_range_position, prior_high_20d_dist, prior_low_20d_dist
 
 **Tests added:**
-- `TestTrendIndicators` class with 12 tests
-- Structure tests for chunk 7 count and indicator list
-- All 663 tests passing
+- `TestVolumeIndicators` class (12 tests)
+- `TestExpectancyMetrics` class (6 tests)
+- `TestSupportResistance` class (8 tests)
+- Structure tests for chunk 8 count and feature list total
 
-**Implementation notes:**
-- SuperTrend required manual iterative calculation (not in talib)
-- Uses ATR period=10, multiplier=3.0 (standard values)
-- SuperTrend flips direction when price crosses the band
+**Test Results:**
+- All 692 tests passing
+- 139 tier_a100 tests passing
 
 ---
 
 ## Files Owned/Modified
 - `src/features/tier_a100.py` - PRIMARY
-  - Contains A100_ADDITION_LIST with 40 indicators (Chunks 1-7)
-  - All helper functions: `_compute_momentum_derivatives()`, `_compute_qqe_stc_derivatives()`,
-    `_compute_standard_oscillators()`, `_compute_vrp_extensions()`, `_compute_extended_risk_metrics()`,
-    `_compute_var_cvar()`, `_compute_ma_extensions()`, `_compute_days_since_cross()`,
-    `_compute_advanced_volatility()`, `_compute_trend_indicators()`
+  - Contains A100_ADDITION_LIST with 50 indicators (Chunks 1-8)
+  - All helper functions for all chunks
+  - UNCOMMITTED: +186 lines (Chunk 8)
 - `tests/features/test_tier_a100.py` - PRIMARY
-  - Tests for all 40 implemented indicators
-  - ~100 tests total
+  - Tests for all 50 implemented indicators
+  - 139 tests total
+  - UNCOMMITTED: +170 lines (Chunk 8 tests)
 
 ---
 
 ## Key Decisions (Workstream-Specific)
 
-### adx_14 → adx_slope Substitution
-- **Decision**: Use `adx_slope` instead of `adx_14` for Chunk 7
-- **Reason**: `adx_14` already exists in tier_a50
-- **Value**: `adx_slope` measures trend strength momentum (more informative derivative)
+### Volume Indicator Normalization
+- **Decision**: Normalize cumulative volume indicators (OBV, VPT, AD, KVO) by rolling statistics
+- **Reason**: Raw cumulative values are scale-dependent and not comparable across time
+- **Implementation**: Divide by rolling std (obv_slope, kvo_histogram) or rolling mean abs (vpt, ad)
 
-### SuperTrend Implementation
-- **Parameters**: ATR period=10, multiplier=3.0
-- **Initialization**: Start bearish (direction=-1) at first valid index
-- **Logic**: Iterative calculation with trailing stop behavior
+### KVO Manual Implementation
+- **Formula**: VolumeForce = Volume × (High-Low) × sign(typical_price_change)
+- **KVO**: EMA34(VolumeForce) - EMA55(VolumeForce)
+- **Signal**: EMA13(KVO)
+- **Histogram**: KVO - Signal
 
-### DeMarker Manual Implementation
-- **Formula**: SMA(DeMax,14) / (SMA(DeMax,14) + SMA(DeMin,14))
-- **Division by zero**: Fill with 0.5 (neutral value)
+### Division by Zero Handling
+- `buying_pressure_ratio`: Fill 0.5 (neutral) when High == Low
+- `fib_range_position`: Fill 0.5 when 44-day range is 0
 
-### Stochastic Configuration
-- fastk_period=14, slowk_period=3, slowd_period=3
-- SMA smoothing (matype=0)
+### Prior High/Low Distances
+- Uses rolling 20-day high/low of High/Low columns (not Close)
+- prior_high_20d_dist is always ≤ 0 (price at or below rolling max high)
+- prior_low_20d_dist is always ≥ 0 (price at or above rolling min low)
 
 ---
 
 ## Session History
 
-### 2026-01-25
+### 2026-01-25 (Current)
+- Completed Chunk 8 (10 indicators) - TIER A100 COMPLETE!
+- 692 tests passing, 100 features total
+- Uncommitted: tier_a100.py (+186), test_tier_a100.py (+170)
+
+### 2026-01-25 (Earlier)
 - Completed Chunk 7 (5 trend indicators)
 - Discovered adx_14 overlap with tier_a50, substituted adx_slope
-- 663 tests passing, 90 features total
 
 ### 2026-01-24 17:00
 - Workflow improvement detour: implemented multi-workstream context system
@@ -121,27 +133,26 @@ Implemented 5 trend indicators following TDD workflow:
 
 ## Next Session Should
 
-### Priority 1: Complete tier_a100 with Chunk 8
-1. Plan Chunk 8 (Volume + Momentum + S/R, ranks 91-100)
-2. Expected indicators (10 total):
-   - Volume indicators: obv_slope, volume_percentile_60d, etc.
-   - Momentum: roc variants, trix, etc.
-   - Support/Resistance: pivot levels, etc.
-3. Follow TDD workflow: tests first, then implementation
-4. Target: 100 features total (50 a50 + 50 a100)
+### Priority 1: Commit tier_a100 completion
+1. Stage and commit: `git add -A && git commit -m "feat: Complete tier_a100 with 100 features (Chunk 8)"`
+2. Update docs/indicator_catalog.md with all 50 new indicators
+3. Consider whether to merge to main or keep on branch
 
-### After Chunk 8 Complete
-- Update `docs/indicator_catalog.md` with all 100 indicators
-- Commit tier_a100 implementation
-- Unblock ws3 (Phase 6C experiments)
+### Priority 2: Enable Phase 6C a100 experiments (unblocks ws3)
+- tier_a100 is now ready for use in experiments
+- ws3 can now run Phase 6C experiments with 100 features
 
 ---
 
 ## Verification
 ```bash
-# Current state verification
+# Verify tier_a100 is complete
 ./venv/bin/python -c "from src.features import tier_a100; print('A100_ADDITION_LIST:', len(tier_a100.A100_ADDITION_LIST)); print('FEATURE_LIST:', len(tier_a100.FEATURE_LIST))"
-# Expected: A100_ADDITION_LIST: 40, FEATURE_LIST: 90
+# Expected: A100_ADDITION_LIST: 50, FEATURE_LIST: 100
+
+# Run tests
+make test
+# Expected: 692 passed
 ```
 
 ---

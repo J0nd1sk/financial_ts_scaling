@@ -695,6 +695,187 @@ def _compute_trend_indicators(df: pd.DataFrame) -> Mapping[str, pd.Series]:
     return features
 
 
+def _compute_volume_indicators(df: pd.DataFrame) -> Mapping[str, pd.Series]:
+    """Compute volume-based indicators.
+
+    Includes OBV slope, Volume Price Trend, Klinger Volume Oscillator,
+    Accumulation/Distribution, and Buying Pressure Ratio.
+
+    Args:
+        df: DataFrame with High, Low, Close, Volume columns
+
+    Returns:
+        Dict with obv_slope, volume_price_trend, kvo_histogram,
+        accumulation_dist, buying_pressure_ratio
+    """
+    high = df["High"].values
+    low = df["Low"].values
+    close = df["Close"].values
+    volume = df["Volume"].values.astype(float)
+
+    close_series = pd.Series(close, index=df.index)
+    high_series = pd.Series(high, index=df.index)
+    low_series = pd.Series(low, index=df.index)
+    volume_series = pd.Series(volume, index=df.index)
+
+    features = {}
+
+    # --- OBV slope (5-day change in OBV, normalized by std) ---
+    obv = pd.Series(talib.OBV(close, volume), index=df.index)
+    obv_change_5d = obv - obv.shift(5)
+    # Normalize by rolling std to make comparable across different volume regimes
+    obv_std = obv_change_5d.rolling(20).std()
+    obv_std_safe = obv_std.replace(0, np.nan)
+    features["obv_slope"] = (obv_change_5d / obv_std_safe).fillna(0)
+
+    # --- Volume Price Trend (VPT) ---
+    # VPT = cumsum(Volume × pct_change(Close))
+    pct_change = close_series.pct_change()
+    vpt = (volume_series * pct_change).cumsum()
+    # Normalize by rolling mean to make comparable
+    vpt_mean = vpt.rolling(20).mean()
+    vpt_mean_safe = vpt_mean.replace(0, np.nan).abs()
+    features["volume_price_trend"] = (vpt / vpt_mean_safe).fillna(0)
+
+    # --- Klinger Volume Oscillator (KVO) histogram ---
+    # KVO = EMA34(VolumeForce) - EMA55(VolumeForce)
+    # VolumeForce = Volume × |2×(dm/cm) - 1| × trend × 100
+    # where dm = High - Low, cm = cumulative dm for trend
+    # Simplified: VolumeForce = Volume × sign(typical price change)
+
+    # Typical price
+    typical = (high_series + low_series + close_series) / 3
+    typical_change = typical - typical.shift(1)
+
+    # Trend direction: +1 if typical price up, -1 if down
+    trend = np.sign(typical_change)
+
+    # Volume Force (simplified)
+    dm = high_series - low_series
+    volume_force = volume_series * dm * trend
+
+    # KVO = EMA34 - EMA55 of Volume Force
+    ema34_vf = volume_force.ewm(span=34, adjust=False).mean()
+    ema55_vf = volume_force.ewm(span=55, adjust=False).mean()
+    kvo = ema34_vf - ema55_vf
+
+    # Signal line = EMA13 of KVO
+    kvo_signal = kvo.ewm(span=13, adjust=False).mean()
+
+    # Histogram = KVO - Signal
+    kvo_histogram = kvo - kvo_signal
+    # Normalize by rolling std
+    kvo_std = kvo_histogram.rolling(20).std()
+    kvo_std_safe = kvo_std.replace(0, np.nan)
+    features["kvo_histogram"] = (kvo_histogram / kvo_std_safe).fillna(0)
+
+    # --- Accumulation/Distribution Line (AD) ---
+    ad = pd.Series(talib.AD(high, low, close, volume), index=df.index)
+    # Normalize by rolling mean (absolute value)
+    ad_mean = ad.rolling(20).mean().abs()
+    ad_mean_safe = ad_mean.replace(0, np.nan)
+    features["accumulation_dist"] = (ad / ad_mean_safe).fillna(0)
+
+    # --- Buying Pressure Ratio ---
+    # (Close - Low) / (High - Low)
+    range_hl = high_series - low_series
+    # Handle division by zero: fill with 0.5 (neutral) when High == Low
+    buying_pressure = (close_series - low_series) / range_hl
+    buying_pressure = buying_pressure.where(range_hl != 0, 0.5)
+    features["buying_pressure_ratio"] = buying_pressure
+
+    return features
+
+
+def _compute_expectancy_metrics(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute trading expectancy and win rate metrics.
+
+    Expectancy = win_rate × avg_gain - (1 - win_rate) × abs(avg_loss)
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with expectancy_20d, win_rate_20d
+    """
+    features = {}
+
+    # Daily returns (percentage)
+    returns = close.pct_change() * 100
+
+    # Win rate: proportion of positive returns over 20 days
+    def win_rate(x: pd.Series) -> float:
+        """Compute win rate (proportion of positive returns)."""
+        if len(x) == 0:
+            return 0.5
+        return (x > 0).sum() / len(x)
+
+    features["win_rate_20d"] = returns.rolling(20).apply(win_rate, raw=False)
+
+    # Expectancy: win_rate × avg_gain - (1 - win_rate) × abs(avg_loss)
+    def expectancy(x: pd.Series) -> float:
+        """Compute expectancy from returns."""
+        if len(x) == 0:
+            return 0.0
+
+        wins = x[x > 0]
+        losses = x[x < 0]
+
+        win_rate_val = len(wins) / len(x) if len(x) > 0 else 0.5
+        avg_gain = wins.mean() if len(wins) > 0 else 0.0
+        avg_loss = losses.mean() if len(losses) > 0 else 0.0
+
+        return win_rate_val * avg_gain - (1 - win_rate_val) * abs(avg_loss)
+
+    features["expectancy_20d"] = returns.rolling(20).apply(expectancy, raw=False)
+
+    return features
+
+
+def _compute_sr_indicators(df: pd.DataFrame) -> Mapping[str, pd.Series]:
+    """Compute support/resistance indicators.
+
+    Includes Fibonacci range position and distances from prior highs/lows.
+
+    Args:
+        df: DataFrame with High, Low, Close columns
+
+    Returns:
+        Dict with fib_range_position, prior_high_20d_dist, prior_low_20d_dist
+    """
+    close = pd.Series(df["Close"].values, index=df.index)
+    high = pd.Series(df["High"].values, index=df.index)
+    low = pd.Series(df["Low"].values, index=df.index)
+
+    features = {}
+
+    # --- Fibonacci range position (44-day lookback per IronBot spec) ---
+    # Position within the 44-day high-low range
+    high_44d = high.rolling(44).max()
+    low_44d = low.rolling(44).min()
+    range_44d = high_44d - low_44d
+
+    # (Close - Low_44d) / (High_44d - Low_44d)
+    # Handle division by zero: fill with 0.5 (middle) when range is 0
+    fib_position = (close - low_44d) / range_44d
+    fib_position = fib_position.where(range_44d != 0, 0.5)
+    features["fib_range_position"] = fib_position
+
+    # --- Prior high 20d distance ---
+    # (Close - High_20d) / High_20d × 100
+    # This is always <= 0 because close cannot exceed the rolling max high
+    high_20d = high.rolling(20).max()
+    features["prior_high_20d_dist"] = (close - high_20d) / high_20d * 100
+
+    # --- Prior low 20d distance ---
+    # (Close - Low_20d) / Low_20d × 100
+    # This is always >= 0 because close cannot be below the rolling min low
+    low_20d = low.rolling(20).min()
+    features["prior_low_20d_dist"] = (close - low_20d) / low_20d * 100
+
+    return features
+
+
 def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.DataFrame:
     """Build feature DataFrame with all tier_a100 indicators.
 
@@ -741,6 +922,11 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
 
     # Chunk 7: Trend indicators
     features.update(_compute_trend_indicators(df))
+
+    # Chunk 8: Volume + Momentum + S/R
+    features.update(_compute_volume_indicators(df))
+    features.update(_compute_expectancy_metrics(close))
+    features.update(_compute_sr_indicators(df))
 
     # Create feature DataFrame for new a100 features
     new_features_df = pd.DataFrame(features)
