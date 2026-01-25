@@ -1,5 +1,5 @@
 # Workstream 2 Context: foundation
-# Last Updated: 2026-01-25 09:30
+# Last Updated: 2026-01-25 19:45
 
 ## Identity
 - **ID**: ws2
@@ -10,8 +10,8 @@
 ---
 
 ## Current Task
-- **Working on**: TimesFM notebook restructuring for proper threshold analysis
-- **Status**: IN PROGRESS - notebook cells need reordering
+- **Working on**: TimesFM notebook - comprehensive export cell (TFM-01)
+- **Status**: READY TO RE-RUN IN COLAB
 
 ---
 
@@ -37,38 +37,33 @@ Can pre-trained foundation models (Lag-Llama, TimesFM) beat task-specific PatchT
 
 ---
 
-## Last Session Work (2026-01-25)
+## Last Session Work (2026-01-25 19:45)
 
-### TFM-01 Ran in Colab - Results Analyzed
-1. User ran notebook in Colab, downloaded `timesfm_tfm-01_results.json`
-2. Discovered issues:
-   - Classification threshold (1%) was higher than any prediction
-   - Model produced 0 positive predictions
-   - AUC 0.364 indicates anti-correlation
+### Fixed JSON Serialization Bug in cell-27
+**Problem**: Comprehensive export cell failed with:
+```
+TypeError: Object of type bool is not JSON serializable
+```
 
-### Notebook Restructuring (IN PROGRESS)
-User requested proper threshold sweeping and anti-correlation analysis. Changes made:
+**Root Cause**: `is_anti_correlated = auc_normal < 0.5` returns `np.bool_`, not Python `bool`
 
-**Added new cells:**
-- Cell 13: Threshold sweep on predicted returns (sweep prediction confidence levels)
-- Cell 14: Anti-correlation analysis (test inverted predictions)
-- Cell 16: Comprehensive export (gather ALL data at end)
+**Fix Applied**: Changed line in cell-27:
+```python
+# Before:
+"is_anti_correlated": is_anti_correlated
 
-**Issues to fix next session:**
-1. **Threshold sweep code is MISSING** - Cell 24 has header but Cell 25 jumped to anti-correlation
-2. **Cell order is wrong** - Comprehensive export was in middle, needs to be LAST
-3. **Stubs to clean up** - Some placeholder cells remain
+# After:
+"is_anti_correlated": bool(is_anti_correlated)  # Cast numpy bool to Python bool
+```
 
 ### Files Modified This Session
-- `experiments/foundation/TimesFM_SPY_Experiments.ipynb` - PARTIAL (needs fixing)
-- `experiments/foundation/analyze_timesfm_thresholds.py` - NEW (local analysis script)
-- `outputs/foundation/timesfm_tfm-01_results.json` - Downloaded from Colab
+- `experiments/foundation/TimesFM_SPY_Experiments.ipynb` - cell-27 fixed
 
 ---
 
 ## Files Owned/Modified
 - `experiments/foundation/` - PRIMARY
-  - `TimesFM_SPY_Experiments.ipynb` - **NEEDS FIXING** (cell order wrong)
+  - `TimesFM_SPY_Experiments.ipynb` - **READY** (JSON bug fixed)
   - `analyze_timesfm_thresholds.py` - Local threshold analysis script
   - `train_lagllama_h1_forecast.py` - Lag-Llama experiment script
 - `outputs/foundation/` - Results storage
@@ -84,21 +79,21 @@ User requested proper threshold sweeping and anti-correlation analysis. Changes 
 - **Implication**: Even inverted (AUC 0.636), still below PatchTST (0.718)
 - **Next step**: Complete threshold sweep to fully characterize behavior
 
-### Notebook Restructure Requirements (2026-01-25)
-User specified:
-1. Threshold sweep on PREDICTED returns (not class threshold)
-2. Anti-correlation analysis with inverted predictions
-3. Comprehensive export at VERY END gathering ALL data
-4. Remove unnecessary appendix (no data output)
+### JSON Serialization Fix (2026-01-25 19:45)
+- **Problem**: numpy bool not JSON serializable
+- **Solution**: Cast with `bool()` in comprehensive export dict
 
 ---
 
 ## Session History
 
-### 2026-01-25 (Current - Interrupted)
+### 2026-01-25 19:45
+- Fixed cell-27 JSON serialization bug (numpy bool → Python bool)
+- Notebook now ready to re-run in Colab
+
+### 2026-01-25 09:30
 - Analyzed TFM-01 results - discovered anti-correlation
-- Started notebook restructuring
-- **INTERRUPTED** - cells out of order, needs completion
+- Restructured notebook with threshold sweep and anti-correlation cells
 
 ### 2026-01-24 17:30
 - Fixed TimesFM Colab notebook for API v2.5
@@ -112,36 +107,24 @@ User specified:
 
 ## Next Session Should
 
-### Priority 1: Fix Notebook Cell Order
-Current state (broken):
-```
-Cell 24: Threshold sweep header (Cell 13)
-Cell 25: Anti-correlation code (WRONG - should be threshold sweep code!)
-Cell 26: Export code (old export, should be comprehensive at end)
-Cell 27: Anti-correlation header (Cell 14)
-```
-
-Correct order needed:
-1. Cell 13 header → Threshold sweep CODE
-2. Cell 14 header → Anti-correlation CODE
-3. Cell 15/16 header → Comprehensive export CODE (LAST)
-
-### Priority 2: Add Missing Threshold Sweep Code
-The sweep function exists but execution code is missing. Need:
-```python
-# Sweep thresholds spanning prediction range
-thresholds = np.linspace(pred_min, pred_max, 15)
-results = sweep_prediction_thresholds(val_preds, val_labels, thresholds)
-# Print table, find best F1/precision thresholds
-```
-
-### Priority 3: Re-run in Colab
-After fixing notebook:
+### Priority 1: Re-run Notebook in Colab
+Now that JSON bug is fixed:
 1. Run Cells 1-6 (setup, inference)
-2. Run Cell 13 (threshold sweep)
-3. Run Cell 14 (anti-correlation)
-4. Run Cell 16 (comprehensive export)
-5. Download results
+2. Run Cell 25 (threshold sweep)
+3. Run Cell 26 (anti-correlation analysis)
+4. Run Cell 27 (comprehensive export) - **NOW FIXED**
+5. Download `timesfm_tfm-01_comprehensive.json`
+
+### Priority 2: Analyze Comprehensive Results
+- Review threshold sweep results
+- Confirm anti-correlation behavior
+- Determine if any threshold gives useful precision/recall
+
+### Priority 3: Decision on TFM-02/03/etc.
+Based on TFM-01 comprehensive results:
+- If anti-correlated behavior persists → may skip remaining TimesFM experiments
+- If inverted predictions useful → document as finding
+- Move to next foundation model or conclude investigation
 
 ### Expected Output Files
 - `timesfm_tfm-01_comprehensive.json` - All data in one file

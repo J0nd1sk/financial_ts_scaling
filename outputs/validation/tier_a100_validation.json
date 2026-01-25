@@ -1,0 +1,605 @@
+{
+  "timestamp": "2026-01-25T14:50:12.294532",
+  "summary": {
+    "total_checks": 69,
+    "passed": 69,
+    "failed": 0,
+    "pass_rate": "100.0%"
+  },
+  "by_chunk": {
+    "Chunk 1: Momentum derivatives": {
+      "passed": 10,
+      "failed": 0,
+      "total": 10
+    },
+    "Chunk 2: QQE/STC derivatives": {
+      "passed": 4,
+      "failed": 0,
+      "total": 4
+    },
+    "Chunk 3: Standard oscillators": {
+      "passed": 18,
+      "failed": 0,
+      "total": 18
+    },
+    "Chunk 4: VRP + Risk metrics": {
+      "passed": 6,
+      "failed": 0,
+      "total": 6
+    },
+    "Chunk 5: MA extensions": {
+      "passed": 9,
+      "failed": 0,
+      "total": 9
+    },
+    "Chunk 6: Advanced volatility": {
+      "passed": 6,
+      "failed": 0,
+      "total": 6
+    },
+    "Chunk 7: Trend indicators": {
+      "passed": 6,
+      "failed": 0,
+      "total": 6
+    },
+    "Chunk 8: Volume + Momentum + S/R": {
+      "passed": 7,
+      "failed": 0,
+      "total": 7
+    }
+  },
+  "checks": [
+    {
+      "indicator": "data_quality",
+      "check_name": "columns_present",
+      "passed": true,
+      "expected": "All 50 columns",
+      "actual": "All 50 columns present",
+      "evidence": "Column check passed"
+    },
+    {
+      "indicator": "data_quality",
+      "check_name": "no_nan_values",
+      "passed": true,
+      "expected": "No NaN in any column",
+      "actual": "No NaN values",
+      "evidence": "NaN check passed"
+    },
+    {
+      "indicator": "data_quality",
+      "check_name": "no_inf_values",
+      "passed": true,
+      "expected": "No Inf in any column",
+      "actual": "No Inf values",
+      "evidence": "Infinity check passed"
+    },
+    {
+      "indicator": "return_1d_acceleration",
+      "check_name": "formula_idx_8002",
+      "passed": true,
+      "expected": "-0.173280",
+      "actual": "-0.173280",
+      "evidence": "Hand-calc at idx 8002: diff=0.00e+00"
+    },
+    {
+      "indicator": "return_1d_acceleration",
+      "check_name": "formula_idx_4131",
+      "passed": true,
+      "expected": "-1.346791",
+      "actual": "-1.346791",
+      "evidence": "Hand-calc at idx 4131: diff=0.00e+00"
+    },
+    {
+      "indicator": "return_1d_acceleration",
+      "check_name": "formula_idx_3241",
+      "passed": true,
+      "expected": "0.621480",
+      "actual": "0.621480",
+      "evidence": "Hand-calc at idx 3241: diff=0.00e+00"
+    },
+    {
+      "indicator": "return_1d_acceleration",
+      "check_name": "formula_idx_2117",
+      "passed": true,
+      "expected": "-2.768230",
+      "actual": "-2.768230",
+      "evidence": "Hand-calc at idx 2117: diff=0.00e+00"
+    },
+    {
+      "indicator": "return_1d_acceleration",
+      "check_name": "formula_idx_3005",
+      "passed": true,
+      "expected": "2.302092",
+      "actual": "2.302092",
+      "evidence": "Hand-calc at idx 3005: diff=0.00e+00"
+    },
+    {
+      "indicator": "return_5d_acceleration",
+      "check_name": "formula_idx_8002",
+      "passed": true,
+      "expected": "-0.293233",
+      "actual": "-0.293233",
+      "evidence": "Hand-calc at idx 8002: diff=0.00e+00"
+    },
+    {
+      "indicator": "return_5d_acceleration",
+      "check_name": "formula_idx_4131",
+      "passed": true,
+      "expected": "-1.779129",
+      "actual": "-1.779129",
+      "evidence": "Hand-calc at idx 4131: diff=0.00e+00"
+    },
+    {
+      "indicator": "return_5d_acceleration",
+      "check_name": "formula_idx_3241",
+      "passed": true,
+      "expected": "0.407495",
+      "actual": "0.407495",
+      "evidence": "Hand-calc at idx 3241: diff=0.00e+00"
+    },
+    {
+      "indicator": "return_5d_acceleration",
+      "check_name": "formula_idx_2117",
+      "passed": true,
+      "expected": "-2.920294",
+      "actual": "-2.920294",
+      "evidence": "Hand-calc at idx 2117: diff=0.00e+00"
+    },
+    {
+      "indicator": "return_5d_acceleration",
+      "check_name": "formula_idx_3005",
+      "passed": true,
+      "expected": "1.673372",
+      "actual": "1.673372",
+      "evidence": "Hand-calc at idx 3005: diff=0.00e+00"
+    },
+    {
+      "indicator": "qqe_extreme_dist",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "min(|qqe-20|, |qqe-80|)",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Formula verified against qqe_fast"
+    },
+    {
+      "indicator": "stc_extreme_dist",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "min(|stc-25|, |stc-75|)",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Formula verified against stc_value"
+    },
+    {
+      "indicator": "qqe_slope",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "qqe_fast - qqe_fast.shift(5)",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "5-day change formula verified"
+    },
+    {
+      "indicator": "stc_slope",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "stc_value - stc_value.shift(5)",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "5-day change formula verified"
+    },
+    {
+      "indicator": "demarker_value",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-05",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib/formula reference match"
+    },
+    {
+      "indicator": "demarker_from_half",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-05",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib/formula reference match"
+    },
+    {
+      "indicator": "stoch_k_14",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-06",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib/formula reference match"
+    },
+    {
+      "indicator": "stoch_d_14",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-06",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib/formula reference match"
+    },
+    {
+      "indicator": "stoch_extreme_dist",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-06",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib/formula reference match"
+    },
+    {
+      "indicator": "cci_14",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-06",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib/formula reference match"
+    },
+    {
+      "indicator": "mfi_14",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-06",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib/formula reference match"
+    },
+    {
+      "indicator": "williams_r_14",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-06",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib/formula reference match"
+    },
+    {
+      "indicator": "demarker_value",
+      "check_name": "hand_calc_idx_5508",
+      "passed": true,
+      "expected": "0.160606",
+      "actual": "0.160606",
+      "evidence": "DeMarker hand-calc at idx 5508"
+    },
+    {
+      "indicator": "demarker_value",
+      "check_name": "hand_calc_idx_2597",
+      "passed": true,
+      "expected": "0.360544",
+      "actual": "0.360544",
+      "evidence": "DeMarker hand-calc at idx 2597"
+    },
+    {
+      "indicator": "demarker_value",
+      "check_name": "hand_calc_idx_3712",
+      "passed": true,
+      "expected": "0.256774",
+      "actual": "0.256774",
+      "evidence": "DeMarker hand-calc at idx 3712"
+    },
+    {
+      "indicator": "demarker_value",
+      "check_name": "hand_calc_idx_7486",
+      "passed": true,
+      "expected": "0.421332",
+      "actual": "0.421332",
+      "evidence": "DeMarker hand-calc at idx 7486"
+    },
+    {
+      "indicator": "demarker_value",
+      "check_name": "hand_calc_idx_7584",
+      "passed": true,
+      "expected": "0.580055",
+      "actual": "0.580055",
+      "evidence": "DeMarker hand-calc at idx 7584"
+    },
+    {
+      "indicator": "demarker_value",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.02, 1.00]",
+      "evidence": "Range within expected bounds"
+    },
+    {
+      "indicator": "stoch_k_14",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 100]",
+      "actual": "[0.85, 100.00]",
+      "evidence": "Range within expected bounds"
+    },
+    {
+      "indicator": "stoch_d_14",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 100]",
+      "actual": "[1.26, 98.94]",
+      "evidence": "Range within expected bounds"
+    },
+    {
+      "indicator": "mfi_14",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 100]",
+      "actual": "[9.85, 97.82]",
+      "evidence": "Range within expected bounds"
+    },
+    {
+      "indicator": "williams_r_14",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[-100, 0]",
+      "actual": "[-100.00, 0.00]",
+      "evidence": "Range within expected bounds"
+    },
+    {
+      "indicator": "vrp_5d",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "VRP formula verified"
+    },
+    {
+      "indicator": "vrp_slope",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "VRP formula verified"
+    },
+    {
+      "indicator": "var_99",
+      "check_name": "ordering_constraint",
+      "passed": true,
+      "expected": "var_99 <= var_95 (more extreme)",
+      "actual": "0 violations",
+      "evidence": "VaR ordering verified: var_99 always <= var_95"
+    },
+    {
+      "indicator": "cvar_95",
+      "check_name": "ordering_constraint",
+      "passed": true,
+      "expected": "cvar_95 <= var_95",
+      "actual": "0 violations",
+      "evidence": "CVaR ordering verified"
+    },
+    {
+      "indicator": "sharpe_252d",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[-20, 20]",
+      "actual": "[-1.97, 4.22]",
+      "evidence": "Range within expected bounds"
+    },
+    {
+      "indicator": "sortino_252d",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[-20, 20]",
+      "actual": "[-2.58, 7.20]",
+      "evidence": "Range within expected bounds"
+    },
+    {
+      "indicator": "sma_9_50_proximity",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib reference match"
+    },
+    {
+      "indicator": "sma_50_slope",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib reference match"
+    },
+    {
+      "indicator": "sma_200_slope",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib reference match"
+    },
+    {
+      "indicator": "ema_12",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib reference match"
+    },
+    {
+      "indicator": "ema_26",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib reference match"
+    },
+    {
+      "indicator": "days_since_sma_50_cross",
+      "check_name": "counter_reset",
+      "passed": true,
+      "expected": "days=0 at all crosses",
+      "actual": "552/552 zeros",
+      "evidence": "Counter resets correctly at crosses"
+    },
+    {
+      "indicator": "days_since_sma_50_cross",
+      "check_name": "counter_increment",
+      "passed": true,
+      "expected": "monotonically increasing",
+      "actual": "[30, 31, 32, 33, 34, 35]",
+      "evidence": "Counter generally increases after cross"
+    },
+    {
+      "indicator": "days_since_sma_200_cross",
+      "check_name": "counter_reset",
+      "passed": true,
+      "expected": "days=0 at all crosses",
+      "actual": "212/212 zeros",
+      "evidence": "Counter resets correctly at crosses"
+    },
+    {
+      "indicator": "days_since_sma_200_cross",
+      "check_name": "counter_increment",
+      "passed": true,
+      "expected": "monotonically increasing",
+      "actual": "[54, 55, 56, 57, 58, 59]",
+      "evidence": "Counter generally increases after cross"
+    },
+    {
+      "indicator": "parkinson_volatility",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "parkinson_volatility formula verified (textbook formula)"
+    },
+    {
+      "indicator": "garman_klass_volatility",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "garman_klass_volatility formula verified (textbook formula)"
+    },
+    {
+      "indicator": "parkinson_volatility",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 150]",
+      "actual": "[3.63, 75.76]",
+      "evidence": "Volatility range reasonable"
+    },
+    {
+      "indicator": "garman_klass_volatility",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 150]",
+      "actual": "[3.79, 77.75]",
+      "evidence": "Volatility range reasonable"
+    },
+    {
+      "indicator": "atr_pct_percentile_60d",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 100]",
+      "actual": "[1.67, 100.00]",
+      "evidence": "Percentile range valid"
+    },
+    {
+      "indicator": "bb_width_percentile_60d",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 100]",
+      "actual": "[1.67, 100.00]",
+      "evidence": "Percentile range valid"
+    },
+    {
+      "indicator": "adx_slope",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib reference match"
+    },
+    {
+      "indicator": "di_spread",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib reference match"
+    },
+    {
+      "indicator": "aroon_oscillator",
+      "check_name": "reference_comparison",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Talib reference match"
+    },
+    {
+      "indicator": "supertrend_direction",
+      "check_name": "bullish_consistency",
+      "passed": true,
+      "expected": "price above ST when bullish (>=95%)",
+      "actual": "100.0%",
+      "evidence": "4975/4975 consistent"
+    },
+    {
+      "indicator": "supertrend_direction",
+      "check_name": "bearish_consistency",
+      "passed": true,
+      "expected": "price below ST when bearish (>=95%)",
+      "actual": "100.0%",
+      "evidence": "3047/3047 consistent"
+    },
+    {
+      "indicator": "supertrend_direction",
+      "check_name": "value_range",
+      "passed": true,
+      "expected": "{+1, -1}",
+      "actual": "{1.0, -1.0}",
+      "evidence": "Direction values are valid"
+    },
+    {
+      "indicator": "buying_pressure_ratio",
+      "check_name": "boundary_close_eq_high",
+      "passed": true,
+      "expected": "bp=1 when Close=High",
+      "actual": "214/214",
+      "evidence": "Boundary condition verified"
+    },
+    {
+      "indicator": "buying_pressure_ratio",
+      "check_name": "boundary_close_eq_low",
+      "passed": true,
+      "expected": "bp=0 when Close=Low",
+      "actual": "124/124",
+      "evidence": "Boundary condition verified"
+    },
+    {
+      "indicator": "buying_pressure_ratio",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[-0.0000, 1.0000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "fib_range_position",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0000, 1.0000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "win_rate_20d",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.2000, 0.9000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "prior_high_20d_dist",
+      "check_name": "sign_constraint",
+      "passed": true,
+      "expected": "always <= 0",
+      "actual": "max=0.000000",
+      "evidence": "Sign constraint verified"
+    },
+    {
+      "indicator": "prior_low_20d_dist",
+      "check_name": "sign_constraint",
+      "passed": true,
+      "expected": "always >= 0",
+      "actual": "min=0.000000",
+      "evidence": "Sign constraint verified"
+    }
+  ]
+}

@@ -47,9 +47,9 @@ python scripts/find_batch_size.py --param-budget 20M
 
 | Split | Date Range |
 |-------|------------|
-| Training | Through 2020-12-31 |
-| Validation | 2021-01-01 to 2022-12-31 |
-| Testing | 2023-01-01 onwards |
+| Training | Through 2022-12-31 |
+| Validation | 2023-01-01 to 2024-12-31 |
+| Testing | 2025-01-01 onwards |
 
 These splits are fixed. No leakage permitted.
 

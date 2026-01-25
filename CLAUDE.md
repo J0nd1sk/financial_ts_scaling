@@ -147,9 +147,9 @@ Exceptions:
 - 48 models per dataset (6 tasks × 8 timescales)
 
 ### Data Splits (Fixed)
-- Training: through 2020
-- Validation: 2021-2022
-- Testing: 2023+
+- Training: through 2022-12-31
+- Validation: 2023-01-01 to 2024-12-31
+- Testing: 2025-01-01 onwards
 
 ### Dataset Matrix
 - Rows A-E: Asset scaling (SPY → +DIA/QQQ → +stocks → +econ)
