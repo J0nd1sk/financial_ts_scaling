@@ -302,7 +302,7 @@ def _compute_vrp_extensions(df: pd.DataFrame, vix_df: pd.DataFrame) -> Mapping[s
 
     # Align VIX to price data by date (same pattern as tier_a50._compute_vrp)
     vix_df_copy = vix_df.copy()
-    vix_df_copy["Date"] = pd.to_datetime(vix_df_copy["Date"])
+    vix_df_copy["Date"] = pd.to_datetime(vix_df_copy["Date"]).dt.normalize()
 
     df_copy = df.copy()
     df_copy["Date"] = pd.to_datetime(df_copy["Date"])
