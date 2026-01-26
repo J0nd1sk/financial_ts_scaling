@@ -1,0 +1,1359 @@
+{
+  "timestamp": "2026-01-26T13:10:46.396177",
+  "summary": {
+    "total_checks": 147,
+    "passed": 147,
+    "failed": 0,
+    "pass_rate": "100.0%"
+  },
+  "by_chunk": {
+    "Chunk 1: Extended MAs (101-120)": {
+      "passed": 37,
+      "failed": 0,
+      "total": 37
+    },
+    "Chunk 2: Duration & Proximity (121-140)": {
+      "passed": 15,
+      "failed": 0,
+      "total": 15
+    },
+    "Chunk 3: BB/RSI/Mean Reversion (141-160)": {
+      "passed": 14,
+      "failed": 0,
+      "total": 14
+    },
+    "Chunk 4: MACD/Volume/Calendar/Candle (161-180)": {
+      "passed": 20,
+      "failed": 0,
+      "total": 20
+    },
+    "Chunk 5: Ichimoku/Donchian/Divergence/Entropy (181-206)": {
+      "passed": 34,
+      "failed": 0,
+      "total": 34
+    },
+    "Lookahead Detection": {
+      "passed": 120,
+      "failed": 0,
+      "total": 120
+    },
+    "Cross-Indicator Consistency": {
+      "passed": 120,
+      "failed": 0,
+      "total": 120
+    },
+    "Known Events": {
+      "passed": 120,
+      "failed": 0,
+      "total": 120
+    }
+  },
+  "checks": [
+    {
+      "indicator": "data_quality",
+      "check_name": "columns_present",
+      "passed": true,
+      "expected": "All 106 columns",
+      "actual": "All 106 columns present",
+      "evidence": "Column check passed"
+    },
+    {
+      "indicator": "data_quality",
+      "check_name": "no_nan_values",
+      "passed": true,
+      "expected": "No NaN in any column",
+      "actual": "No NaN values",
+      "evidence": "NaN check passed"
+    },
+    {
+      "indicator": "data_quality",
+      "check_name": "no_inf_values",
+      "passed": true,
+      "expected": "No Inf in any column",
+      "actual": "No Inf values",
+      "evidence": "Infinity check passed"
+    },
+    {
+      "indicator": "tema_9",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "rel_diff < 0.5%",
+      "actual": "rel_diff=0.012%, max_diff=2.12e-02",
+      "evidence": "TA-Lib TEMA reference match (within relative tolerance)"
+    },
+    {
+      "indicator": "tema_20",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "rel_diff < 0.5%",
+      "actual": "rel_diff=0.020%, max_diff=3.47e-02",
+      "evidence": "TA-Lib TEMA reference match (within relative tolerance)"
+    },
+    {
+      "indicator": "tema_50",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "rel_diff < 0.5%",
+      "actual": "rel_diff=0.017%, max_diff=2.93e-02",
+      "evidence": "TA-Lib TEMA reference match (within relative tolerance)"
+    },
+    {
+      "indicator": "tema_100",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "rel_diff < 0.5%",
+      "actual": "rel_diff=0.072%, max_diff=1.26e-01",
+      "evidence": "TA-Lib TEMA reference match (within relative tolerance)"
+    },
+    {
+      "indicator": "wma_10",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "TA-Lib WMA reference match"
+    },
+    {
+      "indicator": "wma_20",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "TA-Lib WMA reference match"
+    },
+    {
+      "indicator": "wma_50",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "TA-Lib WMA reference match"
+    },
+    {
+      "indicator": "wma_200",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "TA-Lib WMA reference match"
+    },
+    {
+      "indicator": "kama_10",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "rel_diff < 0.5%",
+      "actual": "rel_diff=0.096%, max_diff=1.62e-01",
+      "evidence": "TA-Lib KAMA reference match (within relative tolerance)"
+    },
+    {
+      "indicator": "kama_20",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "rel_diff < 0.5%",
+      "actual": "rel_diff=0.088%, max_diff=1.48e-01",
+      "evidence": "TA-Lib KAMA reference match (within relative tolerance)"
+    },
+    {
+      "indicator": "kama_50",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "rel_diff < 0.5%",
+      "actual": "rel_diff=0.332%, max_diff=5.60e-01",
+      "evidence": "TA-Lib KAMA reference match (within relative tolerance)"
+    },
+    {
+      "indicator": "hma_9",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "HMA formula: WMA(2*WMA(n/2)-WMA(n), sqrt(n))",
+      "actual": "max_diff=1.36e-12",
+      "evidence": "HMA hand-calculation verified"
+    },
+    {
+      "indicator": "hma_21",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "HMA formula: WMA(2*WMA(n/2)-WMA(n), sqrt(n))",
+      "actual": "max_diff=9.09e-13",
+      "evidence": "HMA hand-calculation verified"
+    },
+    {
+      "indicator": "hma_50",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "HMA formula: WMA(2*WMA(n/2)-WMA(n), sqrt(n))",
+      "actual": "max_diff=3.90e-11",
+      "evidence": "HMA hand-calculation verified"
+    },
+    {
+      "indicator": "vwma_10",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "VWMA = sum(close*vol)/sum(vol)",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "VWMA hand-calculation verified"
+    },
+    {
+      "indicator": "vwma_20",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "VWMA = sum(close*vol)/sum(vol)",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "VWMA hand-calculation verified"
+    },
+    {
+      "indicator": "vwma_50",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "VWMA = sum(close*vol)/sum(vol)",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "VWMA hand-calculation verified"
+    },
+    {
+      "indicator": "tema_20_slope",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "tema_20 - tema_20.shift(5)",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Slope formula verified"
+    },
+    {
+      "indicator": "price_pct_from_tema_50",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "(close - tema_50) / tema_50 * 100",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Pct formula verified"
+    },
+    {
+      "indicator": "price_pct_from_kama_20",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "(close - kama_20) / kama_20 * 100",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Pct formula verified"
+    },
+    {
+      "indicator": "tema_9",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.06, 685.90]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "tema_20",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.10, 683.04]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "tema_50",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.21, 681.09]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "tema_100",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.42, 687.33]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "wma_10",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.31, 682.19]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "wma_20",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.40, 676.82]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "wma_50",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.59, 673.92]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "wma_200",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[26.04, 641.72]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "kama_10",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.48, 679.45]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "kama_20",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.64, 669.01]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "kama_50",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.80, 669.11]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "hma_9",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[24.98, 687.42]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "hma_21",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.10, 687.16]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "hma_50",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.13, 679.45]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "vwma_10",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.31, 681.45]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "vwma_20",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.35, 675.09]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "vwma_50",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "positive, reasonable range",
+      "actual": "[25.54, 669.86]",
+      "evidence": "MA range valid"
+    },
+    {
+      "indicator": "days_above_sma_9",
+      "check_name": "mutual_exclusivity",
+      "passed": true,
+      "expected": "days_above > 0 implies days_below == 0",
+      "actual": "0 violations",
+      "evidence": "Mutual exclusivity with days_below_sma_9 verified"
+    },
+    {
+      "indicator": "days_above_sma_50",
+      "check_name": "mutual_exclusivity",
+      "passed": true,
+      "expected": "days_above > 0 implies days_below == 0",
+      "actual": "0 violations",
+      "evidence": "Mutual exclusivity with days_below_sma_50 verified"
+    },
+    {
+      "indicator": "days_above_sma_200",
+      "check_name": "mutual_exclusivity",
+      "passed": true,
+      "expected": "days_above > 0 implies days_below == 0",
+      "actual": "0 violations",
+      "evidence": "Mutual exclusivity with days_below_sma_200 verified"
+    },
+    {
+      "indicator": "days_above_tema_20",
+      "check_name": "mutual_exclusivity",
+      "passed": true,
+      "expected": "days_above > 0 implies days_below == 0",
+      "actual": "0 violations",
+      "evidence": "Mutual exclusivity with days_below_tema_20 verified"
+    },
+    {
+      "indicator": "days_above_kama_20",
+      "check_name": "mutual_exclusivity",
+      "passed": true,
+      "expected": "days_above > 0 implies days_below == 0",
+      "actual": "0 violations",
+      "evidence": "Mutual exclusivity with days_below_kama_20 verified"
+    },
+    {
+      "indicator": "days_above_vwma_20",
+      "check_name": "mutual_exclusivity",
+      "passed": true,
+      "expected": "days_above > 0 implies days_below == 0",
+      "actual": "0 violations",
+      "evidence": "Mutual exclusivity with days_below_vwma_20 verified"
+    },
+    {
+      "indicator": "days_above_sma_9",
+      "check_name": "increment_logic",
+      "passed": true,
+      "expected": "counter increments when condition persists",
+      "actual": "0 issues (< 1%)",
+      "evidence": "Counter increment logic verified"
+    },
+    {
+      "indicator": "days_above_sma_50",
+      "check_name": "increment_logic",
+      "passed": true,
+      "expected": "counter increments when condition persists",
+      "actual": "0 issues (< 1%)",
+      "evidence": "Counter increment logic verified"
+    },
+    {
+      "indicator": "days_since_sma_9_50_cross",
+      "check_name": "sign_convention",
+      "passed": true,
+      "expected": "both positive and negative values exist",
+      "actual": "pos: 5445, neg: 2532",
+      "evidence": "Sign convention verified (has both bullish/bearish)"
+    },
+    {
+      "indicator": "days_since_sma_50_200_cross",
+      "check_name": "sign_convention",
+      "passed": true,
+      "expected": "both positive and negative values exist",
+      "actual": "pos: 6086, neg: 1891",
+      "evidence": "Sign convention verified (has both bullish/bearish)"
+    },
+    {
+      "indicator": "days_since_tema_sma_50_cross",
+      "check_name": "sign_convention",
+      "passed": true,
+      "expected": "both positive and negative values exist",
+      "actual": "pos: 5434, neg: 2543",
+      "evidence": "Sign convention verified (has both bullish/bearish)"
+    },
+    {
+      "indicator": "days_since_kama_sma_50_cross",
+      "check_name": "sign_convention",
+      "passed": true,
+      "expected": "both positive and negative values exist",
+      "actual": "pos: 5265, neg: 2712",
+      "evidence": "Sign convention verified (has both bullish/bearish)"
+    },
+    {
+      "indicator": "days_since_sma_9_200_cross",
+      "check_name": "sign_convention",
+      "passed": true,
+      "expected": "both positive and negative values exist",
+      "actual": "pos: 6112, neg: 1865",
+      "evidence": "Sign convention verified (has both bullish/bearish)"
+    },
+    {
+      "indicator": "tema_20_sma_50_proximity",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "(tema_20 - sma_50) / sma_50 * 100",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Proximity formula verified"
+    },
+    {
+      "indicator": "sma_9_200_proximity",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "(sma_9 - sma_200) / sma_200 * 100",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Proximity formula verified"
+    },
+    {
+      "indicator": "pct_from_upper_band",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "(close - upper_bb) / upper_bb * 100",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "BB pct formula verified"
+    },
+    {
+      "indicator": "pct_from_lower_band",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "(close - lower_bb) / lower_bb * 100",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "BB pct formula verified"
+    },
+    {
+      "indicator": "bb_squeeze_indicator",
+      "check_name": "squeeze_duration_consistency",
+      "passed": true,
+      "expected": "squeeze=1 implies duration>=1",
+      "actual": "0 violations",
+      "evidence": "Squeeze-duration consistency verified"
+    },
+    {
+      "indicator": "rsi_distance_from_50",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "RSI - 50",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "RSI distance formula verified"
+    },
+    {
+      "indicator": "rsi_percentile_60d",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0167, 1.0000]",
+      "evidence": "Percentile range valid"
+    },
+    {
+      "indicator": "zscore_from_20d_mean",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "(close - SMA20) / std20",
+      "actual": "max_diff=2.47e-12",
+      "evidence": "Z-score formula verified"
+    },
+    {
+      "indicator": "distance_from_52wk_high_pct",
+      "check_name": "sign_constraint",
+      "passed": true,
+      "expected": "always <= 0",
+      "actual": "max=0.000000",
+      "evidence": "Sign constraint verified (cannot exceed 52wk high)"
+    },
+    {
+      "indicator": "percentile_in_52wk_range",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0000, 1.0000]",
+      "evidence": "Percentile range valid"
+    },
+    {
+      "indicator": "consecutive_up_days",
+      "check_name": "streak_exclusivity",
+      "passed": true,
+      "expected": "up_days > 0 implies down_days == 0",
+      "actual": "0 violations",
+      "evidence": "Streak exclusivity verified"
+    },
+    {
+      "indicator": "up_days_ratio_20d",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.2000, 0.9000]",
+      "evidence": "Ratio range valid"
+    },
+    {
+      "indicator": "macd_signal",
+      "check_name": "talib_reference",
+      "passed": true,
+      "expected": "max_diff < 1e-6",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "TA-Lib MACD signal match"
+    },
+    {
+      "indicator": "trading_day_of_week",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 4]",
+      "actual": "[0, 4]",
+      "evidence": "Day of week range valid"
+    },
+    {
+      "indicator": "is_monday",
+      "check_name": "calendar_logic",
+      "passed": true,
+      "expected": "is_monday == (dayofweek == 0)",
+      "actual": "0 mismatches",
+      "evidence": "Monday logic verified"
+    },
+    {
+      "indicator": "is_friday",
+      "check_name": "calendar_logic",
+      "passed": true,
+      "expected": "is_friday == (dayofweek == 4)",
+      "actual": "0 mismatches",
+      "evidence": "Friday logic verified"
+    },
+    {
+      "indicator": "month_of_year",
+      "check_name": "calendar_logic",
+      "passed": true,
+      "expected": "month_of_year == dt.month, [1, 12]",
+      "actual": "0 mismatches",
+      "evidence": "Month logic verified"
+    },
+    {
+      "indicator": "is_quarter_end_month",
+      "check_name": "calendar_logic",
+      "passed": true,
+      "expected": "is_quarter_end_month == month in {3,6,9,12}",
+      "actual": "0 mismatches",
+      "evidence": "Quarter end logic verified"
+    },
+    {
+      "indicator": "body_to_range_ratio",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0000, 1.0000]",
+      "evidence": "Candle ratio range valid"
+    },
+    {
+      "indicator": "upper_wick_pct",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0000, 0.9820]",
+      "evidence": "Candle ratio range valid"
+    },
+    {
+      "indicator": "lower_wick_pct",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0000, 1.0000]",
+      "evidence": "Candle ratio range valid"
+    },
+    {
+      "indicator": "doji_indicator",
+      "check_name": "doji_logic",
+      "passed": true,
+      "expected": "doji=1 implies body_ratio < 0.1",
+      "actual": "0 violations",
+      "evidence": "Doji logic verified"
+    },
+    {
+      "indicator": "candle_body_pct",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "abs(C-O)/O * 100",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Candle body formula verified"
+    },
+    {
+      "indicator": "tenkan_sen",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "(9d_high + 9d_low) / 2",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Tenkan-sen formula verified"
+    },
+    {
+      "indicator": "kijun_sen",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "(26d_high + 26d_low) / 2",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Kijun-sen formula verified"
+    },
+    {
+      "indicator": "senkou_span_b",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "(52d_high + 52d_low) / 2",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Senkou Span B formula verified"
+    },
+    {
+      "indicator": "price_vs_cloud",
+      "check_name": "value_range",
+      "passed": true,
+      "expected": "{-1, 0, 1}",
+      "actual": "{0, 1, -1}",
+      "evidence": "Cloud position values valid"
+    },
+    {
+      "indicator": "donchian_upper_20",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "rolling(20).max(high)",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Donchian upper formula verified"
+    },
+    {
+      "indicator": "donchian_lower_20",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "rolling(20).min(low)",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Donchian lower formula verified"
+    },
+    {
+      "indicator": "donchian_position",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0000, 1.0000]",
+      "evidence": "Donchian position range valid"
+    },
+    {
+      "indicator": "price_rsi_divergence",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[-1, 1]",
+      "actual": "[-0.7000, 0.8500]",
+      "evidence": "Divergence range valid"
+    },
+    {
+      "indicator": "price_obv_divergence",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[-1, 1]",
+      "actual": "[-0.9000, 0.9000]",
+      "evidence": "Divergence range valid"
+    },
+    {
+      "indicator": "divergence_magnitude",
+      "check_name": "formula_verification",
+      "passed": true,
+      "expected": "max(|rsi_div|, |obv_div|)",
+      "actual": "max_diff=0.00e+00",
+      "evidence": "Divergence magnitude formula verified"
+    },
+    {
+      "indicator": "permutation_entropy_order3",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.4246, 1.0000]",
+      "evidence": "Entropy range valid"
+    },
+    {
+      "indicator": "permutation_entropy_order4",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.3139, 0.8915]",
+      "evidence": "Entropy range valid"
+    },
+    {
+      "indicator": "permutation_entropy_order5",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.2348, 0.5791]",
+      "evidence": "Entropy range valid"
+    },
+    {
+      "indicator": "atr_regime_pct_60d",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0167, 1.0000]",
+      "evidence": "Regime percentile range valid"
+    },
+    {
+      "indicator": "atr_regime_rolling_q",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0167, 1.0000]",
+      "evidence": "Regime percentile range valid"
+    },
+    {
+      "indicator": "trend_strength_pct_60d",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0167, 1.0000]",
+      "evidence": "Regime percentile range valid"
+    },
+    {
+      "indicator": "trend_strength_rolling_q",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0167, 1.0000]",
+      "evidence": "Regime percentile range valid"
+    },
+    {
+      "indicator": "regime_transition_prob",
+      "check_name": "range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.0000, 0.5500]",
+      "evidence": "Regime percentile range valid"
+    },
+    {
+      "indicator": "vol_regime_state",
+      "check_name": "value_range",
+      "passed": true,
+      "expected": "{-1, 0, 1}",
+      "actual": "{0, 1, -1}",
+      "evidence": "Regime state values valid"
+    },
+    {
+      "indicator": "regime_consistency",
+      "check_name": "constraint_check",
+      "passed": true,
+      "expected": ">= 1",
+      "actual": "min=1",
+      "evidence": "Consistency constraint valid"
+    },
+    {
+      "indicator": "body_to_range_ratio",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "upper_wick_pct",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 0.982013]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "lower_wick_pct",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "donchian_position",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "rsi_percentile_60d",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.016667, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "percentile_in_52wk_range",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "up_days_ratio_20d",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.200000, 0.900000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "permutation_entropy_order3",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.424586, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "permutation_entropy_order4",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.313907, 0.891493]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "permutation_entropy_order5",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.234786, 0.579132]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "atr_regime_pct_60d",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.016667, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "atr_regime_rolling_q",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.016667, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "trend_strength_pct_60d",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.016667, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "trend_strength_rolling_q",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.016667, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "regime_transition_prob",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 0.550000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "bb_squeeze_indicator",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "doji_indicator",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "is_monday",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "is_friday",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "is_quarter_end_month",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "trading_day_of_week",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 4]",
+      "actual": "[0.000000, 4.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "month_of_year",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[1, 12]",
+      "actual": "[1.000000, 12.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "vol_regime_state",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[-1, 1]",
+      "actual": "[-1.000000, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "price_vs_cloud",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[-1, 1]",
+      "actual": "[-1.000000, 1.000000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "price_rsi_divergence",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[-1, 1]",
+      "actual": "[-0.700000, 0.850000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "price_obv_divergence",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[-1, 1]",
+      "actual": "[-0.900000, 0.900000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "divergence_magnitude",
+      "check_name": "bounded_range_check",
+      "passed": true,
+      "expected": "[0, 1]",
+      "actual": "[0.000000, 0.900000]",
+      "evidence": "Range valid"
+    },
+    {
+      "indicator": "sample_audit",
+      "check_name": "date_2020-03-16",
+      "passed": true,
+      "expected": "indicators sensible for context",
+      "actual": "SENSIBLE",
+      "evidence": "COVID crash - worst single day: vol_regime=high (EXPECTED), atr_pct>0.7 (EXPECTED), zscore=-2.14 (negative, EXPECTED)"
+    },
+    {
+      "indicator": "sample_audit",
+      "check_name": "date_2020-03-23",
+      "passed": true,
+      "expected": "indicators present",
+      "actual": "REVIEW",
+      "evidence": "COVID bottom - reversal: data available, manual review recommended"
+    },
+    {
+      "indicator": "sample_audit",
+      "check_name": "date_2021-11-19",
+      "passed": true,
+      "expected": "indicators sensible for context",
+      "actual": "SENSIBLE",
+      "evidence": "All-time high before 2022 bear: above_cloud (EXPECTED), donchian_pos=0.889 (high, EXPECTED), near_52wk_high (EXPECTED)"
+    },
+    {
+      "indicator": "sample_audit",
+      "check_name": "date_2022-06-16",
+      "passed": true,
+      "expected": "indicators sensible for context",
+      "actual": "SENSIBLE",
+      "evidence": "2022 bear market low: vol_regime=high (EXPECTED), atr_pct>0.7 (EXPECTED), zscore=-2.02 (negative, EXPECTED)"
+    },
+    {
+      "indicator": "sample_audit",
+      "check_name": "date_2023-10-27",
+      "passed": true,
+      "expected": "indicators sensible for context",
+      "actual": "SENSIBLE",
+      "evidence": "October 2023 correction low: vol_regime=high (EXPECTED), atr_pct>0.7 (EXPECTED), zscore=-2.08 (negative, EXPECTED)"
+    },
+    {
+      "indicator": "sample_audit",
+      "check_name": "date_2024-07-16",
+      "passed": true,
+      "expected": "indicators sensible for context",
+      "actual": "SENSIBLE",
+      "evidence": "Mid-2024 high: above_cloud (EXPECTED), donchian_pos=0.988 (high, EXPECTED), near_52wk_high (EXPECTED)"
+    },
+    {
+      "indicator": "cross_indicator",
+      "check_name": "rsi_overbought_sync",
+      "passed": true,
+      "expected": "RSI>70 implies days_overbought>0 (99%)",
+      "actual": "100.0% consistent",
+      "evidence": "RSI-duration sync verified"
+    },
+    {
+      "indicator": "cross_indicator",
+      "check_name": "rsi_oversold_sync",
+      "passed": true,
+      "expected": "RSI<30 implies days_oversold>0 (99%)",
+      "actual": "100.0% consistent",
+      "evidence": "RSI-duration sync verified"
+    },
+    {
+      "indicator": "cross_indicator",
+      "check_name": "bb_squeeze_duration_sync",
+      "passed": true,
+      "expected": "squeeze=1 implies duration>=1",
+      "actual": "0 violations",
+      "evidence": "BB squeeze-duration sync verified"
+    },
+    {
+      "indicator": "cross_indicator",
+      "check_name": "monday_dow_sync",
+      "passed": true,
+      "expected": "is_monday=1 implies dow=0",
+      "actual": "0 violations",
+      "evidence": "Monday-DOW sync verified"
+    },
+    {
+      "indicator": "cross_indicator",
+      "check_name": "friday_dow_sync",
+      "passed": true,
+      "expected": "is_friday=1 implies dow=4",
+      "actual": "0 violations",
+      "evidence": "Friday-DOW sync verified"
+    },
+    {
+      "indicator": "cross_indicator",
+      "check_name": "quarter_end_month_sync",
+      "passed": true,
+      "expected": "is_quarter_end=1 implies month in {3,6,9,12}",
+      "actual": "0 violations",
+      "evidence": "Quarter end-month sync verified"
+    },
+    {
+      "indicator": "cross_indicator",
+      "check_name": "vol_regime_atr_sync",
+      "passed": true,
+      "expected": "vol_state=1 implies atr_pct>0.7 (99%)",
+      "actual": "100.0% consistent",
+      "evidence": "Volatility regime sync verified"
+    },
+    {
+      "indicator": "cross_indicator",
+      "check_name": "vol_regime_atr_low_sync",
+      "passed": true,
+      "expected": "vol_state=-1 implies atr_pct<0.3 (99%)",
+      "actual": "100.0% consistent",
+      "evidence": "Low volatility regime sync verified"
+    },
+    {
+      "indicator": "cross_indicator",
+      "check_name": "streak_exclusivity",
+      "passed": true,
+      "expected": "up>0 and down>0 cannot both be true",
+      "actual": "0 violations",
+      "evidence": "Streak exclusivity verified"
+    },
+    {
+      "indicator": "cross_indicator",
+      "check_name": "doji_body_ratio_sync",
+      "passed": true,
+      "expected": "doji=1 implies body_ratio<0.1",
+      "actual": "0 violations",
+      "evidence": "Doji-body ratio sync verified"
+    },
+    {
+      "indicator": "known_events",
+      "check_name": "covid_vol_regime",
+      "passed": true,
+      "expected": ">70% high vol days",
+      "actual": "100.0%",
+      "evidence": "COVID crash showed sustained high volatility"
+    },
+    {
+      "indicator": "known_events",
+      "check_name": "covid_atr_pct",
+      "passed": true,
+      "expected": "mean atr_pct > 0.8",
+      "actual": "0.994",
+      "evidence": "COVID ATR percentile was high"
+    },
+    {
+      "indicator": "known_events",
+      "check_name": "covid_zscore",
+      "passed": true,
+      "expected": "mean zscore < -1",
+      "actual": "-1.78",
+      "evidence": "COVID showed negative z-scores (expected)"
+    },
+    {
+      "indicator": "known_events",
+      "check_name": "covid_52wk_dist",
+      "passed": true,
+      "expected": "min distance < -20%",
+      "actual": "-33.7%",
+      "evidence": "COVID showed significant drawdown from 52wk high"
+    },
+    {
+      "indicator": "known_events",
+      "check_name": "bear2022_cloud",
+      "passed": true,
+      "expected": ">30% below cloud",
+      "actual": "49.0%",
+      "evidence": "2022 bear market showed time below cloud"
+    },
+    {
+      "indicator": "known_events",
+      "check_name": "bear2022_streak",
+      "passed": true,
+      "expected": "max down streak >= 3",
+      "actual": "6 days",
+      "evidence": "2022 bear market had down streaks"
+    },
+    {
+      "indicator": "known_events",
+      "check_name": "bull2024_cloud",
+      "passed": true,
+      "expected": ">50% above cloud",
+      "actual": "86.1%",
+      "evidence": "2023-24 bull run showed time above cloud"
+    },
+    {
+      "indicator": "known_events",
+      "check_name": "bull2024_donchian",
+      "passed": true,
+      "expected": "mean donchian > 0.6",
+      "actual": "0.790",
+      "evidence": "2023-24 bull run showed high Donchian position"
+    }
+  ],
+  "sample_audits": [
+    {
+      "date": "2020-03-16",
+      "context": "COVID crash - worst single day",
+      "date_note": "",
+      "indicators": {
+        "vol_regime_state": 1,
+        "atr_regime_pct_60d": 1.0,
+        "zscore_from_20d_mean": -2.14,
+        "distance_from_52wk_high_pct": -29.11,
+        "days_rsi_oversold": 0,
+        "days_rsi_overbought": 0,
+        "price_vs_cloud": -1,
+        "donchian_position": 0.024,
+        "permutation_entropy_order4": 0.606
+      },
+      "sensibility_checks": [
+        "vol_regime=high (EXPECTED)",
+        "atr_pct>0.7 (EXPECTED)",
+        "zscore=-2.14 (negative, EXPECTED)"
+      ],
+      "status": "SENSIBLE"
+    },
+    {
+      "date": "2020-03-23",
+      "context": "COVID bottom - reversal",
+      "date_note": "",
+      "indicators": {
+        "vol_regime_state": 1,
+        "atr_regime_pct_60d": 1.0,
+        "zscore_from_20d_mean": -1.69,
+        "distance_from_52wk_high_pct": -33.72,
+        "days_rsi_oversold": 1,
+        "days_rsi_overbought": 0,
+        "price_vs_cloud": -1,
+        "donchian_position": 0.045,
+        "permutation_entropy_order4": 0.763
+      },
+      "sensibility_checks": [],
+      "status": "REVIEW"
+    },
+    {
+      "date": "2021-11-19",
+      "context": "All-time high before 2022 bear",
+      "date_note": "",
+      "indicators": {
+        "vol_regime_state": -1,
+        "atr_regime_pct_60d": 0.167,
+        "zscore_from_20d_mean": 0.96,
+        "distance_from_52wk_high_pct": -0.18,
+        "days_rsi_oversold": 0,
+        "days_rsi_overbought": 0,
+        "price_vs_cloud": 1,
+        "donchian_position": 0.889,
+        "permutation_entropy_order4": 0.584
+      },
+      "sensibility_checks": [
+        "above_cloud (EXPECTED)",
+        "donchian_pos=0.889 (high, EXPECTED)",
+        "near_52wk_high (EXPECTED)"
+      ],
+      "status": "SENSIBLE"
+    },
+    {
+      "date": "2022-06-16",
+      "context": "2022 bear market low",
+      "date_note": "",
+      "indicators": {
+        "vol_regime_state": 1,
+        "atr_regime_pct_60d": 1.0,
+        "zscore_from_20d_mean": -2.02,
+        "distance_from_52wk_high_pct": -23.01,
+        "days_rsi_oversold": 0,
+        "days_rsi_overbought": 0,
+        "price_vs_cloud": -1,
+        "donchian_position": 0.048,
+        "permutation_entropy_order4": 0.805
+      },
+      "sensibility_checks": [
+        "vol_regime=high (EXPECTED)",
+        "atr_pct>0.7 (EXPECTED)",
+        "zscore=-2.02 (negative, EXPECTED)"
+      ],
+      "status": "SENSIBLE"
+    },
+    {
+      "date": "2023-10-27",
+      "context": "October 2023 correction low",
+      "date_note": "",
+      "indicators": {
+        "vol_regime_state": 1,
+        "atr_regime_pct_60d": 1.0,
+        "zscore_from_20d_mean": -2.08,
+        "distance_from_52wk_high_pct": -9.97,
+        "days_rsi_oversold": 1,
+        "days_rsi_overbought": 0,
+        "price_vs_cloud": -1,
+        "donchian_position": 0.051,
+        "permutation_entropy_order4": 0.712
+      },
+      "sensibility_checks": [
+        "vol_regime=high (EXPECTED)",
+        "atr_pct>0.7 (EXPECTED)",
+        "zscore=-2.08 (negative, EXPECTED)"
+      ],
+      "status": "SENSIBLE"
+    },
+    {
+      "date": "2024-07-16",
+      "context": "Mid-2024 high",
+      "date_note": "",
+      "indicators": {
+        "vol_regime_state": -1,
+        "atr_regime_pct_60d": 0.15,
+        "zscore_from_20d_mean": 1.96,
+        "distance_from_52wk_high_pct": 0.0,
+        "days_rsi_oversold": 0,
+        "days_rsi_overbought": 3,
+        "price_vs_cloud": 1,
+        "donchian_position": 0.988,
+        "permutation_entropy_order4": 0.614
+      },
+      "sensibility_checks": [
+        "above_cloud (EXPECTED)",
+        "donchian_pos=0.988 (high, EXPECTED)",
+        "near_52wk_high (EXPECTED)"
+      ],
+      "status": "SENSIBLE"
+    }
+  ]
+}
