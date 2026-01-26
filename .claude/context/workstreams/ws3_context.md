@@ -1,161 +1,154 @@
 # Workstream 3 Context: Phase 6C Experiments
-# Last Updated: 2026-01-26 00:30
+# Last Updated: 2026-01-26 09:30
 
 ## Identity
 - **ID**: ws3
 - **Name**: phase6c
-- **Focus**: Phase 6C feature scaling experiments (a50 → a100 tier)
-- **Status**: **Phase 1 Complete** - Ready for Phase 2 (HPO search space expansion)
+- **Focus**: Phase 6C HPO and feature scaling experiments
+- **Status**: **HPO 2M Complete** - Analysis done, planning next HPO runs
 
 ## Current Task
-- **Working on**: Deep Code Audit - Phase 6C HPO & Training Infrastructure
-- **Status**: Phase 1 COMPLETE, Phases 2-4 pending
+- **Working on**: HPO Analysis & Planning Next Steps
+- **Status**: HPO 2M h1 complete, comprehensive analysis done, planning 20M/200M HPO
 
 ---
 
-## Session 2026-01-26: Deep Code Audit (Phase 1 Complete)
+## Session 2026-01-26 09:30: HPO Analysis Complete
 
-### Completed This Session
+### Key Results
 
-#### 1. Added Recall/Precision Metrics to Trainer ✅
-**File**: `src/training/trainer.py`
-- Added `recall` and `precision` calculation in `_evaluate_detailed()` method
-- Added `pred_range` (min, max) for detecting probability collapse
-- Updated `train()` method to return these metrics when `verbose=True`
-- Now tracks: recall, precision, pred_range in addition to accuracy/AUC
-
-#### 2. Fixed HPO Exception Handling ✅ (All 6 scripts)
-**Files**: All `experiments/phase6c_a100/hpo_*.py`
-- Replaced bare `except Exception` with specific exception handling
-- OOM/MPS errors → `raise optuna.TrialPruned()` (don't poison study with 0.5)
-- NaN/Inf errors → `raise optuna.TrialPruned()`
-- KeyboardInterrupt → re-raise (let user stop)
-- All errors logged to trial metadata via `trial.set_user_attr("error", ...)`
-
-#### 3. Fixed Experiment Numbering / Path Issues ✅
-**Files**: `statistical_validation.py`, `compare_all_tiers.py`
-- Fixed `RESULT_DIRS["a20"]` path: `phase6a` → `phase6a_final`
-- Added tier-aware experiment naming:
-  - a20 (Phase 6A): `phase6a_2m_h1` naming convention
-  - a50/a100 (Phase 6C): `s1_01_2m_h1` sequential numbering convention
-- Updated `load_tier_results()` in compare_all_tiers.py similarly
-
-### Tests
-- **786 passed**, 2 skipped - All tests passing
-
-### Not Done Yet (Phases 2-4)
-
-#### Phase 2: Expand HPO Search Space (User's main intent)
-Add to all 6 HPO scripts:
-```python
-SEARCH_SPACE = {
-    # Architecture (existing)
-    "d_model": [...],
-    "n_layers": [...],
-    "n_heads": [...],
-    "d_ff_ratio": [2, 4],
-
-    # Training hyperparameters (NEW)
-    "learning_rate": [1e-5, 5e-5, 1e-4, 5e-4],
-    "dropout": [0.1, 0.3, 0.5, 0.7],
-    "weight_decay": [0.0, 1e-5, 1e-4, 1e-3],
-    "batch_size": [32, 64, 128],  # Independent, not d_model-derived
-}
+#### HPO 2M h1 Results (50 trials, 20 min)
+**Best Config Found**:
 ```
-- Remove d_model-based batch_size derivation
-- Pass `weight_decay` to Trainer (already supported but not passed!)
-- Use sampled values instead of fixed LEARNING_RATE/DROPOUT constants
+d_model=96, n_layers=2, n_heads=8, d_ff_ratio=4
+learning_rate=1e-5, dropout=0.1, weight_decay=0.001
+AUC-ROC: 0.7178
+```
 
-#### Phase 3: High Severity Fixes
-- Log AUC=None with warnings
-- Fix gradient accumulation edge case
-- Validate high_prices column presence
-- Update default context_length to 80 in experiment.py
-- Add device selection logging
+**Optuna Convergence**: 10 trials hit identical AUC=0.7178 (TPE found optimum)
 
-#### Phase 4: Medium Severity Fixes
-- Division by zero risk in compare_all_tiers.py
-- Float formatting crash for None values
-- Bootstrap CI iteration counting
-- Remove dead code (threshold_0.5pct)
-- File I/O error handling
+**HPO vs Baseline Comparison**:
+- HPO 2M: 0.7178 AUC (+1.29% vs baseline)
+- Baseline 2M: 0.7049 AUC (d_model=64, layers=4, dropout=0.5, lr=1e-4)
+- 20M reference: 0.7342 AUC (d_model=512, layers=6)
+- **Conclusion**: HPO found better 2M config, but 20M still outperforms → need 20M/200M HPO
+
+#### CRITICAL FINDING: Probability Collapse
+Model predictions collapsed to narrow range:
+- **Probability range**: [0.505, 0.662] (very narrow!)
+- At threshold 0.5: 100% recall, 18% precision (predicts everything positive)
+- **Max achievable precision**: ~41% at threshold 0.60 (with 16% recall)
+- Best F1: 0.44 at threshold 0.54 (precision 35%, recall 61%)
+
+#### Hyperparameter Insights
+
+**Weight Decay** (tested 0.0, 1e-5, 1e-4, 1e-3):
+- wd=0.001: Mean AUC 0.7037 (28 trials) - BEST
+- wd=0.0001: Mean AUC 0.7006 (7 trials)
+- wd=1e-5: Mean AUC 0.6993 (10 trials)
+- wd=0.0: Mean AUC 0.6889 (5 trials) - WORST
+- **Conclusion**: Weight decay helps, try higher values (0.005, 0.01)
+
+**Dropout** (tested 0.1, 0.3, 0.5, 0.7):
+- dropout=0.1: Mean AUC 0.7055 - BEST (contradicts earlier ablation!)
+- dropout=0.3: Mean AUC 0.6970
+- dropout=0.5: Mean AUC 0.6905
+- dropout=0.7: Mean AUC 0.6894
+- **Conclusion**: Low dropout better for tier_a100, test 0.05/0.15/0.2
+
+**Learning Rate** (tested 1e-5, 5e-5, 1e-4, 5e-4):
+- lr=1e-5: Mean AUC 0.7042 - BEST but narrow range
+- lr=5e-5: Mean AUC 0.7086 (fewer trials)
+- lr=1e-4: Mean AUC 0.6916
+- lr=5e-4: Mean AUC 0.6822 - WORST
+- **Conclusion**: Slower learning helps, try even slower (5e-6, 2e-6)
+
+**n_heads** (tested 2, 4, 8):
+- 8-head best: 0.7178 AUC
+- 4-head: 0.7167 AUC (very close!)
+- 2-head: 0.7152 AUC
+- **Gap**: 2-head NOT tested with best config (d_model=96, layers=2, lr=1e-5, dropout=0.1)
+
+### User Priorities for Next Steps
+
+1. **Run 20M and 200M HPO** with same expanded search space
+2. **Test more dropout values**: 0.05, 0.15, 0.2, 0.3 on top configs
+3. **Test more weight decay**: 0.005, 0.01 for stronger regularization
+4. **Address probability collapse**: User notes this is persistent issue, slowing learning helps
+5. **After HPO exploration**: Apply calibration (Platt scaling, isotonic regression, temperature scaling)
+6. **Final**: Run full experiments on best configs from all HPO
 
 ---
 
 ## Files Modified This Session
-- `src/training/trainer.py` - Added recall/precision/pred_range metrics
-- `experiments/phase6c_a100/hpo_2m_h1.py` - Fixed exception handling
-- `experiments/phase6c_a100/hpo_2m_h5.py` - Fixed exception handling
-- `experiments/phase6c_a100/hpo_20m_h1.py` - Fixed exception handling
-- `experiments/phase6c_a100/hpo_20m_h5.py` - Fixed exception handling
-- `experiments/phase6c_a100/hpo_200m_h1.py` - Fixed exception handling
-- `experiments/phase6c_a100/hpo_200m_h5.py` - Fixed exception handling
-- `experiments/phase6c_a100/statistical_validation.py` - Fixed paths and naming
-- `experiments/phase6c_a100/compare_all_tiers.py` - Fixed paths and naming
+- None (analysis only, commit already done at session start)
+
+## Git Status
+- **Branch**: `experiment/foundation-decoder-investigation`
+- **Last commit**: `268e328` feat: Expand HPO search space to include training hyperparameters
+- **Clean**: Working tree clean
 
 ---
 
-## Outputs Status
+## Outputs Generated
 ```
-outputs/phase6c_a100/
-├── s1_01_2m_h1/ through s1_12_200m_h5/  (all 12 complete)
-├── hpo_2m_h1/  (exists but untested with fixes)
-├── hpo_20m_h1/ (exists but untested)
-├── hpo_200m_h1/ (partial)
+outputs/phase6c_a100/hpo_2m_h1/
+├── all_trials.json (50 trials with full params)
+├── best_params.json
+└── trial_000/ through trial_049/ (checkpoints)
 ```
 
 ---
 
 ## Next Session Should
 
-1. **Phase 2: Expand HPO search space** (user's main intent)
-   - Add learning_rate, dropout, weight_decay, batch_size to search
-   - Update all 6 HPO scripts
-   - Remove d_model-based batch derivation
-   - Pass weight_decay to Trainer
+1. **Plan extended HPO search**:
+   - Add dropout values: 0.05, 0.15, 0.2
+   - Add weight decay values: 0.005, 0.01
+   - Add slower learning rates: 5e-6, 2e-6
+   - Test 2-head and 4-head with best config explicitly
 
-2. **Test one HPO script manually** after Phase 2:
+2. **Run 20M HPO overnight**:
    ```bash
-   ./venv/bin/python experiments/phase6c_a100/hpo_2m_h1.py
+   caffeinate -i ./venv/bin/python experiments/phase6c_a100/hpo_20m_h1.py 2>&1 | tee outputs/phase6c_a100/hpo_20m_h1_$(date +%Y%m%d).log
    ```
 
-3. **Phase 3-4**: High/Medium severity fixes (optional, lower priority)
+3. **Run 200M HPO** (after 20M completes)
 
-4. **Run full HPO overnight** after fixes verified
-
----
-
-## Lessons Learned (Audit Findings)
-
-1. **HPO only searched architecture, not training params** - Fixed constants for LR, dropout, weight_decay meant we never explored their interaction with architecture
-
-2. **Exception masking poisons Optuna studies** - Returning 0.5 for failed trials makes them indistinguishable from actual 0.5 AUC results. Use `optuna.TrialPruned()` instead.
-
-3. **Experiment naming conventions differ between phases** - Phase 6A uses `phase6a_2m_h1`, Phase 6C uses `s1_01_2m_h1`. Analysis scripts must handle both.
-
-4. **Missing metrics (recall/precision) hide model failures** - A model predicting all negatives passes silently without recall tracking. CLAUDE.md explicitly requires these metrics.
+4. **After all HPO complete**:
+   - Analyze results across parameter budgets
+   - Implement probability calibration if still collapsed
+   - Run full experiments on best configurations
 
 ---
 
-## Memory Entities (This Session)
-- `Phase6C_DeepCodeAudit_Phase1_20260126` - (to be created)
+## Key Decisions This Session
+
+1. **HPO is working**: Found 2M config (0.7178) that beats baseline (0.7049)
+2. **Probability collapse is the core issue**: Not just AUC, need calibrated predictions
+3. **Parameter scaling matters**: 20M reference (0.7342) > all 2M configs
+4. **Dropout finding contradicts ablation**: 0.1 >> 0.5 for tier_a100 (feature quality difference?)
+5. **Weight decay beneficial**: 0.001 optimal, may benefit from more
 
 ---
 
 ## Session History
 
+### 2026-01-26 09:30 (HPO Analysis)
+- Analyzed HPO 2M h1 results (50 trials complete)
+- Found best config: d_model=96, layers=2, heads=8, lr=1e-5, dropout=0.1, wd=0.001
+- Identified probability collapse issue [0.505, 0.662]
+- Max precision ~41% achievable
+- Compared HPO vs baseline: +1.29% improvement
+- Planned next steps: 20M/200M HPO, more regularization, calibration
+
 ### 2026-01-26 00:30 (Deep Code Audit - Phase 1)
-- Completed Phase 1 of deep code audit (4 critical issues)
+- Completed Phase 1 of deep code audit
 - Added recall/precision/pred_range metrics to Trainer
 - Fixed exception handling in all 6 HPO scripts
 - Fixed experiment paths and naming conventions
-- Ready for Phase 2 (HPO search space expansion)
 
-### 2026-01-25 17:15 (S1 Complete, HPO Blocked)
-- Ran all 12 S1 baselines successfully
-- Performed threshold sweep analysis
-- Started HPO but stopped due to "-inf AUC" bug
-- Identified 3 bugs in HPO scripts
-
-### 2026-01-25 16:00 (Runner Script Fixes)
-- Fixed broken runner scripts
+### 2026-01-25 (Phase 2 Implementation)
+- Expanded HPO search space with training hyperparameters
+- Added learning_rate, dropout, weight_decay to all 6 HPO scripts
+- Committed changes

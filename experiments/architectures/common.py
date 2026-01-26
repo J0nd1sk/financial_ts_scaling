@@ -410,3 +410,117 @@ def save_results(
 
     print(f"Results saved to {results_path}")
     return results_path
+
+
+# ============================================================================
+# HPO UTILITIES
+# ============================================================================
+
+def prepare_hpo_data(data_path: Path | None = None):
+    """Prepare data for HPO experiments with NeuralForecast models.
+
+    Returns data in NeuralForecast panel format with evaluation metadata.
+
+    Args:
+        data_path: Path to parquet file. Defaults to DATA_PATH_A20.
+
+    Returns:
+        Dictionary with train/val/test data and evaluation metadata.
+    """
+    if data_path is None:
+        data_path = DATA_PATH_A20
+
+    df = pd.read_parquet(data_path)
+    df["Date"] = pd.to_datetime(df["Date"])
+    df = df.sort_values("Date").reset_index(drop=True)
+
+    # Feature columns (exclude Date, High)
+    exclude_cols = {"Date", "High"}
+    feature_cols = [c for c in df.columns if c not in exclude_cols]
+
+    # Calculate next-day return as target
+    df["return"] = df["Close"].pct_change().shift(-1)
+
+    # Calculate threshold target (for evaluation)
+    # True if next-day high reaches +1% from current close
+    df["threshold_target"] = (df["High"].shift(-1) >= df["Close"] * 1.01).astype(float)
+
+    # Drop rows with NaN
+    df = df.dropna(subset=["return", "threshold_target"]).reset_index(drop=True)
+
+    # Panel format with single series
+    df_nf = pd.DataFrame({
+        "unique_id": "SPY",
+        "ds": df["Date"],
+        "y": df["return"],
+    })
+
+    # Store metadata for evaluation
+    metadata = {
+        "threshold_targets": df["threshold_target"].values,
+        "actual_returns": df["return"].values,
+    }
+
+    # Split by date
+    val_start = pd.Timestamp("2023-01-01")
+    test_start = pd.Timestamp("2025-01-01")
+
+    df_train = df_nf[df_nf["ds"] < val_start].copy()
+    df_val = df_nf[(df_nf["ds"] >= val_start) & (df_nf["ds"] < test_start)].copy()
+    df_test = df_nf[df_nf["ds"] >= test_start].copy()
+
+    # Get corresponding metadata indices
+    val_mask = (df["Date"] >= val_start) & (df["Date"] < test_start)
+    test_mask = df["Date"] >= test_start
+
+    return {
+        "df_train": df_train,
+        "df_val": df_val,
+        "df_test": df_test,
+        "df_full": df_nf,
+        "feature_cols": feature_cols,
+        "val_targets": metadata["threshold_targets"][val_mask],
+        "val_returns": metadata["actual_returns"][val_mask],
+        "test_targets": metadata["threshold_targets"][test_mask],
+        "test_returns": metadata["actual_returns"][test_mask],
+    }
+
+
+def format_hpo_results_table(trials_data: list[dict]) -> str:
+    """Format HPO trial results as a markdown table.
+
+    Args:
+        trials_data: List of trial dicts with params and metrics.
+
+    Returns:
+        Markdown table string.
+    """
+    if not trials_data:
+        return "No trials completed."
+
+    # Sort by AUC (descending)
+    sorted_trials = sorted(
+        trials_data,
+        key=lambda t: t.get("auc", 0) or 0,
+        reverse=True
+    )
+
+    lines = [
+        "| Trial | AUC | Acc | Recall | Dropout | LR | Hidden | Layers |",
+        "|-------|-----|-----|--------|---------|------|--------|--------|",
+    ]
+
+    for t in sorted_trials[:10]:  # Top 10
+        auc = t.get("auc", 0) or 0
+        acc = t.get("val_accuracy", 0) or 0
+        recall = t.get("val_recall", 0) or 0
+        p = t.get("params", {})
+
+        lines.append(
+            f"| {t.get('trial_number', '-')} | {auc:.4f} | {acc:.4f} | "
+            f"{recall:.4f} | {p.get('dropout', '-')} | "
+            f"{p.get('learning_rate', 0):.0e} | {p.get('hidden_size', '-')} | "
+            f"{p.get('n_layers', '-')} |"
+        )
+
+    return "\n".join(lines)

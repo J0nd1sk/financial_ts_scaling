@@ -1,4 +1,4 @@
-"""Tests for tier_a200 indicator module (indicators 101-200).
+"""Tests for tier_a200 indicator module (indicators 101-206).
 
 Chunk 1 (rank 101-120): Extended MA Types
 - tema_9, tema_20, tema_50, tema_100 - Triple EMA at various periods
@@ -89,9 +89,9 @@ class TestA200FeatureListStructure:
         """A200_ADDITION_LIST constant exists."""
         assert hasattr(tier_a200, "A200_ADDITION_LIST")
 
-    def test_a200_chunks_1_to_4_count_is_80(self) -> None:
-        """A200_ADDITION_LIST has exactly 80 indicators for Chunks 1-4."""
-        assert len(tier_a200.A200_ADDITION_LIST) == 80
+    def test_a200_chunks_1_to_5_count_is_106(self) -> None:
+        """A200_ADDITION_LIST has exactly 106 indicators for Chunks 1-5."""
+        assert len(tier_a200.A200_ADDITION_LIST) == 106
 
     def test_a200_feature_list_extends_a100(self) -> None:
         """FEATURE_LIST includes all a100 features plus new additions."""
@@ -100,9 +100,9 @@ class TestA200FeatureListStructure:
         for feature in tier_a100.FEATURE_LIST:
             assert feature in tier_a200.FEATURE_LIST, f"Missing a100 feature: {feature}"
 
-    def test_feature_list_total_180(self) -> None:
-        """FEATURE_LIST has exactly 180 features (100 a100 + 80 a200 Chunks 1-4)."""
-        assert len(tier_a200.FEATURE_LIST) == 180
+    def test_feature_list_total_206(self) -> None:
+        """FEATURE_LIST has exactly 206 features (100 a100 + 106 a200 Chunks 1-5)."""
+        assert len(tier_a200.FEATURE_LIST) == 206
 
     def test_chunk1_tema_indicators_in_list(self) -> None:
         """Chunk 1 TEMA indicators are in the list."""
@@ -563,9 +563,9 @@ class TestA200OutputShape:
     def test_output_column_count(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
     ) -> None:
-        """Output has 181 columns (Date + 180 features)."""
+        """Output has 207 columns (Date + 206 features)."""
         result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
-        assert len(result.columns) == 181, f"Expected 181 columns, got {len(result.columns)}"
+        assert len(result.columns) == 207, f"Expected 207 columns, got {len(result.columns)}"
 
     def test_output_fewer_rows_than_input(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
@@ -1077,13 +1077,13 @@ class TestChunk2FeatureListStructure:
 class TestChunk3FeatureListStructure:
     """Test Chunk 3 feature list structure and counts."""
 
-    def test_a200_chunks_1_to_4_count_is_80(self) -> None:
-        """A200_ADDITION_LIST has exactly 80 indicators for Chunks 1-4."""
-        assert len(tier_a200.A200_ADDITION_LIST) == 80
+    def test_a200_chunks_1_to_5_count_is_106(self) -> None:
+        """A200_ADDITION_LIST has exactly 106 indicators for Chunks 1-5."""
+        assert len(tier_a200.A200_ADDITION_LIST) == 106
 
-    def test_feature_list_total_180(self) -> None:
-        """FEATURE_LIST has exactly 180 features (100 a100 + 80 a200 Chunks 1-4)."""
-        assert len(tier_a200.FEATURE_LIST) == 180
+    def test_feature_list_total_206(self) -> None:
+        """FEATURE_LIST has exactly 206 features (100 a100 + 106 a200 Chunks 1-5)."""
+        assert len(tier_a200.FEATURE_LIST) == 206
 
     def test_chunk3_bb_extension_in_list(self) -> None:
         """Chunk 3 BB extension indicators are in the list."""
@@ -1570,9 +1570,9 @@ class TestChunk3OutputShape:
     def test_output_column_count_with_chunk3(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
     ) -> None:
-        """Output has 181 columns (Date + 180 features)."""
+        """Output has 207 columns (Date + 206 features)."""
         result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
-        assert len(result.columns) == 181, f"Expected 181 columns, got {len(result.columns)}"
+        assert len(result.columns) == 207, f"Expected 207 columns, got {len(result.columns)}"
 
     def test_chunk3_all_features_present(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
@@ -2104,9 +2104,9 @@ class TestChunk4OutputShape:
     def test_output_column_count_with_chunk4(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
     ) -> None:
-        """Output has 181 columns (Date + 180 features)."""
+        """Output has 207 columns (Date + 206 features)."""
         result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
-        assert len(result.columns) == 181, f"Expected 181 columns, got {len(result.columns)}"
+        assert len(result.columns) == 207, f"Expected 207 columns, got {len(result.columns)}"
 
     def test_chunk4_all_features_present(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
@@ -2142,4 +2142,556 @@ class TestChunk4OutputShape:
         ]
 
         for feature in chunk4_features:
+            assert feature in result.columns, f"Missing feature: {feature}"
+
+
+# =============================================================================
+# Chunk 5 Tests (ranks 181-206)
+# =============================================================================
+
+
+class TestChunk5FeatureListStructure:
+    """Test feature list structure for Chunk 5."""
+
+    def test_a200_addition_list_has_106_features(self) -> None:
+        """A200_ADDITION_LIST has exactly 106 indicators for Chunks 1-5."""
+        assert len(tier_a200.A200_ADDITION_LIST) == 106
+
+    def test_feature_list_total_206(self) -> None:
+        """FEATURE_LIST has exactly 206 features (100 a100 + 106 a200)."""
+        assert len(tier_a200.FEATURE_LIST) == 206
+
+    def test_chunk5_ichimoku_features_in_list(self) -> None:
+        """Chunk 5 Ichimoku features are in the list."""
+        ichimoku_features = [
+            "tenkan_sen",
+            "kijun_sen",
+            "senkou_span_a",
+            "senkou_span_b",
+            "price_vs_cloud",
+            "cloud_thickness_pct",
+        ]
+        for feature in ichimoku_features:
+            assert feature in tier_a200.A200_ADDITION_LIST, f"Missing: {feature}"
+
+    def test_chunk5_donchian_features_in_list(self) -> None:
+        """Chunk 5 Donchian features are in the list."""
+        donchian_features = [
+            "donchian_upper_20",
+            "donchian_lower_20",
+            "donchian_position",
+            "donchian_width_pct",
+            "pct_to_donchian_breakout",
+        ]
+        for feature in donchian_features:
+            assert feature in tier_a200.A200_ADDITION_LIST, f"Missing: {feature}"
+
+    def test_chunk5_divergence_features_in_list(self) -> None:
+        """Chunk 5 divergence features are in the list."""
+        divergence_features = [
+            "price_rsi_divergence",
+            "price_obv_divergence",
+            "divergence_streak",
+            "divergence_magnitude",
+        ]
+        for feature in divergence_features:
+            assert feature in tier_a200.A200_ADDITION_LIST, f"Missing: {feature}"
+
+    def test_chunk5_entropy_regime_features_in_list(self) -> None:
+        """Chunk 5 entropy and regime features are in the list."""
+        entropy_regime_features = [
+            "permutation_entropy_order3",
+            "permutation_entropy_order4",
+            "permutation_entropy_order5",
+            "entropy_trend_5d",
+            "atr_regime_pct_60d",
+            "atr_regime_rolling_q",
+            "trend_strength_pct_60d",
+            "trend_strength_rolling_q",
+            "vol_regime_state",
+            "regime_consistency",
+            "regime_transition_prob",
+        ]
+        for feature in entropy_regime_features:
+            assert feature in tier_a200.A200_ADDITION_LIST, f"Missing: {feature}"
+
+
+class TestChunk5IchimokuIndicators:
+    """Test Ichimoku Cloud indicators (ranks 181-186)."""
+
+    # --- Existence tests ---
+
+    def test_tenkan_sen_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """tenkan_sen column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "tenkan_sen" in result.columns
+
+    def test_kijun_sen_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """kijun_sen column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "kijun_sen" in result.columns
+
+    def test_senkou_span_a_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """senkou_span_a column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "senkou_span_a" in result.columns
+
+    def test_senkou_span_b_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """senkou_span_b column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "senkou_span_b" in result.columns
+
+    def test_price_vs_cloud_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """price_vs_cloud column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "price_vs_cloud" in result.columns
+
+    def test_cloud_thickness_pct_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """cloud_thickness_pct column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "cloud_thickness_pct" in result.columns
+
+    # --- Range tests ---
+
+    def test_ichimoku_lines_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Ichimoku lines should be positive (price-based)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["tenkan_sen", "kijun_sen", "senkou_span_a", "senkou_span_b"]:
+            assert (result[col] > 0).all(), f"{col} has non-positive values"
+
+    def test_ichimoku_lines_reasonable_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Ichimoku lines should be within reasonable price range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["tenkan_sen", "kijun_sen", "senkou_span_a", "senkou_span_b"]:
+            assert result[col].min() > 50, f"{col} too low: {result[col].min()}"
+            assert result[col].max() < 200, f"{col} too high: {result[col].max()}"
+
+    def test_price_vs_cloud_categorical(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """price_vs_cloud should be -1, 0, or 1."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["price_vs_cloud"].unique()
+        assert set(vals).issubset({-1, 0, 1}), f"Invalid values: {vals}"
+
+    # --- No-NaN test ---
+
+    def test_ichimoku_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Ichimoku columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        ichimoku_cols = [
+            "tenkan_sen",
+            "kijun_sen",
+            "senkou_span_a",
+            "senkou_span_b",
+            "price_vs_cloud",
+            "cloud_thickness_pct",
+        ]
+        for col in ichimoku_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk5DonchianIndicators:
+    """Test Donchian Channel indicators (ranks 187-191)."""
+
+    # --- Existence tests ---
+
+    def test_donchian_upper_20_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """donchian_upper_20 column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "donchian_upper_20" in result.columns
+
+    def test_donchian_lower_20_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """donchian_lower_20 column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "donchian_lower_20" in result.columns
+
+    def test_donchian_position_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """donchian_position column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "donchian_position" in result.columns
+
+    def test_donchian_width_pct_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """donchian_width_pct column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "donchian_width_pct" in result.columns
+
+    def test_pct_to_donchian_breakout_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_to_donchian_breakout column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "pct_to_donchian_breakout" in result.columns
+
+    # --- Range tests ---
+
+    def test_donchian_channels_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Donchian channel bounds should be positive (price-based)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["donchian_upper_20", "donchian_lower_20"]:
+            assert (result[col] > 0).all(), f"{col} has non-positive values"
+
+    def test_donchian_upper_ge_lower(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Upper Donchian channel >= lower channel."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["donchian_upper_20"] >= result["donchian_lower_20"]).all()
+
+    def test_donchian_position_bounds(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """donchian_position should be in [0, 1] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["donchian_position"]
+        assert col.min() >= 0, f"donchian_position below 0: {col.min()}"
+        assert col.max() <= 1, f"donchian_position above 1: {col.max()}"
+
+    def test_donchian_width_pct_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """donchian_width_pct should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["donchian_width_pct"] >= 0).all()
+
+    # --- No-NaN test ---
+
+    def test_donchian_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Donchian columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        donchian_cols = [
+            "donchian_upper_20",
+            "donchian_lower_20",
+            "donchian_position",
+            "donchian_width_pct",
+            "pct_to_donchian_breakout",
+        ]
+        for col in donchian_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk5DivergenceIndicators:
+    """Test Momentum Divergence indicators (ranks 192-195)."""
+
+    # --- Existence tests ---
+
+    def test_price_rsi_divergence_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """price_rsi_divergence column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "price_rsi_divergence" in result.columns
+
+    def test_price_obv_divergence_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """price_obv_divergence column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "price_obv_divergence" in result.columns
+
+    def test_divergence_streak_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """divergence_streak column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "divergence_streak" in result.columns
+
+    def test_divergence_magnitude_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """divergence_magnitude column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "divergence_magnitude" in result.columns
+
+    # --- Range tests ---
+
+    def test_divergence_values_bounded(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Divergence values should be in [-1, 1] range (percentile-based)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["price_rsi_divergence", "price_obv_divergence"]:
+            assert result[col].min() >= -1, f"{col} below -1: {result[col].min()}"
+            assert result[col].max() <= 1, f"{col} above 1: {result[col].max()}"
+
+    def test_divergence_streak_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """divergence_streak should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["divergence_streak"] >= 0).all()
+
+    def test_divergence_magnitude_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """divergence_magnitude should be >= 0 (absolute value)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["divergence_magnitude"] >= 0).all()
+
+    # --- No-NaN test ---
+
+    def test_divergence_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in divergence columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        divergence_cols = [
+            "price_rsi_divergence",
+            "price_obv_divergence",
+            "divergence_streak",
+            "divergence_magnitude",
+        ]
+        for col in divergence_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk5EntropyRegimeIndicators:
+    """Test Entropy & Regime indicators (ranks 196-206)."""
+
+    # --- Existence tests ---
+
+    def test_permutation_entropy_order3_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """permutation_entropy_order3 column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "permutation_entropy_order3" in result.columns
+
+    def test_permutation_entropy_order4_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """permutation_entropy_order4 column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "permutation_entropy_order4" in result.columns
+
+    def test_permutation_entropy_order5_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """permutation_entropy_order5 column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "permutation_entropy_order5" in result.columns
+
+    def test_entropy_trend_5d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_trend_5d column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_trend_5d" in result.columns
+
+    def test_atr_regime_pct_60d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """atr_regime_pct_60d column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "atr_regime_pct_60d" in result.columns
+
+    def test_atr_regime_rolling_q_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """atr_regime_rolling_q column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "atr_regime_rolling_q" in result.columns
+
+    def test_trend_strength_pct_60d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_strength_pct_60d column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "trend_strength_pct_60d" in result.columns
+
+    def test_trend_strength_rolling_q_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_strength_rolling_q column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "trend_strength_rolling_q" in result.columns
+
+    def test_vol_regime_state_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """vol_regime_state column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "vol_regime_state" in result.columns
+
+    def test_regime_consistency_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """regime_consistency column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "regime_consistency" in result.columns
+
+    def test_regime_transition_prob_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """regime_transition_prob column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "regime_transition_prob" in result.columns
+
+    # --- Range tests ---
+
+    def test_entropy_values_bounds(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Entropy values should be in [0, 1] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in [
+            "permutation_entropy_order3",
+            "permutation_entropy_order4",
+            "permutation_entropy_order5",
+        ]:
+            assert result[col].min() >= 0, f"{col} below 0: {result[col].min()}"
+            assert result[col].max() <= 1, f"{col} above 1: {result[col].max()}"
+
+    def test_regime_percentile_bounds(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Regime percentile values should be in [0, 1] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in [
+            "atr_regime_pct_60d",
+            "atr_regime_rolling_q",
+            "trend_strength_pct_60d",
+            "trend_strength_rolling_q",
+        ]:
+            assert result[col].min() >= 0, f"{col} below 0: {result[col].min()}"
+            assert result[col].max() <= 1, f"{col} above 1: {result[col].max()}"
+
+    def test_vol_regime_state_categorical(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """vol_regime_state should be -1, 0, or 1."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["vol_regime_state"].unique()
+        assert set(vals).issubset({-1, 0, 1}), f"Invalid values: {vals}"
+
+    def test_regime_consistency_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """regime_consistency should be >= 1 (at least 1 day in any regime)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["regime_consistency"] >= 1).all()
+
+    def test_regime_transition_prob_bounds(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """regime_transition_prob should be in [0, 1] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["regime_transition_prob"]
+        assert col.min() >= 0, f"regime_transition_prob below 0: {col.min()}"
+        assert col.max() <= 1, f"regime_transition_prob above 1: {col.max()}"
+
+    # --- No-NaN test ---
+
+    def test_entropy_regime_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in entropy/regime columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        entropy_regime_cols = [
+            "permutation_entropy_order3",
+            "permutation_entropy_order4",
+            "permutation_entropy_order5",
+            "entropy_trend_5d",
+            "atr_regime_pct_60d",
+            "atr_regime_rolling_q",
+            "trend_strength_pct_60d",
+            "trend_strength_rolling_q",
+            "vol_regime_state",
+            "regime_consistency",
+            "regime_transition_prob",
+        ]
+        for col in entropy_regime_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk5OutputShape:
+    """Test output shape and structure for Chunk 5."""
+
+    def test_output_column_count_with_chunk5(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output has 207 columns (Date + 206 features)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert len(result.columns) == 207, f"Expected 207 columns, got {len(result.columns)}"
+
+    def test_chunk5_all_features_present(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """All 26 Chunk 5 features are present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        chunk5_features = [
+            # Ichimoku (181-186)
+            "tenkan_sen",
+            "kijun_sen",
+            "senkou_span_a",
+            "senkou_span_b",
+            "price_vs_cloud",
+            "cloud_thickness_pct",
+            # Donchian (187-191)
+            "donchian_upper_20",
+            "donchian_lower_20",
+            "donchian_position",
+            "donchian_width_pct",
+            "pct_to_donchian_breakout",
+            # Divergence (192-195)
+            "price_rsi_divergence",
+            "price_obv_divergence",
+            "divergence_streak",
+            "divergence_magnitude",
+            # Entropy/Regime (196-206)
+            "permutation_entropy_order3",
+            "permutation_entropy_order4",
+            "permutation_entropy_order5",
+            "entropy_trend_5d",
+            "atr_regime_pct_60d",
+            "atr_regime_rolling_q",
+            "trend_strength_pct_60d",
+            "trend_strength_rolling_q",
+            "vol_regime_state",
+            "regime_consistency",
+            "regime_transition_prob",
+        ]
+
+        for feature in chunk5_features:
             assert feature in result.columns, f"Missing feature: {feature}"

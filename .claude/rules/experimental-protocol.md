@@ -101,9 +101,15 @@ These splits are fixed. No leakage permitted.
 
 ## Feature Tiers
 
-20 → 50 → 100 → 200 → 500 → 1000 → 2000 indicators
+Approximate targets: 20 → 50 → 100 → 200 → 500 → 1000 → 2000 indicators
 
-Each tier is a superset of the previous.
+Each tier is a superset of the previous. Actual feature counts may differ slightly from targets based on indicator groupings and implementation details. This is acceptable and desirable—scientific validity depends on consistent tier definitions, not exact round numbers.
+
+**Implemented tiers:**
+- a20: 20 features (baseline)
+- a50: 50 features
+- a100: 100 features
+- a200: 206 features (26 extra from Ichimoku/Donchian/Entropy groupings)
 
 ---
 

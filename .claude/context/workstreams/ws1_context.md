@@ -1,16 +1,16 @@
 # Workstream 1 Context: Feature Generation (tier_a200)
-# Last Updated: 2026-01-26 01:45
+# Last Updated: 2026-01-26 13:30
 
 ## Identity
 - **ID**: ws1
 - **Name**: feature_generation
-- **Focus**: tier_a200 implementation (Chunks 1-4 complete)
+- **Focus**: tier_a200 implementation (Chunks 1-5 COMPLETE)
 - **Status**: active
 
 ---
 
 ## Current Task
-- **Working on**: Tier a200 Chunk 4 (MACD, Volume, Calendar, Candle)
+- **Working on**: Tier a200 Chunk 5 (Ichimoku, Donchian, Divergence, Entropy/Regime)
 - **Status**: COMPLETE - ready to commit
 
 ---
@@ -33,127 +33,143 @@
 - **tier_a200 Chunk 4** (2026-01-26 01:45):
   - 20 new indicators (ranks 161-180)
   - Categories: MACD Extensions (4), Volume Dynamics (4), Calendar (6), Candle Analysis (6)
+- **tier_a200 Chunk 5** (2026-01-26 13:30):
+  - 26 new indicators (ranks 181-206)
+  - Categories: Ichimoku Cloud (6), Donchian Channel (5), Divergence (4), Entropy/Regime (11)
 
 ### Pending
-- Commit tier_a200 Chunks 1-4 files
-- tier_a200 Chunk 5 (ranks 181-200) - future work
+- Commit tier_a200 Chunks 1-5 files
+- Generate processed tier_a200 parquet files (separate task)
 
 ---
 
-## Last Session Work (2026-01-26 01:45)
+## Last Session Work (2026-01-26 13:30)
 
-### Implemented tier_a200 Chunk 4 (TDD approach)
+### Implemented tier_a200 Chunk 5 (TDD approach)
 
-1. **Added feature list** - 20 new features to A200_ADDITION_LIST (total: 80)
+1. **Added feature list** - 26 new features to A200_ADDITION_LIST (total: 106)
+   - Total FEATURE_LIST now 206 features
 
 2. **Wrote failing tests** (test_tier_a200.py):
-   - TestChunk4FeatureListStructure - list composition (80 additions, 180 total)
-   - TestChunk4MACDExtensions - MACD signal, histogram slope, cross recency, proximity
-   - TestChunk4VolumeDynamics - Volume trend, consecutive increase, confluence, bias
-   - TestChunk4CalendarFeatures - Day of week, month, quarter end, days to month end
-   - TestChunk4CandleFeatures - Body %, wick %, doji, range vs average
-   - TestChunk4OutputShape - Output structure (181 columns)
+   - TestChunk5FeatureListStructure - list composition (106 additions, 206 total)
+   - TestChunk5IchimokuIndicators - Tenkan/Kijun/Senkou lines, price_vs_cloud, thickness
+   - TestChunk5DonchianIndicators - Upper/lower bounds, position, width, breakout proximity
+   - TestChunk5DivergenceIndicators - Price/RSI/OBV divergence, streak, magnitude
+   - TestChunk5EntropyRegimeIndicators - Permutation entropy orders 3/4/5, regime percentiles, state
+   - TestChunk5OutputShape - Output structure (207 columns)
 
 3. **Implemented compute functions** (tier_a200.py):
-   - `_compute_macd_extensions()` - MACD signal line, histogram slope, cross recency, proximity (161-164)
-   - `_compute_volume_dynamics()` - Volume trend, consecutive increase, confluence, bias (165-168)
-   - `_compute_calendar_features()` - Day of week, Monday/Friday, month end, quarter end (169-174)
-   - `_compute_candle_features()` - Body/wick analysis, doji indicator, range ratio (175-180)
-   - Updated `build_feature_dataframe()` to call Chunk 4 functions
+   - `_compute_ichimoku()` - Tenkan, Kijun, Senkou spans, price vs cloud, thickness (181-186)
+   - `_compute_donchian()` - Upper/lower channels, position, width, breakout % (187-191)
+   - `_compute_divergence()` - Price/RSI/OBV divergence, streak, magnitude (192-195)
+   - `_permutation_entropy()` - Helper for ordinal pattern entropy calculation
+   - `_compute_entropy_regime()` - Entropy orders, regime percentiles, state, consistency (196-206)
+   - Updated `build_feature_dataframe()` to call Chunk 5 functions
 
 4. **Edge case handling**:
-   - MACD signal = 0: Use absolute difference fallback for proximity
-   - High == Low: Return 0 for wicks, 0.5 for body ratio
-   - Synthetic data artifacts: Clamp wick/body ratios to [0, 1]
+   - Flat Donchian channel: position = 0.5, width = 0
+   - Entropy on constant series: returns 0
+   - Regime state: -1 (low), 0 (medium), 1 (high) based on 30%/70% thresholds
 
 5. **Verification**:
-   - `make test`: 891 passed, 2 skipped
-   - Feature counts: A200_ADDITION_LIST=80, FEATURE_LIST=180
-   - Output columns: 181 (Date + 180 features)
+   - `make test`: 944 passed, 2 skipped
+   - Feature counts: A200_ADDITION_LIST=106, FEATURE_LIST=206
+   - Output columns: 207 (Date + 206 features)
    - No NaN values in output after warmup
 
-### Chunk 4 Features (ranks 161-180)
+### Chunk 5 Features (ranks 181-206)
 
-**MACD Extensions (4 features, ranks 161-164):**
+**Ichimoku Cloud (6 features, ranks 181-186):**
 | Rank | Feature | Signal |
 |------|---------|--------|
-| 161 | macd_signal | EMA(9) of MACD line |
-| 162 | macd_histogram_slope | 5-day change in histogram |
-| 163 | days_since_macd_cross_signal | Signed days since MACD crossed signal |
-| 164 | macd_signal_proximity | % proximity of MACD to signal line |
+| 181 | tenkan_sen | (9-day H+L)/2 - Fast line |
+| 182 | kijun_sen | (26-day H+L)/2 - Baseline |
+| 183 | senkou_span_a | (tenkan+kijun)/2 - Cloud edge 1 |
+| 184 | senkou_span_b | (52-day H+L)/2 - Cloud edge 2 |
+| 185 | price_vs_cloud | -1/0/+1 (below/inside/above cloud) |
+| 186 | cloud_thickness_pct | (span_a - span_b) / close * 100 |
 
-**Volume-Price Dynamics (4 features, ranks 165-168):**
+**Donchian Channel (5 features, ranks 187-191):**
 | Rank | Feature | Signal |
 |------|---------|--------|
-| 165 | volume_trend_5d | Normalized 5d volume change (z-score delta) |
-| 166 | consecutive_volume_increase | Days with vol > prior day |
-| 167 | volume_price_confluence | zscore(vol) * zscore(move) |
-| 168 | high_volume_direction_bias | Mean return on high-vol days (20d rolling) |
+| 187 | donchian_upper_20 | 20-day rolling max(High) |
+| 188 | donchian_lower_20 | 20-day rolling min(Low) |
+| 189 | donchian_position | (Close - lower) / (upper - lower) [0,1] |
+| 190 | donchian_width_pct | (upper - lower) / close * 100 |
+| 191 | pct_to_donchian_breakout | % to nearest boundary, signed |
 
-**Calendar/Temporal (6 features, ranks 169-174):**
+**Momentum Divergence (4 features, ranks 192-195):**
 | Rank | Feature | Signal |
 |------|---------|--------|
-| 169 | trading_day_of_week | 0=Mon, 4=Fri |
-| 170 | is_monday | Binary |
-| 171 | is_friday | Binary |
-| 172 | days_to_month_end | Business days remaining |
-| 173 | month_of_year | 1-12 |
-| 174 | is_quarter_end_month | 1 if Mar/Jun/Sep/Dec |
+| 192 | price_rsi_divergence | 20d percentile rank difference |
+| 193 | price_obv_divergence | 20d percentile rank difference |
+| 194 | divergence_streak | Consecutive days with |div| > 0.2 |
+| 195 | divergence_magnitude | max(|price_rsi_div|, |price_obv_div|) |
 
-**Candle Body/Wick Analysis (6 features, ranks 175-180):**
+**Entropy & Regime (11 features, ranks 196-206):**
 | Rank | Feature | Signal |
 |------|---------|--------|
-| 175 | candle_body_pct | abs(C-O)/O * 100 |
-| 176 | body_to_range_ratio | abs(C-O)/(H-L), clamped to [0,1] |
-| 177 | upper_wick_pct | (H-max(O,C))/(H-L), clamped to [0,1] |
-| 178 | lower_wick_pct | (min(O,C)-L)/(H-L), clamped to [0,1] |
-| 179 | doji_indicator | 1 if body_to_range < 0.1 |
-| 180 | range_vs_avg_range | (H-L)/20d_avg_range |
+| 196 | permutation_entropy_order3 | 20d rolling entropy (6 patterns) [0,1] |
+| 197 | permutation_entropy_order4 | 20d rolling entropy (24 patterns) [0,1] |
+| 198 | permutation_entropy_order5 | 20d rolling entropy (120 patterns) [0,1] |
+| 199 | entropy_trend_5d | Change in order4 entropy over 5 days |
+| 200 | atr_regime_pct_60d | 60-day percentile of ATR% [0,1] |
+| 201 | atr_regime_rolling_q | Rolling 60d quantile position [0,1] |
+| 202 | trend_strength_pct_60d | 60-day percentile of ADX [0,1] |
+| 203 | trend_strength_rolling_q | Rolling 60d quantile position [0,1] |
+| 204 | vol_regime_state | -1 (low), 0 (medium), 1 (high) |
+| 205 | regime_consistency | Days in current vol_regime_state |
+| 206 | regime_transition_prob | % of last 20 days with regime changes [0,1] |
 
 ---
 
 ## Files Modified
 - `src/features/tier_a200.py` - Modified (uncommitted)
-  - Added docstring for Chunk 4
-  - Added 20 feature names to A200_ADDITION_LIST (total: 80)
-  - Added 4 compute functions for Chunk 4
+  - Added docstring for Chunk 5
+  - Added 26 feature names to A200_ADDITION_LIST (total: 106)
+  - Added 4 compute functions + 1 helper for Chunk 5
   - Updated build_feature_dataframe()
 - `tests/features/test_tier_a200.py` - Modified (uncommitted)
-  - Updated test counts (80 additions, 180 total)
-  - Added 6 new test classes for Chunk 4 (~80 new tests)
+  - Updated test counts (106 additions, 206 total)
+  - Added 6 new test classes for Chunk 5 (~70 new tests)
   - Updated existing count tests to new totals
 
 ---
 
 ## Test Status
-- `make test`: 891 passed, 2 skipped (2026-01-26 01:40)
-- 893 total tests collected
-- All tier_a200 tests pass (Chunks 1-4)
-- ~80 new tests for Chunk 4
+- `make test`: 944 passed, 2 skipped (2026-01-26 13:30)
+- All tier_a200 tests pass (Chunks 1-5)
+- ~70 new tests for Chunk 5
+- 252 total tier_a200 tests
 
 ---
 
 ## Key Decisions (Workstream-Specific)
 
-### Duration Counter Design (Chunks 2-4)
-- **Convention**: price >= MA means "above" (inclusive)
-- **Counter resets**: On cross event, counter resets to 0 for opposite state
-- **Mutual exclusivity**: At any point, days_above=0 OR days_below=0
-- **Maximum value**: Can exceed output length (counting starts at MA warmup)
+### Ichimoku Cloud Design (Chunk 5)
+- **Cloud definition**: Cloud boundaries are span_a and span_b
+- **price_vs_cloud**: Categorical {-1, 0, 1} - below/inside/above
+- **cloud_thickness_pct**: Signed - positive = span_a > span_b (bullish)
 
-### Cross Recency Design (Chunks 2, 4)
-- **Signed values**: Positive = bullish (short > long), Negative = bearish
-- **Magnitude**: Days since last cross event
-- Applied to MA crosses (Chunk 2) and MACD crosses (Chunk 4)
+### Donchian Channel Design (Chunk 5)
+- **Position clamp**: Clamped to [0, 1] even if price outside channel
+- **Flat channel edge case**: position = 0.5, width = 0
+- **Breakout proximity**: Positive = closer to upper, negative = closer to lower
 
-### Candle Feature Edge Cases (Chunk 4)
-- **H == L**: Return 0.5 for body_to_range, 0 for wicks
-- **Synthetic data**: Clamp all ratios to [0, 1] to handle unrealistic OHLC relationships
-- **Doji threshold**: body_to_range < 0.1
+### Divergence Design (Chunk 5)
+- **Percentile-based**: Use 20-day rolling percentile ranks for comparability
+- **Range**: [-1, 1] since both series are in [0, 1]
+- **Streak threshold**: |divergence| > 0.2 considered significant
 
-### MACD Signal Proximity (Chunk 4)
-- When signal ≈ 0, use absolute difference fallback to avoid extreme percentages
-- Test relaxed to check for variation rather than tight bounds
+### Permutation Entropy (Chunk 5)
+- **Pure numpy implementation**: No scipy dependency
+- **Normalized**: Divided by log(n!) for [0, 1] range
+- **Multiple orders**: 3, 4, 5 to let model find optimal complexity measure
+
+### Regime State (Chunk 5)
+- **Thresholds**: High > 0.7, Low < 0.3, Middle otherwise
+- **Consistency**: Counts consecutive days in same state
+- **Transition prob**: Rolling 20-day mean of state changes
 
 ---
 
@@ -165,16 +181,16 @@
 | 2 | 121-140 | 20 (Duration, Cross, Proximity) | Complete |
 | 3 | 141-160 | 20 (BB, RSI, MeanReversion, Patterns) | Complete |
 | 4 | 161-180 | 20 (MACD, Volume, Calendar, Candle) | Complete |
-| 5 | 181-200 | 20 (TBD) | Pending |
+| 5 | 181-206 | 26 (Ichimoku, Donchian, Divergence, Entropy/Regime) | Complete |
 
-**Totals**: 80/100 tier_a200 additions complete, 180/200 total features
+**Totals**: 106/106 tier_a200 additions complete, 206 total features
 
 ---
 
 ## Next Session Should
-1. `git add -A && git commit` tier_a200 Chunks 1-4 files
-2. Plan tier_a200 Chunk 5 (ranks 181-200) if continuing
-3. Or pivot to ws3 Phase 6C HPO runs with 180-feature tier
+1. `git add -A && git commit` tier_a200 Chunks 1-5 files
+2. Generate processed tier_a200 parquet files
+3. Or pivot to ws3 Phase 6C HPO runs with larger feature tier
 
 ---
 

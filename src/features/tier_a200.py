@@ -1,8 +1,8 @@
-"""Tier a200 indicator module - 200 total indicators (100 from a100 + 100 new).
+"""Tier a200 indicator module - 206 total indicators (100 from a100 + 106 new).
 
-This module extends tier_a100 with 100 additional indicators.
-Currently implements Chunk 1 (ranks 101-120), Chunk 2 (ranks 121-140),
-Chunk 3 (ranks 141-160), and Chunk 4 (ranks 161-180).
+This module extends tier_a100 with 106 additional indicators.
+Implements Chunk 1 (ranks 101-120), Chunk 2 (ranks 121-140),
+Chunk 3 (ranks 141-160), Chunk 4 (ranks 161-180), and Chunk 5 (ranks 181-206).
 
 Chunk 1 (rank 101-120): Extended MA Types
 - tema_{9,20,50,100} - Triple EMA at various periods
@@ -62,6 +62,25 @@ Chunk 4 (rank 161-180): MACD Extensions, Volume Dynamics, Calendar, Candle Analy
 - upper/lower_wick_pct - Wick proportions of range
 - doji_indicator - 1 if body_to_range < 0.1
 - range_vs_avg_range - Current range / 20d average range
+
+Chunk 5 (rank 181-206): Ichimoku Cloud, Donchian Channel, Divergence, Entropy/Regime
+- tenkan_sen/kijun_sen/senkou_span_a/senkou_span_b - Ichimoku cloud components
+- price_vs_cloud - -1/0/+1 relative to cloud
+- cloud_thickness_pct - Signed (span_a - span_b) / close * 100
+- donchian_upper_20/donchian_lower_20 - 20-day Donchian channel boundaries
+- donchian_position - Position within channel [0,1]
+- donchian_width_pct - Channel width as % of close
+- pct_to_donchian_breakout - % to nearest boundary, signed
+- price_rsi_divergence/price_obv_divergence - Price vs indicator divergence
+- divergence_streak - Consecutive days with significant divergence
+- divergence_magnitude - Maximum divergence magnitude
+- permutation_entropy_order{3,4,5} - Time series complexity [0,1]
+- entropy_trend_5d - 5-day change in entropy_order4
+- atr_regime_pct_60d/atr_regime_rolling_q - ATR regime percentiles [0,1]
+- trend_strength_pct_60d/trend_strength_rolling_q - ADX regime percentiles [0,1]
+- vol_regime_state - Categorical {-1=low, 0=medium, 1=high}
+- regime_consistency - Days in current regime state
+- regime_transition_prob - % of last 20 days with regime changes [0,1]
 """
 
 from __future__ import annotations
@@ -74,8 +93,7 @@ import talib
 
 from src.features import tier_a100
 
-# 80 new indicators added in tier a200 Chunks 1-4 (ranks 101-180)
-# Future chunks will add ranks 181-200
+# 106 new indicators added in tier a200 Chunks 1-5 (ranks 101-206)
 A200_ADDITION_LIST = [
     # Chunk 1: Extended MA Types (ranks 101-120)
     # TEMA - Triple Exponential Moving Average
@@ -178,9 +196,39 @@ A200_ADDITION_LIST = [
     "lower_wick_pct",
     "doji_indicator",
     "range_vs_avg_range",
+    # Chunk 5: Ichimoku Cloud (ranks 181-186)
+    "tenkan_sen",
+    "kijun_sen",
+    "senkou_span_a",
+    "senkou_span_b",
+    "price_vs_cloud",
+    "cloud_thickness_pct",
+    # Chunk 5: Donchian Channel (ranks 187-191)
+    "donchian_upper_20",
+    "donchian_lower_20",
+    "donchian_position",
+    "donchian_width_pct",
+    "pct_to_donchian_breakout",
+    # Chunk 5: Momentum Divergence (ranks 192-195)
+    "price_rsi_divergence",
+    "price_obv_divergence",
+    "divergence_streak",
+    "divergence_magnitude",
+    # Chunk 5: Entropy & Regime (ranks 196-206)
+    "permutation_entropy_order3",
+    "permutation_entropy_order4",
+    "permutation_entropy_order5",
+    "entropy_trend_5d",
+    "atr_regime_pct_60d",
+    "atr_regime_rolling_q",
+    "trend_strength_pct_60d",
+    "trend_strength_rolling_q",
+    "vol_regime_state",
+    "regime_consistency",
+    "regime_transition_prob",
 ]
 
-# Complete a200 feature list = a100 (100) + 80 new (Chunks 1-4) = 180 total
+# Complete a200 feature list = a100 (100) + 106 new (Chunks 1-5) = 206 total
 FEATURE_LIST = tier_a100.FEATURE_LIST + A200_ADDITION_LIST
 
 
@@ -1139,6 +1187,384 @@ def _compute_candle_features(
     return features
 
 
+# =============================================================================
+# Chunk 5 computation functions (ranks 181-206)
+# =============================================================================
+
+
+def _compute_ichimoku(high: pd.Series, low: pd.Series, close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute Ichimoku Cloud indicators (ranks 181-186).
+
+    Features:
+    - tenkan_sen: (max(H,9) + min(L,9)) / 2 - Fast conversion line
+    - kijun_sen: (max(H,26) + min(L,26)) / 2 - Baseline/standard line
+    - senkou_span_a: (tenkan + kijun) / 2 - Leading span A (cloud boundary 1)
+    - senkou_span_b: (max(H,52) + min(L,52)) / 2 - Leading span B (cloud boundary 2)
+    - price_vs_cloud: -1/0/+1 (below/inside/above cloud)
+    - cloud_thickness_pct: (span_a - span_b) / close * 100 - Signed thickness
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with Ichimoku features
+    """
+    features = {}
+
+    # Tenkan-sen (Conversion Line): (9-period high + 9-period low) / 2
+    high_9 = high.rolling(9).max()
+    low_9 = low.rolling(9).min()
+    tenkan = (high_9 + low_9) / 2
+    features["tenkan_sen"] = tenkan
+
+    # Kijun-sen (Base Line): (26-period high + 26-period low) / 2
+    high_26 = high.rolling(26).max()
+    low_26 = low.rolling(26).min()
+    kijun = (high_26 + low_26) / 2
+    features["kijun_sen"] = kijun
+
+    # Senkou Span A (Leading Span A): (Tenkan + Kijun) / 2
+    span_a = (tenkan + kijun) / 2
+    features["senkou_span_a"] = span_a
+
+    # Senkou Span B (Leading Span B): (52-period high + 52-period low) / 2
+    high_52 = high.rolling(52).max()
+    low_52 = low.rolling(52).min()
+    span_b = (high_52 + low_52) / 2
+    features["senkou_span_b"] = span_b
+
+    # price_vs_cloud: -1 (below cloud), 0 (inside cloud), +1 (above cloud)
+    # Cloud top = max(span_a, span_b), cloud bottom = min(span_a, span_b)
+    cloud_top = np.maximum(span_a, span_b)
+    cloud_bottom = np.minimum(span_a, span_b)
+
+    price_vs_cloud = pd.Series(0, index=close.index, dtype=int)
+    price_vs_cloud = price_vs_cloud.where(
+        ~((close > cloud_top) | (close < cloud_bottom)),
+        np.where(close > cloud_top, 1, np.where(close < cloud_bottom, -1, 0))
+    )
+    # Re-compute with vectorized approach
+    above_cloud = close > cloud_top
+    below_cloud = close < cloud_bottom
+    price_vs_cloud = pd.Series(0, index=close.index, dtype=int)
+    price_vs_cloud[above_cloud] = 1
+    price_vs_cloud[below_cloud] = -1
+    features["price_vs_cloud"] = price_vs_cloud
+
+    # cloud_thickness_pct: (span_a - span_b) / close * 100
+    # Positive = span_a > span_b (bullish), negative = span_a < span_b (bearish)
+    features["cloud_thickness_pct"] = (span_a - span_b) / close * 100
+
+    return features
+
+
+def _compute_donchian(high: pd.Series, low: pd.Series, close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute Donchian Channel indicators (ranks 187-191).
+
+    Features:
+    - donchian_upper_20: 20-day rolling max of High
+    - donchian_lower_20: 20-day rolling min of Low
+    - donchian_position: (Close - lower) / (upper - lower) in [0,1]
+    - donchian_width_pct: (upper - lower) / close * 100
+    - pct_to_donchian_breakout: % to nearest boundary, signed (positive = above mid)
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with Donchian channel features
+    """
+    features = {}
+
+    # Donchian channels
+    upper = high.rolling(20).max()
+    lower = low.rolling(20).min()
+
+    features["donchian_upper_20"] = upper
+    features["donchian_lower_20"] = lower
+
+    # Donchian position: (close - lower) / (upper - lower)
+    # Handle flat channel (upper = lower) by setting position to 0.5
+    channel_width = upper - lower
+    width_safe = channel_width.where(channel_width > 0, 1.0)
+    position = (close - lower) / width_safe
+    position = position.where(channel_width > 0, 0.5)
+    position = position.clip(0, 1)  # Clamp to [0, 1]
+    features["donchian_position"] = position
+
+    # Donchian width %: (upper - lower) / close * 100
+    features["donchian_width_pct"] = channel_width / close * 100
+
+    # pct_to_donchian_breakout: % distance to nearest boundary
+    # Positive = closer to upper, negative = closer to lower
+    mid = (upper + lower) / 2
+    dist_to_upper = (upper - close) / close * 100
+    dist_to_lower = (close - lower) / close * 100
+
+    # If above mid, report distance to upper (positive), else to lower (negative)
+    breakout_pct = np.where(
+        close >= mid,
+        dist_to_upper,  # Distance to upper breakout
+        -dist_to_lower  # Distance to lower breakout (negative)
+    )
+    features["pct_to_donchian_breakout"] = pd.Series(breakout_pct, index=close.index)
+
+    return features
+
+
+def _compute_divergence(close: pd.Series, volume: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute Momentum Divergence indicators (ranks 192-195).
+
+    Features:
+    - price_rsi_divergence: Difference in 20d percentile ranks (price vs RSI)
+    - price_obv_divergence: Difference in 20d percentile ranks (price vs OBV)
+    - divergence_streak: Consecutive days with |divergence| > 0.2
+    - divergence_magnitude: max(|price_rsi_div|, |price_obv_div|)
+
+    Args:
+        close: Close price series
+        volume: Volume series
+
+    Returns:
+        Dict with divergence features
+    """
+    features = {}
+
+    close_arr = close.values
+
+    # Compute RSI
+    rsi = pd.Series(talib.RSI(close_arr, timeperiod=14), index=close.index)
+
+    # Compute OBV
+    # OBV = cumulative sum of (volume if price up, -volume if price down)
+    price_direction = np.sign(close.diff())
+    obv = (volume * price_direction).fillna(0).cumsum()
+
+    # Rolling percentile rank function
+    def rolling_percentile_rank(series: pd.Series, window: int = 20) -> pd.Series:
+        """Compute rolling percentile rank in [0, 1]."""
+        result = pd.Series(np.nan, index=series.index)
+        for i in range(window - 1, len(series)):
+            window_data = series.iloc[i - window + 1 : i + 1]
+            if window_data.isna().any():
+                continue
+            current = series.iloc[i]
+            result.iloc[i] = (window_data <= current).sum() / window
+        return result
+
+    # Compute percentile ranks
+    price_pct = rolling_percentile_rank(close)
+    rsi_pct = rolling_percentile_rank(rsi)
+    obv_pct = rolling_percentile_rank(obv)
+
+    # Divergence = price percentile - indicator percentile
+    # Range: [-1, 1] since both are in [0, 1]
+    price_rsi_div = price_pct - rsi_pct
+    price_obv_div = price_pct - obv_pct
+
+    features["price_rsi_divergence"] = price_rsi_div
+    features["price_obv_divergence"] = price_obv_div
+
+    # Divergence magnitude: max of absolute values
+    features["divergence_magnitude"] = np.maximum(price_rsi_div.abs(), price_obv_div.abs())
+
+    # Divergence streak: consecutive days with |divergence| > 0.2
+    # Use the larger divergence for streak calculation
+    significant_div = features["divergence_magnitude"] > 0.2
+
+    streak = pd.Series(0, index=close.index, dtype=int)
+    count = 0
+    for i in range(len(close)):
+        if pd.isna(significant_div.iloc[i]):
+            count = 0
+            streak.iloc[i] = 0
+        elif significant_div.iloc[i]:
+            count += 1
+            streak.iloc[i] = count
+        else:
+            count = 0
+            streak.iloc[i] = 0
+    features["divergence_streak"] = streak
+
+    return features
+
+
+def _permutation_entropy(series: np.ndarray, order: int = 3) -> float:
+    """Compute permutation entropy for a 1D array.
+
+    Permutation entropy measures the complexity/randomness of a time series.
+    - Low entropy (close to 0) = regular, predictable patterns
+    - High entropy (close to 1) = random, unpredictable
+
+    Args:
+        series: 1D numpy array of values
+        order: Embedding dimension (number of consecutive values to compare)
+
+    Returns:
+        Normalized permutation entropy in [0, 1]
+    """
+    from math import factorial
+
+    n = len(series)
+    if n < order:
+        return np.nan
+
+    # Count occurrences of each ordinal pattern
+    pattern_counts = {}
+    for i in range(n - order + 1):
+        # Get the ordinal pattern (ranks of values)
+        window = series[i : i + order]
+        if np.isnan(window).any():
+            continue
+        # Convert to ordinal pattern (tuple of ranks)
+        pattern = tuple(np.argsort(np.argsort(window)))
+        pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+
+    if not pattern_counts:
+        return np.nan
+
+    # Compute entropy
+    total = sum(pattern_counts.values())
+    probs = np.array(list(pattern_counts.values())) / total
+    entropy = -np.sum(probs * np.log(probs))
+
+    # Normalize by maximum possible entropy (log of number of possible patterns)
+    max_entropy = np.log(factorial(order))
+    if max_entropy == 0:
+        return 0.0
+
+    return entropy / max_entropy
+
+
+def _compute_entropy_regime(
+    close: pd.Series, high: pd.Series, low: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Entropy & Regime indicators (ranks 196-206).
+
+    Entropy Features:
+    - permutation_entropy_order3: 20-day rolling entropy (6 patterns)
+    - permutation_entropy_order4: 20-day rolling entropy (24 patterns)
+    - permutation_entropy_order5: 20-day rolling entropy (120 patterns)
+    - entropy_trend_5d: Change in order4 entropy over 5 days
+
+    Regime Features:
+    - atr_regime_pct_60d: 60-day percentile of ATR%
+    - atr_regime_rolling_q: Rolling 60d quantile position
+    - trend_strength_pct_60d: 60-day percentile of ADX
+    - trend_strength_rolling_q: Rolling 60d quantile position
+    - vol_regime_state: -1 (low), 0 (medium), 1 (high) based on ATR percentile
+    - regime_consistency: Days in current vol_regime_state
+    - regime_transition_prob: % of last 20 days with regime changes
+
+    Args:
+        close: Close price series
+        high: High price series
+        low: Low price series
+
+    Returns:
+        Dict with entropy and regime features
+    """
+    features = {}
+    close_arr = close.values
+    high_arr = high.values
+    low_arr = low.values
+
+    # =========================================================================
+    # Entropy features
+    # =========================================================================
+
+    # Compute rolling permutation entropy for different orders
+    window = 20
+
+    for order in [3, 4, 5]:
+        col_name = f"permutation_entropy_order{order}"
+        entropy_values = pd.Series(np.nan, index=close.index)
+
+        for i in range(window - 1, len(close)):
+            window_data = close_arr[i - window + 1 : i + 1]
+            entropy_values.iloc[i] = _permutation_entropy(window_data, order=order)
+
+        features[col_name] = entropy_values
+
+    # Entropy trend: change in order4 entropy over 5 days
+    features["entropy_trend_5d"] = features["permutation_entropy_order4"] - \
+                                   features["permutation_entropy_order4"].shift(5)
+
+    # =========================================================================
+    # Regime features
+    # =========================================================================
+
+    # ATR% = ATR / Close * 100
+    atr = pd.Series(talib.ATR(high_arr, low_arr, close_arr, timeperiod=14), index=close.index)
+    atr_pct = atr / close * 100
+
+    # ADX for trend strength
+    adx = pd.Series(talib.ADX(high_arr, low_arr, close_arr, timeperiod=14), index=close.index)
+
+    # Rolling percentile rank function
+    def rolling_percentile_rank(series: pd.Series, window: int = 60) -> pd.Series:
+        """Compute rolling percentile rank in [0, 1]."""
+        result = pd.Series(np.nan, index=series.index)
+        for i in range(window - 1, len(series)):
+            window_data = series.iloc[i - window + 1 : i + 1]
+            if window_data.isna().any():
+                continue
+            current = series.iloc[i]
+            result.iloc[i] = (window_data <= current).sum() / window
+        return result
+
+    # ATR regime percentiles
+    features["atr_regime_pct_60d"] = rolling_percentile_rank(atr_pct, 60)
+    features["atr_regime_rolling_q"] = rolling_percentile_rank(atr_pct, 60)
+
+    # Trend strength percentiles
+    features["trend_strength_pct_60d"] = rolling_percentile_rank(adx, 60)
+    features["trend_strength_rolling_q"] = rolling_percentile_rank(adx, 60)
+
+    # vol_regime_state: -1 (low), 0 (medium), 1 (high)
+    # High = percentile > 0.7, Low = percentile < 0.3, Medium = else
+    atr_pct_60 = features["atr_regime_pct_60d"]
+    vol_state = pd.Series(0, index=close.index, dtype=int)
+    vol_state[atr_pct_60 > 0.7] = 1  # High volatility
+    vol_state[atr_pct_60 < 0.3] = -1  # Low volatility
+    features["vol_regime_state"] = vol_state
+
+    # regime_consistency: Consecutive days in current regime state
+    consistency = pd.Series(1, index=close.index, dtype=int)
+    count = 1
+    prev_state = None
+    for i in range(len(close)):
+        if pd.isna(vol_state.iloc[i]):
+            count = 1
+            consistency.iloc[i] = 1
+            prev_state = None
+        else:
+            current_state = vol_state.iloc[i]
+            if prev_state is None:
+                count = 1
+            elif current_state == prev_state:
+                count += 1
+            else:
+                count = 1
+            consistency.iloc[i] = count
+            prev_state = current_state
+    features["regime_consistency"] = consistency
+
+    # regime_transition_prob: % of last 20 days with regime changes
+    # A regime change occurs when vol_regime_state changes from previous day
+    state_changed = (vol_state != vol_state.shift(1)).astype(int)
+    # Set first valid point and NaN points to 0 (no change)
+    state_changed = state_changed.fillna(0)
+    # Rolling mean of changes over 20 days
+    features["regime_transition_prob"] = state_changed.rolling(20).mean()
+
+    return features
+
+
 def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.DataFrame:
     """Build feature DataFrame with all tier_a200 indicators.
 
@@ -1240,6 +1666,23 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
     # Candle body/wick analysis features (ranks 175-180)
     open_price = df["Open"]
     features.update(_compute_candle_features(open_price, high, low, close))
+
+    # =========================================================================
+    # Chunk 5: Ichimoku Cloud, Donchian Channel, Divergence, Entropy/Regime
+    #          (ranks 181-206)
+    # =========================================================================
+
+    # Ichimoku Cloud features (ranks 181-186)
+    features.update(_compute_ichimoku(high, low, close))
+
+    # Donchian Channel features (ranks 187-191)
+    features.update(_compute_donchian(high, low, close))
+
+    # Momentum Divergence features (ranks 192-195)
+    features.update(_compute_divergence(close, volume))
+
+    # Entropy & Regime features (ranks 196-206)
+    features.update(_compute_entropy_regime(close, high, low))
 
     # Create feature DataFrame for new a200 features
     new_features_df = pd.DataFrame(features)

@@ -27,13 +27,28 @@
 
 **Dataset**: `SPY.features.a20` (generated via `scripts/build_features_a20.py`, registered in data/processed manifest)
 
-## Future Tiers
+## Tier Implementation Status
 
-| Tier | Description | Status |
-|------|-------------|--------|
-| a50  | 50 indicators | TBD |
-| a100 | 100 indicators | TBD |
-| ...  | ... | ... |
+| Tier | Target | Actual | Status | Notes |
+|------|--------|--------|--------|-------|
+| a20 | 20 | 20 | ✅ Complete | Phase 2 baseline |
+| a50 | 50 | 50 | ✅ Complete | Extended MAs, slopes, crosses |
+| a100 | 100 | 100 | ✅ Complete | Volume, volatility, momentum extensions |
+| a200 | 200 | **206** | ✅ Complete | Ichimoku, Donchian, entropy/regime indicators |
+| a500 | 500 | - | Planned | Future |
+| a1000 | 1000 | - | Planned | Future |
+| a2000 | 2000 | - | Planned | Future |
 
-Add rows as each tier is defined (indicators + references).
+**Note on actual counts:** Tier targets are approximate. Actual feature counts may differ based on indicator groupings (e.g., Ichimoku Cloud adds 6 related features together). Scientific validity depends on consistent tier definitions across experiments, not exact round numbers. The 206 features in tier_a200 provide richer signal than artificially constraining to exactly 200.
+
+## Tier a50, a100, a200 Details
+
+See `src/features/tier_a50.py`, `src/features/tier_a100.py`, and `src/features/tier_a200.py` for full feature lists and implementation details.
+
+**tier_a200 categories (106 new features, 206 total):**
+- Chunk 1 (101-120): TEMA, WMA, KAMA, HMA, VWMA and derived
+- Chunk 2 (121-140): Duration counters, MA cross recency, proximity
+- Chunk 3 (141-160): BB extension, RSI duration, mean reversion, patterns
+- Chunk 4 (161-180): MACD extensions, volume dynamics, calendar, candle
+- Chunk 5 (181-206): Ichimoku Cloud, Donchian Channel, divergence, entropy/regime
 

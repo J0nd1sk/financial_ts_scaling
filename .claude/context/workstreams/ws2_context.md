@@ -1,17 +1,17 @@
 # Workstream 2 Context: foundation
-# Last Updated: 2026-01-25 15:00
+# Last Updated: 2026-01-26 12:00
 
 ## Identity
 - **ID**: ws2
 - **Name**: foundation
 - **Focus**: Foundation model & alternative architecture investigation
-- **Status**: INVESTIGATION COMPLETE - Both paths rejected
+- **Status**: HPO SCRIPT READY - Awaiting full HPO runs
 
 ---
 
 ## Current Task
-- **Working on**: Alternative Architecture Investigation (ARCH-01, ARCH-02)
-- **Status**: COMPLETE - Both architectures failed vs PatchTST
+- **Working on**: Alternative Architecture HPO Investigation
+- **Status**: HPO script created, smoke test passed, ready for full runs
 
 ---
 
@@ -20,8 +20,9 @@
 ### Research Questions
 1. Can pre-trained foundation models (Lag-Llama, TimesFM) beat task-specific PatchTST?
 2. Can alternative transformer architectures (iTransformer, Informer) beat PatchTST?
+3. **NEW**: Can proper HPO (dropout tuning, LR exploration) fix alternative architectures?
 
-### Final Results - Foundation Models
+### Original Results - Foundation Models
 
 | Experiment | Val AUC | vs PatchTST | Status |
 |------------|---------|-------------|--------|
@@ -31,122 +32,133 @@
 | TimesFM (inverted) | 0.636 | -11% | Still below baseline |
 | Lag-Llama (all modes) | 0.499-0.576 | -20% to -30% | FAILED |
 
-### Final Results - Alternative Architectures (NEW - 2026-01-25)
+### Original Results - Alternative Architectures (UNFAIR - 1 config each)
 
 | Experiment | Val AUC | vs PatchTST | Status |
 |------------|---------|-------------|--------|
 | **PatchTST 200M** | **0.718** | Baseline | BEST |
-| iTransformer (ARCH-01) | 0.517 | **-28%** | FAILED - barely above random |
-| Informer (ARCH-02) | 0.587 | **-18%** | FAILED - probability collapse |
+| iTransformer (ARCH-01) | 0.517 | **-28%** | 1 config only |
+| Informer (ARCH-02) | 0.587 | **-18%** | 1 config only |
 
-### Critical Discovery: Covariates Ignored (Foundation Models)
-- TimesFM predictions identical with 1 vs 50 features (correlation 1.0000000000)
-- Foundation models cannot use feature engineering
+### NEW: HPO Investigation Plan (2026-01-26)
 
-### Critical Discovery: Architecture Mismatch (Alternative Architectures)
-- iTransformer's inverted attention loses temporal patterns
-- Informer's forecasting→threshold approach causes probability collapse
-- Both show narrow prediction ranges (collapsed to mean)
+Key insight: PatchTST went through 50+ trials of HPO. Alternative architectures only ran with ONE configuration each - no dropout tuning, no LR exploration, only 500 steps.
+
+**Hypothesis**: dropout=0.5 (critical for PatchTST) might fix probability collapse in alternative architectures.
+
+**HPO Search Space**:
+- dropout: [0.3, 0.4, 0.5]
+- learning_rate: [5e-5, 1e-4, 2e-4]
+- hidden_size: [64, 128, 256]
+- n_layers: [2, 3, 4]
+- n_heads: [2, 4, 8]
+- max_steps: [1000, 2000]
+- batch_size: [16, 32, 64]
+
+**Success criteria**: AUC >= 0.70 (comparable to PatchTST 0.718)
 
 ---
 
-## Last Session Work (2026-01-25 15:00)
+## Last Session Work (2026-01-26 12:00)
 
-### Alternative Architecture Investigation
-1. Fixed NeuralForecast loss API bug (`loss="MSE"` → `loss=MSE()`)
-2. Fixed early stopping conflicts with cross_validation
-3. Fixed Informer parameter naming (`e_layers` → `encoder_layers`)
-4. Ran ARCH-01 (iTransformer): **AUC 0.517** (-28% vs baseline)
-5. Ran ARCH-02 (Informer): **AUC 0.587** (-18% vs baseline)
-6. Updated `docs/architecture_comparison_results.md` with full analysis
+### Alternative Architecture HPO Script Created
+1. Created `experiments/architectures/hpo_neuralforecast.py` (~400 lines)
+   - Optuna-based HPO with TPE sampler (20 startup trials)
+   - Supports both `--model itransformer` and `--model informer`
+   - `--dry-run` flag for testing
+   - `--resume` flag to continue interrupted studies
+   - SQLite study storage for persistence
+   - Incremental result saving (trials dir + best_params.json + study_summary.md)
 
-### Bugs Fixed
-- NeuralForecast requires loss objects, not strings
-- Early stopping conflicts with cross_validation (removed)
-- Parameter naming differences between original papers and NeuralForecast
+2. Updated `experiments/architectures/common.py` with HPO utilities
+   - `prepare_hpo_data()` - Shared data preparation for HPO
+   - `format_hpo_results_table()` - Markdown table formatting
+
+3. Created output directories
+   - `outputs/hpo/architectures/itransformer/trials/`
+   - `outputs/hpo/architectures/informer/trials/`
+
+4. Fixed NeuralForecast early stopping
+   - `val_size` must be passed to `nf.fit()`, not model constructor
+   - Per NeuralForecast docs: https://nixtlaverse.nixtla.io/neuralforecast/models.itransformer.html
+
+5. Ran smoke test (3 trials)
+   - Script runs without crashing
+   - Training completes (0.9 min for 3 trials)
+   - AUC=0 in smoke test (probability collapse persists with random params)
+
+6. Ran `make test` - 944 passed, 2 skipped
 
 ### Files Created/Modified
-- `experiments/architectures/itransformer_forecast.py` - FIXED
-- `experiments/architectures/informer_forecast.py` - FIXED
-- `outputs/architectures/itransformer_forecast/results.json` - NEW
-- `outputs/architectures/informer_forecast/results.json` - NEW
-- `docs/architecture_comparison_results.md` - UPDATED with results
+- `experiments/architectures/hpo_neuralforecast.py` - NEW (untracked)
+- `experiments/architectures/common.py` - MODIFIED
+- `outputs/hpo/architectures/` - NEW (directory structure)
 
 ---
 
 ## Files Owned/Modified
 - `experiments/foundation/` - PRIMARY
-- `experiments/architectures/` - PRIMARY (NEW)
+- `experiments/architectures/` - PRIMARY
+- `experiments/architectures/hpo_neuralforecast.py` - NEW (HPO script)
 - `outputs/foundation/` - Results
-- `outputs/architectures/` - Results (NEW)
+- `outputs/architectures/` - Results
+- `outputs/hpo/architectures/` - HPO results (NEW)
 - `docs/foundation_model_results.md` - Documentation
-- `docs/architecture_comparison_results.md` - Documentation (UPDATED)
+- `docs/architecture_comparison_results.md` - Documentation
 
 ---
 
 ## Key Decisions (Workstream-Specific)
 
-### Alternative Architecture Investigation Closed (2026-01-25)
-- **Context**: Tested iTransformer and Informer via NeuralForecast
-- **Finding**: Both significantly worse than PatchTST (17-28% lower AUC)
-- **Root cause**: Task mismatch (forecasting→threshold) and attention mechanism unsuitability
-- **Decision**: ABANDON architecture investigation
+### HPO Investigation Approved (2026-01-26)
+- **Context**: Original alternative architecture tests were unfair (1 config each vs 50+ for PatchTST)
+- **Decision**: Run proper HPO with comparable rigor
+- **Rationale**: dropout=0.5 was critical for PatchTST; never tested on alternatives
 
-### Foundation Model Investigation Closed (2026-01-26)
-- **Finding**: TimesFM ignores covariates entirely
-- **Decision**: Foundation model path is not viable
+### NeuralForecast val_size Fix (2026-01-26)
+- **Issue**: `early_stop_patience_steps` requires `val_size`
+- **Fix**: Pass `val_size=100` to `nf.fit()`, not model constructor
+- **Source**: NeuralForecast GitHub issue #435
 
 ---
 
 ## Session History
 
+### 2026-01-26 12:00
+- Created HPO script for NeuralForecast models
+- Fixed early stopping (val_size to fit(), not constructor)
+- Smoke test passed (3 trials in 0.9 min)
+- make test passed (944/946)
+- **Next**: Full 50-trial HPO runs
+
 ### 2026-01-25 15:00
-- Implemented Alternative Architecture Investigation plan
 - Fixed NeuralForecast bugs (loss API, early stopping, parameter naming)
 - Ran iTransformer: AUC 0.517 (-28%)
 - Ran Informer: AUC 0.587 (-18%)
-- Documented results in architecture_comparison_results.md
-- **Conclusion**: Both architectures FAILED
-
-### 2026-01-26 09:00
-- Analyzed TFM-07 results - discovered covariates completely ignored
-- Created foundation_model_results.md with full analysis
-- Computed prediction correlation (1.0000000000)
-
-### 2026-01-25 23:55
-- Created TimesFM_a50/a100 notebooks
+- **Conclusion**: Both architectures FAILED (but unfair comparison)
 
 ---
 
 ## Next Session Should
 
-1. **Discuss and analyze** what happened (per user request)
-   - Why did iTransformer fail so badly?
-   - Why did Informer show probability collapse?
-   - What does this tell us about financial time series?
+1. **Run iTransformer HPO (50 trials)**
+   ```bash
+   caffeinate -i ./venv/bin/python experiments/architectures/hpo_neuralforecast.py --model itransformer --trials 50 2>&1 | tee outputs/hpo/architectures/itransformer/hpo.log
+   ```
+   Estimated time: 8-10 hours (overnight)
 
-2. **Make final decision** on closing ws2
-   - Both foundation models AND alternative architectures failed
-   - Strong evidence to focus exclusively on PatchTST + feature scaling
+2. **Run Informer HPO (50 trials)**
+   ```bash
+   caffeinate -i ./venv/bin/python experiments/architectures/hpo_neuralforecast.py --model informer --trials 50 2>&1 | tee outputs/hpo/architectures/informer/hpo.log
+   ```
 
-3. **Archive** or **continue** (user choice)
-   - If archive: Move to archive, update global context
-   - If continue: Could test direct classification (Phase 2 of arch plan)
+3. **Analyze results** after both complete
+   - Compare best configs to PatchTST baseline
+   - Create `docs/architecture_hpo_results.md`
 
----
-
-## Investigation Conclusions
-
-### Foundation Models: NOT VIABLE
-1. Lag-Llama: 20% below PatchTST
-2. TimesFM: Anti-correlated AND ignores all covariates
-
-### Alternative Architectures: NOT VIABLE
-1. iTransformer: 28% below PatchTST (inverted attention loses temporal patterns)
-2. Informer: 18% below PatchTST (probability collapse, all-negative predictions)
-
-### Recommendation
-**FOCUS ON PHASE 6C** with PatchTST. The baseline architecture is actually the best option discovered. Feature scaling (tier_a100 → tier_a200) is the most promising path forward.
+4. **Decision point**
+   - If AUC >= 0.70: Consider horizon experiments (H3, H5)
+   - If AUC < 0.65: Confirm architecture not viable, close investigation
 
 ---
 
