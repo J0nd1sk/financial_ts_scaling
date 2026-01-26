@@ -1,67 +1,109 @@
 #!/bin/bash
-# Run Phase 6C A100 Stage 1 Baseline Experiments
-# 12 models: 3 budgets × 4 horizons
+#
+# Phase 6C A100: Stage 1 Baseline Experiments
+# 12 models: 3 budgets (2M/20M/200M) × 4 horizons (H1/H2/H3/H5)
+#
+# Usage: caffeinate ./scripts/run_s1_a100.sh
+#
+# Each experiment runs ~20-40 epochs with early stopping
+# Total estimated time: 2-4 hours depending on thermal conditions
+#
 
+set -e  # Exit on error
+set -o pipefail  # Catch errors in pipelines
+export PYTHONUNBUFFERED=1  # Ensure real-time output
+
+# Navigate to project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+
+# Activate virtual environment (disable set -e temporarily due to unalias in activate)
+set +e
+source venv/bin/activate
 set -e
 
-cd "$(dirname "$0")/.."
-source venv/bin/activate
+# Ensure base output directory exists
+mkdir -p outputs/phase6c_a100
 
 echo "=================================================="
 echo "Phase 6C A100: Stage 1 Baseline Experiments"
 echo "12 models: 2M/20M/200M × H1/H2/H3/H5"
 echo "=================================================="
+echo ""
+date
+echo ""
 
-# Array of experiment scripts
-EXPERIMENTS=(
-    "s1_01_2m_h1"
-    "s1_02_20m_h1"
-    "s1_03_200m_h1"
-    "s1_04_2m_h2"
-    "s1_05_20m_h2"
-    "s1_06_200m_h2"
-    "s1_07_2m_h3"
-    "s1_08_20m_h3"
-    "s1_09_200m_h3"
-    "s1_10_2m_h5"
-    "s1_11_20m_h5"
-    "s1_12_200m_h5"
-)
+# Track counters
+TOTAL=0
+PASSED=0
+FAILED=0
 
-# Track results
-RESULTS_FILE="outputs/phase6c_a100/s1_summary.json"
+run_experiment() {
+    local exp=$1
+    TOTAL=$((TOTAL + 1))
 
-echo "[" > "$RESULTS_FILE"
-FIRST=true
-
-for exp in "${EXPERIMENTS[@]}"; do
     echo ""
-    echo "=================================================="
-    echo "Running: $exp"
-    echo "=================================================="
+    echo "[$TOTAL/12] Running: $exp"
+    echo "----------------------------------------"
 
-    python experiments/phase6c_a100/${exp}.py 2>&1 | tee outputs/phase6c_a100/${exp}/log.txt
-
-    # Append to summary (skip comma for first entry)
-    if [ "$FIRST" = true ]; then
-        FIRST=false
+    if python "experiments/phase6c_a100/${exp}.py"; then
+        PASSED=$((PASSED + 1))
+        echo "[$TOTAL/12] PASSED: $exp"
     else
-        echo "," >> "$RESULTS_FILE"
+        FAILED=$((FAILED + 1))
+        echo "[$TOTAL/12] FAILED: $exp"
     fi
-
-    # Extract key metrics
-    cat outputs/phase6c_a100/${exp}/results.json >> "$RESULTS_FILE"
 
     # Thermal pause between experiments
     echo ""
     echo "Cooling pause (30s)..."
     sleep 30
-done
+}
 
-echo "]" >> "$RESULTS_FILE"
+# Run all 12 Stage 1 experiments
+echo ""
+echo "========================================"
+echo "HORIZON 1 (H1) EXPERIMENTS"
+echo "========================================"
+run_experiment "s1_01_2m_h1"
+run_experiment "s1_02_20m_h1"
+run_experiment "s1_03_200m_h1"
+
+echo ""
+echo "========================================"
+echo "HORIZON 2 (H2) EXPERIMENTS"
+echo "========================================"
+run_experiment "s1_04_2m_h2"
+run_experiment "s1_05_20m_h2"
+run_experiment "s1_06_200m_h2"
+
+echo ""
+echo "========================================"
+echo "HORIZON 3 (H3) EXPERIMENTS"
+echo "========================================"
+run_experiment "s1_07_2m_h3"
+run_experiment "s1_08_20m_h3"
+run_experiment "s1_09_200m_h3"
+
+echo ""
+echo "========================================"
+echo "HORIZON 5 (H5) EXPERIMENTS"
+echo "========================================"
+run_experiment "s1_10_2m_h5"
+run_experiment "s1_11_20m_h5"
+run_experiment "s1_12_200m_h5"
 
 echo ""
 echo "=================================================="
-echo "All experiments complete!"
-echo "Summary saved to: $RESULTS_FILE"
+echo "SUMMARY"
 echo "=================================================="
+echo ""
+echo "Total: $TOTAL"
+echo "Passed: $PASSED"
+echo "Failed: $FAILED"
+echo ""
+date
+echo ""
+echo "Results saved to: outputs/phase6c_a100/s1_*/results.json"
+echo ""

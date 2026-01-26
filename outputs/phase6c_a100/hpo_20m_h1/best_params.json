@@ -1,0 +1,40 @@
+{
+  "experiment": "hpo_20m_h1",
+  "budget": "20M",
+  "horizon": 1,
+  "n_trials": 50,
+  "best_trial": 0,
+  "best_value": -Infinity,
+  "best_params": {
+    "d_model": 96,
+    "n_layers": 6,
+    "n_heads": 8,
+    "d_ff_ratio": 2
+  },
+  "search_space": {
+    "d_model": [
+      64,
+      96,
+      128,
+      160,
+      192
+    ],
+    "n_layers": [
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "n_heads": [
+      4,
+      8
+    ],
+    "d_ff_ratio": [
+      2,
+      4
+    ]
+  },
+  "total_time_min": 0.000696718692779541,
+  "timestamp": "2026-01-25T17:48:59.970343"
+}

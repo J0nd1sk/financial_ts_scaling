@@ -1,0 +1,552 @@
+[
+  {
+    "number": 0,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 1,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 2,
+    "value": -Infinity,
+    "params": {
+      "d_model": 128,
+      "n_layers": 5,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 3,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 7,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 4,
+    "value": -Infinity,
+    "params": {
+      "d_model": 192,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 5,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 5,
+      "n_heads": 4,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 6,
+    "value": -Infinity,
+    "params": {
+      "d_model": 192,
+      "n_layers": 7,
+      "n_heads": 4,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 7,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 5,
+      "n_heads": 4,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 8,
+    "value": -Infinity,
+    "params": {
+      "d_model": 64,
+      "n_layers": 8,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 9,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 7,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 10,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 11,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 12,
+    "value": -Infinity,
+    "params": {
+      "d_model": 64,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 13,
+    "value": -Infinity,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 14,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 15,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 8,
+      "n_heads": 8,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 16,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 17,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 18,
+    "value": -Infinity,
+    "params": {
+      "d_model": 128,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 19,
+    "value": -Infinity,
+    "params": {
+      "d_model": 64,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 20,
+    "value": -Infinity,
+    "params": {
+      "d_model": 192,
+      "n_layers": 8,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 21,
+    "value": -Infinity,
+    "params": {
+      "d_model": 128,
+      "n_layers": 5,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 22,
+    "value": -Infinity,
+    "params": {
+      "d_model": 128,
+      "n_layers": 5,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 23,
+    "value": -Infinity,
+    "params": {
+      "d_model": 128,
+      "n_layers": 5,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 24,
+    "value": -Infinity,
+    "params": {
+      "d_model": 128,
+      "n_layers": 5,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 25,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 26,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 5,
+      "n_heads": 4,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 27,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 28,
+    "value": -Infinity,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 4,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 29,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 7,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 30,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 31,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 7,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 32,
+    "value": -Infinity,
+    "params": {
+      "d_model": 192,
+      "n_layers": 7,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 33,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 7,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 34,
+    "value": -Infinity,
+    "params": {
+      "d_model": 192,
+      "n_layers": 5,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 35,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 7,
+      "n_heads": 4,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 36,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 5,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 37,
+    "value": -Infinity,
+    "params": {
+      "d_model": 64,
+      "n_layers": 8,
+      "n_heads": 4,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 38,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 7,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 39,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 40,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 6,
+      "n_heads": 4,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 41,
+    "value": -Infinity,
+    "params": {
+      "d_model": 192,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 42,
+    "value": -Infinity,
+    "params": {
+      "d_model": 192,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 43,
+    "value": -Infinity,
+    "params": {
+      "d_model": 192,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 44,
+    "value": -Infinity,
+    "params": {
+      "d_model": 64,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 45,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 8,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 46,
+    "value": -Infinity,
+    "params": {
+      "d_model": 192,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 47,
+    "value": -Infinity,
+    "params": {
+      "d_model": 128,
+      "n_layers": 7,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 48,
+    "value": -Infinity,
+    "params": {
+      "d_model": 96,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4
+    },
+    "state": "TrialState.COMPLETE"
+  },
+  {
+    "number": 49,
+    "value": -Infinity,
+    "params": {
+      "d_model": 160,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 2
+    },
+    "state": "TrialState.COMPLETE"
+  }
+]

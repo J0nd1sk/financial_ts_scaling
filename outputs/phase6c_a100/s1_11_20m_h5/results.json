@@ -1,0 +1,50 @@
+{
+  "experiment": "s1_11_20m_h5",
+  "phase": "6C",
+  "stage": "S1",
+  "budget": "20M",
+  "horizon": 5,
+  "feature_tier": "a100",
+  "num_features": 100,
+  "architecture": {
+    "d_model": 128,
+    "n_layers": 6,
+    "n_heads": 8,
+    "d_ff": 512
+  },
+  "hyperparameters": {
+    "dropout": 0.5,
+    "learning_rate": 0.0001,
+    "context_length": 80,
+    "batch_size": 64,
+    "epochs": 50,
+    "use_revin": true
+  },
+  "splits": {
+    "train": 7200,
+    "val": 418,
+    "test": 152
+  },
+  "training": {
+    "train_loss": 0.5994964740445129,
+    "val_loss": 0.7587317143167768,
+    "val_auc": 0.5602261612233699,
+    "stopped_early": true,
+    "training_time_min": 0.2736606001853943
+  },
+  "val_metrics": {
+    "auc": 0.5602261612233699,
+    "accuracy": 0.5813397129186603,
+    "precision": 0.6225806451612903,
+    "recall": 0.7689243027888446,
+    "f1": 0.6880570409982175,
+    "pred_min": 0.16795140504837036,
+    "pred_max": 0.9918760061264038,
+    "pred_mean": 0.6570171117782593,
+    "pred_std": 0.21006634831428528,
+    "n_positive_preds": 310,
+    "n_samples": 418,
+    "class_balance": 0.60047847032547
+  },
+  "timestamp": "2026-01-25T16:25:00.830879"
+}

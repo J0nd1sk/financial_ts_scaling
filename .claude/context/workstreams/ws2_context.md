@@ -1,5 +1,5 @@
 # Workstream 2 Context: foundation
-# Last Updated: 2026-01-25 19:45
+# Last Updated: 2026-01-25 23:55
 
 ## Identity
 - **ID**: ws2
@@ -10,8 +10,8 @@
 ---
 
 ## Current Task
-- **Working on**: TimesFM notebook - comprehensive export cell (TFM-01)
-- **Status**: READY TO RE-RUN IN COLAB
+- **Working on**: TimesFM a50/a100 covariate experiments (TFM-07 through TFM-10)
+- **Status**: NOTEBOOKS CREATED - Ready for Colab execution
 
 ---
 
@@ -27,110 +27,123 @@ Can pre-trained foundation models (Lag-Llama, TimesFM) beat task-specific PatchT
 | **PatchTST H1** | **0.718** | 0.58 | 0.45 | BASELINE |
 | Lag-Llama (all modes) | 0.499-0.576 | ~0.50 | ~0.50 | FAILED |
 | TimesFM TFM-01 | **0.364** | 0.0 | 0.0 | **ANTI-CORRELATED** |
+| TFM-01 Inverted | 0.636 | 0.33 | 0.49 | Below PatchTST |
 
-### TimesFM TFM-01 Results (2026-01-25)
-**Critical Finding**: Model is ANTI-CORRELATED
-- Val AUC: 0.364 (< 0.5 = worse than random)
-- Inverted AUC: 0.636 (still below PatchTST 0.718)
-- 0 positive predictions on val (threshold 1% too high for predictions)
-- Prediction range: [-0.011, +0.006] (never reaches 1%)
+### Key Finding: TFM-01 NOT Fair Comparison
+- TFM-01 was zero-shot with ONLY 1 feature (close price)
+- PatchTST was trained on 20 features
+- Need to test TimesFM with covariates for fair comparison
 
 ---
 
-## Last Session Work (2026-01-25 19:45)
+## Last Session Work (2026-01-25 23:55)
 
-### Fixed JSON Serialization Bug in cell-27
-**Problem**: Comprehensive export cell failed with:
-```
-TypeError: Object of type bool is not JSON serializable
-```
+### Created a50/a100 Covariate Experiment Notebooks
+Created two Colab notebooks for testing TimesFM with engineered features:
 
-**Root Cause**: `is_anti_correlated = auc_normal < 0.5` returns `np.bool_`, not Python `bool`
+| Notebook | Experiments | Features | Data File |
+|----------|-------------|----------|-----------|
+| `TimesFM_a50_Experiments.ipynb` | TFM-07, TFM-08 | 50 | `SPY_dataset_a50_combined.parquet` |
+| `TimesFM_a100_Experiments.ipynb` | TFM-09, TFM-10 | 100 | `SPY_dataset_a100_combined.parquet` |
 
-**Fix Applied**: Changed line in cell-27:
-```python
-# Before:
-"is_anti_correlated": is_anti_correlated
+### Experiment Matrix
+| ID | Features | Mode | Description |
+|----|----------|------|-------------|
+| TFM-07 | 50 (a50) | Zero-shot | Covariates with 50 features |
+| TFM-08 | 50 (a50) | Fine-tuned | Train on 1% threshold with 50 features |
+| TFM-09 | 100 (a100) | Zero-shot | Covariates with 100 features |
+| TFM-10 | 100 (a100) | Fine-tuned | Train on 1% threshold with 100 features |
 
-# After:
-"is_anti_correlated": bool(is_anti_correlated)  # Cast numpy bool to Python bool
-```
+### Bug Fix: Wrong File Uploaded
+User initially uploaded `SPY_dataset_a50.parquet` (features only, no OHLCV) instead of `SPY_dataset_a50_combined.parquet` (OHLCV + features).
 
-### Files Modified This Session
-- `experiments/foundation/TimesFM_SPY_Experiments.ipynb` - cell-27 fixed
+**Fixed by**: Added clear validation in Cell 2:
+- Shows warning if filename doesn't contain "_combined"
+- Lists all columns for diagnostics
+- Clear error message explaining which file to use
+
+### Files Created This Session
+- `experiments/foundation/TimesFM_a50_Experiments.ipynb` - NEW
+- `experiments/foundation/TimesFM_a100_Experiments.ipynb` - NEW
 
 ---
 
 ## Files Owned/Modified
 - `experiments/foundation/` - PRIMARY
-  - `TimesFM_SPY_Experiments.ipynb` - **READY** (JSON bug fixed)
+  - `TimesFM_SPY_Experiments.ipynb` - Original TFM-01 notebook
+  - `TimesFM_a50_Experiments.ipynb` - **NEW** (TFM-07, TFM-08)
+  - `TimesFM_a100_Experiments.ipynb` - **NEW** (TFM-09, TFM-10)
   - `analyze_timesfm_thresholds.py` - Local threshold analysis script
-  - `train_lagllama_h1_forecast.py` - Lag-Llama experiment script
 - `outputs/foundation/` - Results storage
-  - `timesfm_tfm-01_results.json` - TFM-01 results from Colab
+  - `timesfm_tfm-01_results.json` - TFM-01 results
+  - `timesfm_tfm-01_comprehensive.json` - TFM-01 full analysis
+  - `timesfm_tfm-01_predictions.npz` - Raw predictions
 
 ---
 
 ## Key Decisions (Workstream-Specific)
 
-### TimesFM Anti-Correlation Discovery (2026-01-25)
-- **Finding**: TimesFM predicts OPPOSITE of correct direction
-- **Evidence**: AUC 0.364 < 0.5
-- **Implication**: Even inverted (AUC 0.636), still below PatchTST (0.718)
-- **Next step**: Complete threshold sweep to fully characterize behavior
+### Data File Naming Clarification (2026-01-25)
+- **Two versions exist**: `SPY_dataset_a50.parquet` vs `SPY_dataset_a50_combined.parquet`
+- **Without "_combined"**: Features ONLY (no OHLCV columns)
+- **With "_combined"**: OHLCV + Features (needed for experiments)
+- **Lesson**: Always validate column presence before proceeding
 
-### JSON Serialization Fix (2026-01-25 19:45)
-- **Problem**: numpy bool not JSON serializable
-- **Solution**: Cast with `bool()` in comprehensive export dict
+### TFM-01 Not Fair Comparison (2026-01-25)
+- TFM-01 used 1 feature (close), PatchTST used 20
+- Created TFM-07 through TFM-10 for fair comparison with covariates
 
 ---
 
 ## Session History
 
+### 2026-01-25 23:55
+- Created TimesFM_a50_Experiments.ipynb and TimesFM_a100_Experiments.ipynb
+- Fixed Cell 2 data upload with better validation and error messages
+- Diagnosed wrong file upload issue (non-combined vs combined parquet)
+
 ### 2026-01-25 19:45
 - Fixed cell-27 JSON serialization bug (numpy bool → Python bool)
-- Notebook now ready to re-run in Colab
 
 ### 2026-01-25 09:30
 - Analyzed TFM-01 results - discovered anti-correlation
-- Restructured notebook with threshold sweep and anti-correlation cells
 
-### 2026-01-24 17:30
-- Fixed TimesFM Colab notebook for API v2.5
-- Model: TimesFM-2.0-500M → TimesFM-2.5-200M
-
-### 2026-01-24 09:00
-- Completed Lag-Llama investigation (FAILED)
-- Created TimesFM Colab notebook
+### 2026-01-24
+- Completed Lag-Llama investigation, created TimesFM notebook
 
 ---
 
 ## Next Session Should
 
-### Priority 1: Re-run Notebook in Colab
-Now that JSON bug is fixed:
-1. Run Cells 1-6 (setup, inference)
-2. Run Cell 25 (threshold sweep)
-3. Run Cell 26 (anti-correlation analysis)
-4. Run Cell 27 (comprehensive export) - **NOW FIXED**
-5. Download `timesfm_tfm-01_comprehensive.json`
+### Priority 1: Run TFM-07 in Colab
+1. Upload `SPY_dataset_a50_combined.parquet` (note: _combined!)
+2. Run all cells
+3. Check if anti-correlation persists with 50 features
+4. Download results
 
-### Priority 2: Analyze Comprehensive Results
-- Review threshold sweep results
-- Confirm anti-correlation behavior
-- Determine if any threshold gives useful precision/recall
+### Priority 2: Run Remaining Experiments
+Order: TFM-07 → TFM-08 → TFM-09 → TFM-10
 
-### Priority 3: Decision on TFM-02/03/etc.
-Based on TFM-01 comprehensive results:
-- If anti-correlated behavior persists → may skip remaining TimesFM experiments
-- If inverted predictions useful → document as finding
-- Move to next foundation model or conclude investigation
+### Priority 3: Analyze Results
+- Does adding features help?
+- Does fine-tuning fix anti-correlation?
+- Can TimesFM beat PatchTST with proper features?
 
-### Expected Output Files
-- `timesfm_tfm-01_comprehensive.json` - All data in one file
-- `timesfm_tfm-01_predictions.npz` - Raw predictions for local analysis
+### Key Question
+Does adding 50-100 engineered features help TimesFM overcome the anti-correlation issue seen in TFM-01 (1 feature)?
+
+---
+
+## Data Files for Upload
+
+| File | Size | Location |
+|------|------|----------|
+| `SPY_dataset_a50_combined.parquet` | 4.0 MB | `data/processed/v1/` |
+| `SPY_dataset_a100_combined.parquet` | 7.2 MB | `data/processed/v1/` |
+
+**IMPORTANT**: Upload the `_combined` versions (have OHLCV + features)
 
 ---
 
 ## Memory Entities (Workstream-Specific)
-- No Memory entities created specifically for this workstream yet
+- None created this session

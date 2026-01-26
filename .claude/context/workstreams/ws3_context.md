@@ -1,160 +1,114 @@
 # Workstream 3 Context: Phase 6C Experiments
-# Last Updated: 2026-01-25 23:50
+# Last Updated: 2026-01-25 16:45
 
 ## Identity
 - **ID**: ws3
 - **Name**: phase6c
 - **Focus**: Phase 6C feature scaling experiments (a50 → a100 tier)
-- **Status**: **NEEDS TROUBLESHOOTING** - Scripts created but not working
+- **Status**: **S1 COMPLETE** - Baselines done, HPO next
 
 ## Current Task
-- **Working on**: Phase 6C a100 experimentation pipeline
-- **Status**: ❌ BLOCKED - Scripts created but `run_s1_a100.sh` not executing
+- **Working on**: Phase 6C a100 HPO experiments
+- **Status**: ✅ S1 baselines complete, ready for HPO
 
 ---
 
-## CRITICAL: Issues to Troubleshoot Next Session
+## Session 2026-01-25 (S1 Baselines + Analysis)
 
-### Problem Summary
-Created full experimentation pipeline for a100 tier, but **runner script `run_s1_a100.sh` does nothing when executed**.
+### Completed
+1. ✅ Fixed broken runner scripts (`run_s1_a100.sh`, `run_hpo_a100.sh`)
+   - Added `set -o pipefail`
+   - Added `mkdir -p outputs/phase6c_a100`
+   - Safe venv activation with `set +e`/`set -e` wrapper
+   - Replaced tee pattern with direct execution + pass/fail tracking
 
-### Files Created This Session (Need Verification)
-All in `experiments/phase6c_a100/`:
-- 12 baseline scripts: `s1_01_2m_h1.py` through `s1_12_200m_h5.py`
-- 6 HPO scripts: `hpo_2m_h1.py`, `hpo_20m_h1.py`, etc.
-- 6 architecture variation scripts: `s2_arch_*.py`, `s2_train_*.py`
-- `threshold_sweep.py`
-- `compare_all_tiers.py`
-- `statistical_validation.py`
+2. ✅ Ran all 12 S1 baseline experiments (3 budgets × 4 horizons)
+   - All 12 passed successfully
+   - Results in `outputs/phase6c_a100/s1_*/results.json`
 
-Runners:
-- `scripts/run_s1_a100.sh` - **NOT WORKING** (does nothing)
-- `scripts/run_hpo_a100.sh` - Untested
+3. ✅ Performed threshold sweep analysis on all models
 
-Data:
-- `data/processed/v1/SPY_dataset_a100.parquet` - Created, 8022 rows
-- `data/processed/v1/SPY_dataset_a100_combined.parquet` - Created, 106 columns
+### Key Findings
 
-### Troubleshooting Steps for Next Session
-1. **Test individual experiment script directly**:
-   ```bash
-   ./venv/bin/python experiments/phase6c_a100/s1_01_2m_h1.py
-   ```
-   Check if it produces output or errors.
+#### Scaling Law Results (Preliminary)
+| Horizon | 2M AUC | 20M AUC | 200M AUC | Winner |
+|---------|--------|---------|----------|--------|
+| H1 | **0.709** | 0.712 | 0.705 | 20M (marginal) |
+| H2 | 0.632 | 0.631 | **0.636** | 200M |
+| H3 | 0.609 | 0.616 | **0.632** | 200M |
+| H5 | 0.583 | **0.631** | 0.613 | 20M |
 
-2. **Check runner script syntax**:
-   ```bash
-   bash -x scripts/run_s1_a100.sh
-   ```
-   Trace execution to see where it fails.
+**Conclusion**: No clear scaling benefit. Inverse scaling at H1. Marginal benefit at longer horizons.
 
-3. **Verify data paths in scripts**:
-   - Scripts reference `SPY_dataset_a100_combined.parquet`
-   - Confirm this file exists and has correct structure
+#### Precision-Recall Tradeoff (H5 20M example)
+| Threshold | Precision | Recall |
+|-----------|-----------|--------|
+| 0.712 | 100% | 3.2% |
+| 0.711 | 90.9% | 4.0% |
+| 0.694 | 75.0% | 22.7% |
+| 0.674 | 70.0% | 46.6% |
+| 0.643 (optimal F1) | 62.7% | 96.4% |
 
-4. **Check experiment script imports**:
-   - May have import errors not caught by syntax check
+**Key insight**: High precision (90%+) means catching very few opportunities (3-7% recall).
 
-### Sanity Test Results (Passed)
-- `make test` passes (692 passed)
-- `py_compile` on all scripts passed
-- Quick setup test loaded data and created trainer successfully
-- Model parameters: 309,651 (0.31M) for 2M config
+#### Model Behavior
+- 200M models are more selective (higher precision, lower recall)
+- Default 0.5 threshold was suboptimal; optimal thresholds range 0.50-0.64
+- Longer horizons have better PR-AUC but worse ROC-AUC
+- Models trained with 105 features (100 indicators + OHLCV), not 100 as documented
 
 ---
 
-## Progress Summary
+## Files Modified This Session
+- `scripts/run_s1_a100.sh` - Rewritten (fixed)
+- `scripts/run_hpo_a100.sh` - Rewritten (fixed)
 
-### Completed This Session (2026-01-25)
-- ✅ Created `scripts/build_features_a100.py` - Feature builder
-- ✅ Built `SPY_dataset_a100.parquet` (8,022 rows × 100 features)
-- ✅ Built `SPY_dataset_a100_combined.parquet` (with OHLCV for targets)
-- ✅ Registered a100 in processed manifest
-- ✅ Created 12 baseline experiment scripts (S1)
-- ✅ Created 6 HPO scripts
-- ✅ Created 6 architecture variation scripts (S2)
-- ✅ Created threshold_sweep.py
-- ✅ Created compare_all_tiers.py
-- ✅ Created statistical_validation.py
-- ✅ Created runner scripts (run_s1_a100.sh, run_hpo_a100.sh)
-- ✅ All scripts pass syntax check
-- ✅ Setup sanity test passed
-
-### NOT Working
-- ❌ `run_s1_a100.sh` - Does nothing when executed
-- ⚠️ Individual experiment scripts - Untested at runtime
-
-### Previous Session Completions
-- Statistical validation of a20 vs a50 comparison
-- Bootstrap CI: 0/12 AUC differences statistically significant
-- Test set: 17% consistency (pattern NOT replicated)
-- Conclusion: NULL finding - proceed to a100 tier
-
----
-
-## Files Created/Modified This Session
-
-### New Files (experiments/phase6c_a100/)
+## Outputs Created
 ```
-s1_01_2m_h1.py    s1_07_2m_h3.py    s2_arch_wide.py
-s1_02_20m_h1.py   s1_08_20m_h3.py   s2_arch_deep.py
-s1_03_200m_h1.py  s1_09_200m_h3.py  s2_arch_heads16.py
-s1_04_2m_h2.py    s1_10_2m_h5.py    s2_train_drop03.py
-s1_05_20m_h2.py   s1_11_20m_h5.py   s2_train_drop07.py
-s1_06_200m_h2.py  s1_12_200m_h5.py  s2_train_lr5e5.py
-hpo_2m_h1.py      hpo_2m_h5.py      threshold_sweep.py
-hpo_20m_h1.py     hpo_20m_h5.py     compare_all_tiers.py
-hpo_200m_h1.py    hpo_200m_h5.py    statistical_validation.py
+outputs/phase6c_a100/
+├── s1_01_2m_h1/    (results.json, best_checkpoint.pt)
+├── s1_02_20m_h1/
+├── ...
+└── s1_12_200m_h5/
 ```
-
-### New Files (scripts/)
-- `build_features_a100.py`
-- `run_s1_a100.sh` (NOT WORKING)
-- `run_hpo_a100.sh` (untested)
-
-### New Files (data/)
-- `data/processed/v1/SPY_dataset_a100.parquet` (6.9 MB)
-- `data/processed/v1/SPY_dataset_a100_combined.parquet` (7.2 MB)
-
----
-
-## Key Decisions
-- Scripts use string concatenation for print statements (not f-strings) to avoid escaping issues
-- Data paths are absolute using PROJECT_ROOT pattern
-- Batch sizes: 128 (2M), 64 (20M), 32 (200M)
 
 ---
 
 ## Next Session Should
 
-1. **FIRST: Debug why `run_s1_a100.sh` does nothing**
-   - Run with `bash -x` to trace
-   - Test individual Python scripts directly
-
-2. **Verify one experiment runs end-to-end**:
+1. **Run HPO experiments**:
    ```bash
-   ./venv/bin/python experiments/phase6c_a100/s1_01_2m_h1.py
+   caffeinate ./scripts/run_hpo_a100.sh
    ```
+   - 6 HPO runs (3 budgets × H1, H5)
+   - 50 trials each, ~6-12 hours total
 
-3. **If scripts work individually, fix runner script**
+2. **Analyze HPO results**:
+   - Compare tuned vs baseline performance
+   - Check if dropout/lr tuning helps larger models
 
-4. **Then run baseline experiments** (12 models)
-
-5. **Continue with plan phases 3-8**
+3. **Consider**: Whether to add threshold as HPO parameter
 
 ---
 
-## Memory Entities
-- None created (context in this file)
+## Memory Entities (This Session)
+- `Phase6C_A100_S1_Results` - Baseline experiment results
+- `Phase6C_ThresholdSweep_Findings` - Precision-recall analysis
+- `Phase6C_A100_RunnerScripts_Fix` - Technical fix documentation
+- `Phase6C_ScalingLaw_Preliminary` - Research finding on scaling
 
 ---
 
 ## Session History
 
-### 2026-01-25 23:50 (a100 Pipeline Creation - INCOMPLETE)
+### 2026-01-25 16:45 (S1 Complete + Analysis)
+- Fixed runner scripts (were completely broken)
+- Ran all 12 S1 baselines successfully
+- Performed threshold sweep analysis
+- Key finding: No clear scaling benefit, steep precision-recall tradeoff
+- Ready for HPO
+
+### 2026-01-25 23:50 (Pipeline Creation - INCOMPLETE)
 - Created full a100 experimentation pipeline
-- All scripts created and pass syntax check
-- Data files created and validated
-- **BUT runner script does nothing when executed**
+- All scripts pass syntax check but runner didn't work
 - Session ended with troubleshooting needed
-- `make test` passes (692 passed)

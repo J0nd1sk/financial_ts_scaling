@@ -20,7 +20,7 @@
     "n_positive_preds": 0,
     "n_samples": 502,
     "class_balance": 0.20119521912350596,
-    "inference_time_s": 47.772602558135986
+    "inference_time_s": 45.5321249961853
   },
   "test_metrics": {
     "auc": 0.27589651383478175,
@@ -35,12 +35,12 @@
     "n_positive_preds": 1,
     "n_samples": 260,
     "class_balance": 0.18076923076923077,
-    "inference_time_s": 24.20945930480957
+    "inference_time_s": 22.741812229156494
   },
   "baselines": {
     "patchtst_200m": 0.718,
     "lagllama_best": 0.576,
     "success_target": 0.754
   },
-  "timestamp": "2026-01-25T04:53:45.612711"
+  "timestamp": "2026-01-25T23:56:19.911596"
 }

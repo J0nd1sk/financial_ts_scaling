@@ -4,36 +4,49 @@
 
 | ID | Name | Status | Last Update | Summary |
 |----|------|--------|-------------|---------|
-| ws1 | feature_generation | active | 2026-01-25 15:00 | Deep validation script DONE (uncommitted) |
-| ws2 | foundation | active | 2026-01-25 19:45 | Fixed JSON bug in cell-27, ready to re-run in Colab |
-| ws3 | phase6c | active | 2026-01-25 18:30 | Threshold sweeps done, need a20 sweeps |
+| ws1 | feature_generation | active | 2026-01-25 21:30 | tier_a200 Chunk 1 COMPLETE (uncommitted) - 20 new MA indicators |
+| ws2 | foundation | active | 2026-01-25 23:55 | Created TFM-07/08/09/10 notebooks for a50/a100 covariate experiments |
+| ws3 | phase6c | **BLOCKED** | 2026-01-25 23:50 | a100 pipeline created but NOT WORKING - troubleshooting needed |
 
 ## Shared State
 
 ### Branch & Git
 - **Branch**: `experiment/foundation-decoder-investigation`
-- **Last commit**: `4231cbf` fix: VIX date alignment
-- **Uncommitted**: ws1 validation script + ws3 phase6c files
+- **Last commit**: `d88d76a` feat: Add tier_a100 deep validation script
+- **Uncommitted**: tier_a200 files, foundation notebooks, plus previous work
 
 ### Test Status
-- Last `make test`: 2026-01-25 - **692 passed**, 2 skipped
+- Last `make test`: 2026-01-25 23:55 - **747 passed**, 2 skipped
 - tier_a100 validation: 69/69 checks pass
+- tier_a200 tests: 55/55 pass
 
 ### Data Versions
 - Raw: SPY/DIA/QQQ OHLCV (v1)
-- Processed: a20 features (v1)
+- Processed: a20, a50, a100 (v1) - both features-only and _combined versions
+- tier_a200: Module complete, no processed data yet
 
 ## Cross-Workstream Coordination
 
 ### Blocking Dependencies
-- [ws1 COMPLETE]: tier_a100 validated, ready for Phase 6C a100
+- [ws3 BLOCKED]: Runner script `run_s1_a100.sh` does nothing when executed
 
 ### File Ownership
 | Files | Owner |
 |-------|-------|
-| `scripts/validate_tier_a100.py` | ws1 |
-| `outputs/validation/*` | ws1 |
-| `experiments/phase6c/*` | ws3 |
+| `src/features/tier_a200.py` | ws1 (NEW) |
+| `experiments/foundation/TimesFM_*.ipynb` | ws2 |
+| `experiments/phase6c_a100/*` | ws3 (UNTESTED) |
+| `scripts/run_s1_a100.sh` | ws3 (NOT WORKING) |
+
+---
+
+## Data File Naming Convention (Important!)
+
+Two versions of processed datasets exist:
+- `SPY_dataset_a50.parquet` - Features ONLY (no OHLCV)
+- `SPY_dataset_a50_combined.parquet` - OHLCV + Features
+
+**For experiments**: Always use `_combined` versions!
 
 ---
 

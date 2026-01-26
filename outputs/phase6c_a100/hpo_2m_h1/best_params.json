@@ -1,0 +1,41 @@
+{
+  "experiment": "hpo_2m_h1",
+  "budget": "2M",
+  "horizon": 1,
+  "n_trials": 50,
+  "best_trial": 0,
+  "best_value": -Infinity,
+  "best_params": {
+    "d_model": 48,
+    "n_layers": 4,
+    "n_heads": 4,
+    "d_ff_ratio": 2
+  },
+  "search_space": {
+    "d_model": [
+      32,
+      48,
+      64,
+      80,
+      96
+    ],
+    "n_layers": [
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "n_heads": [
+      2,
+      4,
+      8
+    ],
+    "d_ff_ratio": [
+      2,
+      4
+    ]
+  },
+  "total_time_min": 0.0007188320159912109,
+  "timestamp": "2026-01-25T17:46:57.841610"
+}
