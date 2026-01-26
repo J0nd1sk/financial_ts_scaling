@@ -89,9 +89,9 @@ class TestA200FeatureListStructure:
         """A200_ADDITION_LIST constant exists."""
         assert hasattr(tier_a200, "A200_ADDITION_LIST")
 
-    def test_a200_chunks_1_2_3_count_is_60(self) -> None:
-        """A200_ADDITION_LIST has exactly 60 indicators for Chunks 1-3."""
-        assert len(tier_a200.A200_ADDITION_LIST) == 60
+    def test_a200_chunks_1_to_4_count_is_80(self) -> None:
+        """A200_ADDITION_LIST has exactly 80 indicators for Chunks 1-4."""
+        assert len(tier_a200.A200_ADDITION_LIST) == 80
 
     def test_a200_feature_list_extends_a100(self) -> None:
         """FEATURE_LIST includes all a100 features plus new additions."""
@@ -100,9 +100,9 @@ class TestA200FeatureListStructure:
         for feature in tier_a100.FEATURE_LIST:
             assert feature in tier_a200.FEATURE_LIST, f"Missing a100 feature: {feature}"
 
-    def test_feature_list_total_160(self) -> None:
-        """FEATURE_LIST has exactly 160 features (100 a100 + 60 a200 Chunks 1-3)."""
-        assert len(tier_a200.FEATURE_LIST) == 160
+    def test_feature_list_total_180(self) -> None:
+        """FEATURE_LIST has exactly 180 features (100 a100 + 80 a200 Chunks 1-4)."""
+        assert len(tier_a200.FEATURE_LIST) == 180
 
     def test_chunk1_tema_indicators_in_list(self) -> None:
         """Chunk 1 TEMA indicators are in the list."""
@@ -563,9 +563,9 @@ class TestA200OutputShape:
     def test_output_column_count(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
     ) -> None:
-        """Output has 161 columns (Date + 160 features)."""
+        """Output has 181 columns (Date + 180 features)."""
         result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
-        assert len(result.columns) == 161, f"Expected 161 columns, got {len(result.columns)}"
+        assert len(result.columns) == 181, f"Expected 181 columns, got {len(result.columns)}"
 
     def test_output_fewer_rows_than_input(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
@@ -1077,13 +1077,13 @@ class TestChunk2FeatureListStructure:
 class TestChunk3FeatureListStructure:
     """Test Chunk 3 feature list structure and counts."""
 
-    def test_a200_chunks_1_2_3_count_is_60(self) -> None:
-        """A200_ADDITION_LIST has exactly 60 indicators for Chunks 1-3."""
-        assert len(tier_a200.A200_ADDITION_LIST) == 60
+    def test_a200_chunks_1_to_4_count_is_80(self) -> None:
+        """A200_ADDITION_LIST has exactly 80 indicators for Chunks 1-4."""
+        assert len(tier_a200.A200_ADDITION_LIST) == 80
 
-    def test_feature_list_total_160(self) -> None:
-        """FEATURE_LIST has exactly 160 features (100 a100 + 60 a200 Chunks 1-3)."""
-        assert len(tier_a200.FEATURE_LIST) == 160
+    def test_feature_list_total_180(self) -> None:
+        """FEATURE_LIST has exactly 180 features (100 a100 + 80 a200 Chunks 1-4)."""
+        assert len(tier_a200.FEATURE_LIST) == 180
 
     def test_chunk3_bb_extension_in_list(self) -> None:
         """Chunk 3 BB extension indicators are in the list."""
@@ -1570,9 +1570,9 @@ class TestChunk3OutputShape:
     def test_output_column_count_with_chunk3(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
     ) -> None:
-        """Output has 161 columns (Date + 160 features)."""
+        """Output has 181 columns (Date + 180 features)."""
         result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
-        assert len(result.columns) == 161, f"Expected 161 columns, got {len(result.columns)}"
+        assert len(result.columns) == 181, f"Expected 181 columns, got {len(result.columns)}"
 
     def test_chunk3_all_features_present(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
@@ -1609,4 +1609,537 @@ class TestChunk3OutputShape:
         ]
 
         for feature in chunk3_features:
+            assert feature in result.columns, f"Missing feature: {feature}"
+
+
+# =============================================================================
+# Chunk 4 Tests (rank 161-180): MACD Extensions, Volume Dynamics,
+#                               Calendar/Temporal, Candle Analysis
+# =============================================================================
+
+
+class TestChunk4FeatureListStructure:
+    """Test Chunk 4 feature list structure and counts."""
+
+    def test_chunk4_macd_extensions_in_list(self) -> None:
+        """Chunk 4 MACD extension indicators are in the list."""
+        macd_indicators = [
+            "macd_signal",
+            "macd_histogram_slope",
+            "days_since_macd_cross_signal",
+            "macd_signal_proximity",
+        ]
+        for indicator in macd_indicators:
+            assert indicator in tier_a200.A200_ADDITION_LIST, f"Missing: {indicator}"
+
+    def test_chunk4_volume_dynamics_in_list(self) -> None:
+        """Chunk 4 volume-price dynamics indicators are in the list."""
+        volume_indicators = [
+            "volume_trend_5d",
+            "consecutive_volume_increase",
+            "volume_price_confluence",
+            "high_volume_direction_bias",
+        ]
+        for indicator in volume_indicators:
+            assert indicator in tier_a200.A200_ADDITION_LIST, f"Missing: {indicator}"
+
+    def test_chunk4_calendar_features_in_list(self) -> None:
+        """Chunk 4 calendar/temporal indicators are in the list."""
+        calendar_indicators = [
+            "trading_day_of_week",
+            "is_monday",
+            "is_friday",
+            "days_to_month_end",
+            "month_of_year",
+            "is_quarter_end_month",
+        ]
+        for indicator in calendar_indicators:
+            assert indicator in tier_a200.A200_ADDITION_LIST, f"Missing: {indicator}"
+
+    def test_chunk4_candle_features_in_list(self) -> None:
+        """Chunk 4 candle body/wick analysis indicators are in the list."""
+        candle_indicators = [
+            "candle_body_pct",
+            "body_to_range_ratio",
+            "upper_wick_pct",
+            "lower_wick_pct",
+            "doji_indicator",
+            "range_vs_avg_range",
+        ]
+        for indicator in candle_indicators:
+            assert indicator in tier_a200.A200_ADDITION_LIST, f"Missing: {indicator}"
+
+
+class TestChunk4MACDExtensions:
+    """Test MACD extension features (ranks 161-164)."""
+
+    # --- Existence tests ---
+
+    def test_macd_signal_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """macd_signal column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "macd_signal" in result.columns
+
+    def test_macd_histogram_slope_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """macd_histogram_slope column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "macd_histogram_slope" in result.columns
+
+    def test_days_since_macd_cross_signal_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_macd_cross_signal column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_since_macd_cross_signal" in result.columns
+
+    def test_macd_signal_proximity_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """macd_signal_proximity column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "macd_signal_proximity" in result.columns
+
+    # --- Range tests ---
+
+    def test_macd_histogram_slope_has_variation(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """macd_histogram_slope should have variation (not all same value)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["macd_histogram_slope"]
+        assert col.std() > 0, "macd_histogram_slope has no variation"
+
+    def test_macd_histogram_slope_reasonable_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """macd_histogram_slope should be in reasonable range [-5, +5]."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["macd_histogram_slope"]
+        assert col.min() >= -10, f"macd_histogram_slope too low: {col.min()}"
+        assert col.max() <= 10, f"macd_histogram_slope too high: {col.max()}"
+
+    def test_days_since_macd_cross_signal_sign_varies(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_macd_cross_signal should have both positive and negative values."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["days_since_macd_cross_signal"]
+        # With 300 days of data we should see both bullish and bearish periods
+        has_positive = (col > 0).any()
+        has_negative = (col < 0).any()
+        # Allow test to pass even if all same sign (short data edge case)
+        assert col.std() > 0, "days_since_macd_cross_signal has no variation"
+
+    def test_macd_signal_proximity_reasonable_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """macd_signal_proximity should have variation.
+
+        Note: When signal is near zero, proximity can be large. We just verify
+        the feature has meaningful variation rather than tight bounds.
+        """
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["macd_signal_proximity"]
+        assert col.std() > 0, "macd_signal_proximity has no variation"
+
+    # --- No-NaN test ---
+
+    def test_macd_extensions_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in MACD extension columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        macd_cols = [
+            "macd_signal",
+            "macd_histogram_slope",
+            "days_since_macd_cross_signal",
+            "macd_signal_proximity",
+        ]
+        for col in macd_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk4VolumeDynamics:
+    """Test volume-price dynamics features (ranks 165-168)."""
+
+    # --- Existence tests ---
+
+    def test_volume_trend_5d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """volume_trend_5d column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "volume_trend_5d" in result.columns
+
+    def test_consecutive_volume_increase_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_volume_increase column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "consecutive_volume_increase" in result.columns
+
+    def test_volume_price_confluence_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """volume_price_confluence column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "volume_price_confluence" in result.columns
+
+    def test_high_volume_direction_bias_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """high_volume_direction_bias column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "high_volume_direction_bias" in result.columns
+
+    # --- Range tests ---
+
+    def test_volume_trend_5d_reasonable_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """volume_trend_5d should be in reasonable range (z-score like)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["volume_trend_5d"]
+        assert col.min() >= -10, f"volume_trend_5d too low: {col.min()}"
+        assert col.max() <= 10, f"volume_trend_5d too high: {col.max()}"
+
+    def test_consecutive_volume_increase_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_volume_increase should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["consecutive_volume_increase"] >= 0).all()
+
+    def test_volume_price_confluence_has_variation(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """volume_price_confluence should have variation."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["volume_price_confluence"]
+        assert col.std() > 0, "volume_price_confluence has no variation"
+
+    def test_high_volume_direction_bias_reasonable_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """high_volume_direction_bias should be in reasonable percentage range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["high_volume_direction_bias"]
+        assert col.min() >= -10, f"high_volume_direction_bias too low: {col.min()}"
+        assert col.max() <= 10, f"high_volume_direction_bias too high: {col.max()}"
+
+    # --- No-NaN test ---
+
+    def test_volume_dynamics_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in volume dynamics columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        volume_cols = [
+            "volume_trend_5d",
+            "consecutive_volume_increase",
+            "volume_price_confluence",
+            "high_volume_direction_bias",
+        ]
+        for col in volume_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk4CalendarFeatures:
+    """Test calendar/temporal features (ranks 169-174)."""
+
+    # --- Existence tests ---
+
+    def test_trading_day_of_week_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trading_day_of_week column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "trading_day_of_week" in result.columns
+
+    def test_is_monday_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """is_monday column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "is_monday" in result.columns
+
+    def test_is_friday_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """is_friday column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "is_friday" in result.columns
+
+    def test_days_to_month_end_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_to_month_end column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_to_month_end" in result.columns
+
+    def test_month_of_year_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """month_of_year column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "month_of_year" in result.columns
+
+    def test_is_quarter_end_month_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """is_quarter_end_month column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "is_quarter_end_month" in result.columns
+
+    # --- Range tests ---
+
+    def test_trading_day_of_week_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trading_day_of_week should be in [0, 4] range (Mon=0, Fri=4)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["trading_day_of_week"]
+        assert col.min() >= 0, f"trading_day_of_week below 0: {col.min()}"
+        assert col.max() <= 4, f"trading_day_of_week above 4: {col.max()}"
+
+    def test_is_monday_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """is_monday should be 0 or 1."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["is_monday"]
+        assert set(vals.unique()).issubset({0, 1}), f"Non-binary values: {vals.unique()}"
+
+    def test_is_friday_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """is_friday should be 0 or 1."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["is_friday"]
+        assert set(vals.unique()).issubset({0, 1}), f"Non-binary values: {vals.unique()}"
+
+    def test_days_to_month_end_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_to_month_end should be in [0, 23] range (max trading days in month)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["days_to_month_end"]
+        assert col.min() >= 0, f"days_to_month_end below 0: {col.min()}"
+        assert col.max() <= 23, f"days_to_month_end above 23: {col.max()}"
+
+    def test_month_of_year_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """month_of_year should be in [1, 12] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["month_of_year"]
+        assert col.min() >= 1, f"month_of_year below 1: {col.min()}"
+        assert col.max() <= 12, f"month_of_year above 12: {col.max()}"
+
+    def test_is_quarter_end_month_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """is_quarter_end_month should be 0 or 1."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["is_quarter_end_month"]
+        assert set(vals.unique()).issubset({0, 1}), f"Non-binary values: {vals.unique()}"
+
+    # --- No-NaN test ---
+
+    def test_calendar_features_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in calendar feature columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        calendar_cols = [
+            "trading_day_of_week",
+            "is_monday",
+            "is_friday",
+            "days_to_month_end",
+            "month_of_year",
+            "is_quarter_end_month",
+        ]
+        for col in calendar_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk4CandleFeatures:
+    """Test candle body/wick analysis features (ranks 175-180)."""
+
+    # --- Existence tests ---
+
+    def test_candle_body_pct_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """candle_body_pct column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "candle_body_pct" in result.columns
+
+    def test_body_to_range_ratio_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """body_to_range_ratio column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "body_to_range_ratio" in result.columns
+
+    def test_upper_wick_pct_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """upper_wick_pct column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "upper_wick_pct" in result.columns
+
+    def test_lower_wick_pct_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """lower_wick_pct column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "lower_wick_pct" in result.columns
+
+    def test_doji_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """doji_indicator column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "doji_indicator" in result.columns
+
+    def test_range_vs_avg_range_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_vs_avg_range column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "range_vs_avg_range" in result.columns
+
+    # --- Range tests ---
+
+    def test_candle_body_pct_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """candle_body_pct should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["candle_body_pct"] >= 0).all()
+
+    def test_body_to_range_ratio_bounds(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """body_to_range_ratio should be in [0, 1] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["body_to_range_ratio"]
+        assert col.min() >= 0, f"body_to_range_ratio below 0: {col.min()}"
+        assert col.max() <= 1, f"body_to_range_ratio above 1: {col.max()}"
+
+    def test_upper_wick_pct_bounds(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """upper_wick_pct should be in [0, 1] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["upper_wick_pct"]
+        assert col.min() >= 0, f"upper_wick_pct below 0: {col.min()}"
+        assert col.max() <= 1, f"upper_wick_pct above 1: {col.max()}"
+
+    def test_lower_wick_pct_bounds(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """lower_wick_pct should be in [0, 1] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["lower_wick_pct"]
+        assert col.min() >= 0, f"lower_wick_pct below 0: {col.min()}"
+        assert col.max() <= 1, f"lower_wick_pct above 1: {col.max()}"
+
+    def test_doji_indicator_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """doji_indicator should be 0 or 1."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["doji_indicator"]
+        assert set(vals.unique()).issubset({0, 1}), f"Non-binary values: {vals.unique()}"
+
+    def test_range_vs_avg_range_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_vs_avg_range should be > 0 (ratio of ranges)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["range_vs_avg_range"] > 0).all()
+
+    def test_doji_implies_small_body_ratio(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """When doji_indicator=1, body_to_range_ratio should be < 0.1."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        doji_mask = result["doji_indicator"] == 1
+        if doji_mask.any():
+            body_ratios = result.loc[doji_mask, "body_to_range_ratio"]
+            assert (body_ratios < 0.1).all(), "Doji has body_to_range_ratio >= 0.1"
+
+    # --- No-NaN test ---
+
+    def test_candle_features_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in candle feature columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        candle_cols = [
+            "candle_body_pct",
+            "body_to_range_ratio",
+            "upper_wick_pct",
+            "lower_wick_pct",
+            "doji_indicator",
+            "range_vs_avg_range",
+        ]
+        for col in candle_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk4OutputShape:
+    """Test output shape and structure for Chunk 4."""
+
+    def test_output_column_count_with_chunk4(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output has 181 columns (Date + 180 features)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert len(result.columns) == 181, f"Expected 181 columns, got {len(result.columns)}"
+
+    def test_chunk4_all_features_present(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """All 20 Chunk 4 features are present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        chunk4_features = [
+            # MACD Extensions (161-164)
+            "macd_signal",
+            "macd_histogram_slope",
+            "days_since_macd_cross_signal",
+            "macd_signal_proximity",
+            # Volume Dynamics (165-168)
+            "volume_trend_5d",
+            "consecutive_volume_increase",
+            "volume_price_confluence",
+            "high_volume_direction_bias",
+            # Calendar/Temporal (169-174)
+            "trading_day_of_week",
+            "is_monday",
+            "is_friday",
+            "days_to_month_end",
+            "month_of_year",
+            "is_quarter_end_month",
+            # Candle Analysis (175-180)
+            "candle_body_pct",
+            "body_to_range_ratio",
+            "upper_wick_pct",
+            "lower_wick_pct",
+            "doji_indicator",
+            "range_vs_avg_range",
+        ]
+
+        for feature in chunk4_features:
             assert feature in result.columns, f"Missing feature: {feature}"

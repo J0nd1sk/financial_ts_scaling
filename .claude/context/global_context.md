@@ -1,32 +1,31 @@
-# Global Project Context - 2026-01-25
+# Global Project Context - 2026-01-26
 
 ## Active Workstreams
 
 | ID | Name | Status | Last Update | Summary |
 |----|------|--------|-------------|---------|
-| ws1 | feature_generation | active | 2026-01-25 23:30 | tier_a200 Chunks 1-3 COMPLETE (uncommitted) - 60 new indicators, 160 total |
-| ws2 | foundation | **COMPLETE** | 2026-01-26 09:00 | **FINDING**: TimesFM ignores covariates - predictions identical with 1 vs 50 features |
-| ws3 | phase6c | **Audit Phase 1 Done** | 2026-01-26 00:30 | Deep audit Phase 1 COMPLETE - recall/precision added, exception handling fixed, paths fixed |
+| ws1 | feature_generation | active | 2026-01-26 01:45 | tier_a200 Chunks 1-4 COMPLETE (uncommitted) - 80 new indicators, 180 total |
+| ws2 | foundation | **COMPLETE** | 2026-01-25 15:00 | Foundation models AND alt architectures FAILED vs PatchTST; decoder experiments PENDING |
+| ws3 | phase6c | **Audit Phase 1 Done** | 2026-01-26 00:30 | Deep audit Phase 1 COMPLETE - recall/precision added, exception handling fixed |
 
 ## Shared State
 
 ### Branch & Git
 - **Branch**: `experiment/foundation-decoder-investigation`
-- **Last commit**: `43da65b` feat: Add tier_a200 Chunk 2 with 20 duration/cross/proximity indicators
+- **Last commit**: `268e328` feat: Expand HPO search space to include training hyperparameters
 - **Uncommitted**:
-  - `src/features/tier_a200.py` - Chunk 3 implementation (60 total features)
-  - `tests/features/test_tier_a200.py` - Chunk 3 tests (840 total tests)
-  - `outputs/phase6c_a100/hpo_200m_h1/` (partial HPO run)
+  - `src/features/tier_a200.py` - Chunks 1-4 implementation (80 new features)
+  - `tests/features/test_tier_a200.py` - Chunks 1-4 tests (~80 new tests for Chunk 4)
+  - Various outputs JSON files
 
 ### Test Status
-- Last `make test`: 2026-01-25 23:25 - **840 passed**, 2 skipped
-- 842 total tests collected
-- All tier_a200 tests pass (Chunks 1-3)
+- Last `make test`: 2026-01-26 01:40 - **891 passed**, 2 skipped
+- All tests pass including tier_a200 (Chunks 1-4)
 
 ### Data Versions
 - Raw: SPY/DIA/QQQ OHLCV (v1)
 - Processed: a20, a50, a100 (v1) - both features-only and _combined versions
-- tier_a200: Module complete (Chunks 1-3), no processed data yet
+- tier_a200: Module complete (Chunks 1-4, 80 additions), no processed data yet
 
 ## Cross-Workstream Coordination
 
@@ -37,14 +36,15 @@
 ### File Ownership
 | Files | Owner |
 |-------|-------|
-| `src/features/tier_a200.py` | ws1 (MODIFIED - Chunk 3) |
-| `tests/features/test_tier_a200.py` | ws1 (MODIFIED - Chunk 3) |
-| `experiments/foundation/TimesFM_*.ipynb` | ws2 |
-| `outputs/foundation/*.json` | ws2 (RESULTS) |
-| `docs/foundation_model_results.md` | ws2 (NEW) |
-| `experiments/phase6c_a100/*` | ws3 (NEEDS FIXES) |
-| `scripts/run_s1_a100.sh` | ws3 (WORKING) |
-| `scripts/run_hpo_a100.sh` | ws3 (NEEDS FIX) |
+| `src/features/tier_a200.py` | ws1 (MODIFIED - Chunks 1-4) |
+| `tests/features/test_tier_a200.py` | ws1 (MODIFIED - Chunks 1-4) |
+| `experiments/foundation/` | ws2 |
+| `experiments/architectures/` | ws2 |
+| `outputs/foundation/*.json` | ws2 |
+| `outputs/architectures/` | ws2 |
+| `docs/foundation_model_results.md` | ws2 |
+| `docs/architecture_comparison_results.md` | ws2 |
+| `experiments/phase6c_a100/*` | ws3 |
 
 ---
 
@@ -81,7 +81,7 @@ Two versions of processed datasets exist:
 
 ---
 
-## Recent Findings (ws2 Foundation Models) - CRITICAL
+## Recent Findings (ws2) - CRITICAL
 
 ### Foundation Model Investigation Complete
 See `docs/foundation_model_results.md` for full analysis.
@@ -93,11 +93,24 @@ See `docs/foundation_model_results.md` for full analysis.
 
 **Critical Discovery - Covariates Ignored**:
 - TFM-07 (50 features) predictions **identical** to TFM-01 (1 feature)
-- Correlation: 1.0000000000
-- Max difference: 8.15e-09 (floating point noise only)
 - TimesFM completely ignores feature engineering
 
-**Recommendation**: Abandon foundation model path, focus on Phase 6C with PatchTST.
+### Alternative Architecture Investigation Complete
+See `docs/architecture_comparison_results.md` for full analysis.
+
+**Key Result**: Alternative architectures significantly underperform PatchTST:
+- PatchTST 200M: **0.718 AUC** (baseline)
+- iTransformer: 0.517 AUC (-28%) - barely above random
+- Informer: 0.587 AUC (-18%) - probability collapse
+
+**Root Causes**:
+- iTransformer's inverted (feature-wise) attention loses temporal patterns
+- Informer's forecasting→threshold approach fails for classification
+- Both show narrow prediction ranges (collapsed to mean)
+
+**Recommendation**: Abandon foundation/architecture investigation, focus on Phase 6C with PatchTST.
+
+**Note (ws2)**: Foundation model investigation COMPLETE, but decoder architecture experiments still PENDING if user wants to explore.
 
 ---
 
@@ -117,25 +130,33 @@ See `docs/foundation_model_results.md` for full analysis.
 
 ## Recent Work Summary (ws1)
 
-### tier_a200 Chunk 3 (2026-01-25 23:30)
-Implemented 20 new features (ranks 141-160):
+### tier_a200 Chunk 4 (2026-01-26 01:45)
+Implemented 20 new features (ranks 161-180):
 
-**BB Extension (6)**: Distance and duration outside Bollinger Bands
-- pct_from_upper/lower_band, days_above_upper/below_lower_band
-- bb_squeeze_indicator (BB inside Keltner), bb_squeeze_duration
-
-**RSI Duration (4)**: RSI-based momentum duration
-- rsi_distance_from_50, days_rsi_overbought/oversold, rsi_percentile_60d
-
-**Mean Reversion (6)**: Statistical extension and 52-week features
-- zscore_from_20d/50d_mean, percentile_in_52wk_range
-- distance_from_52wk_high_pct, days_since_52wk_high/low
-
-**Consecutive Patterns (4)**: Price movement patterns
-- consecutive_up/down_days, up_days_ratio_20d, range_compression_5d
+**MACD Extensions (4)**: Signal line, histogram slope, cross recency, proximity
+**Volume Dynamics (4)**: Trend, consecutive increase, confluence, direction bias
+**Calendar/Temporal (6)**: Day of week, Monday/Friday flags, month end, quarter end
+**Candle Analysis (6)**: Body %, wick %, doji indicator, range vs average
 
 ### tier_a200 Cumulative Status
-- **Total additions**: 60 features (Chunks 1-3)
-- **Total features**: 160 (100 a100 + 60 new)
-- **Tests**: 840 passed, all tier_a200 tests pass
-- **Status**: Ready to commit Chunks 1-3
+- **Total additions**: 80 features (Chunks 1-4)
+- **Total features**: 180 (100 a100 + 80 new)
+- **Tests**: 891 passed, all tier_a200 tests pass
+- **Status**: Ready to commit Chunks 1-4
+
+---
+
+## Next Session Notes
+
+### ws1 Ready to Commit
+tier_a200 Chunks 1-4 complete with 80 new features. Ready to:
+1. Commit the implementation
+2. Plan Chunk 5 (ranks 181-200) or pivot to other priorities
+
+### ws2 Note
+Foundation models COMPLETE but decoder experiments still available if user wants to explore alternative approaches.
+
+### Decision Points
+- Close ws2 investigation entirely?
+- Focus exclusively on PatchTST + feature scaling?
+- Proceed with tier_a200 Chunk 5 or use 180-feature tier for Phase 6C experiments?

@@ -2,7 +2,7 @@
 
 This module extends tier_a100 with 100 additional indicators.
 Currently implements Chunk 1 (ranks 101-120), Chunk 2 (ranks 121-140),
-and Chunk 3 (ranks 141-160).
+Chunk 3 (ranks 141-160), and Chunk 4 (ranks 161-180).
 
 Chunk 1 (rank 101-120): Extended MA Types
 - tema_{9,20,50,100} - Triple EMA at various periods
@@ -42,6 +42,26 @@ Chunk 3 (rank 141-160): BB Extension, RSI Duration, Mean Reversion, Consecutive 
 - consecutive_up/down_days - Consecutive directional moves
 - up_days_ratio_20d - Fraction of up days in last 20
 - range_compression_5d - Recent range vs historical range
+
+Chunk 4 (rank 161-180): MACD Extensions, Volume Dynamics, Calendar, Candle Analysis
+- macd_signal - MACD signal line (EMA9 of MACD)
+- macd_histogram_slope - 5-day change in MACD histogram
+- days_since_macd_cross_signal - Signed days since MACD crossed signal
+- macd_signal_proximity - % proximity of MACD to signal line
+- volume_trend_5d - Normalized 5d volume change
+- consecutive_volume_increase - Days with volume > prior day
+- volume_price_confluence - zscore(vol) * zscore(move)
+- high_volume_direction_bias - Mean return on high-volume days
+- trading_day_of_week - 0=Mon, 4=Fri
+- is_monday/is_friday - Binary day indicators
+- days_to_month_end - Business days remaining in month
+- month_of_year - 1-12
+- is_quarter_end_month - 1 if Mar/Jun/Sep/Dec
+- candle_body_pct - abs(C-O)/O * 100
+- body_to_range_ratio - abs(C-O)/(H-L)
+- upper/lower_wick_pct - Wick proportions of range
+- doji_indicator - 1 if body_to_range < 0.1
+- range_vs_avg_range - Current range / 20d average range
 """
 
 from __future__ import annotations
@@ -54,8 +74,8 @@ import talib
 
 from src.features import tier_a100
 
-# 60 new indicators added in tier a200 Chunks 1-3 (ranks 101-160)
-# Future chunks will add ranks 161-200
+# 80 new indicators added in tier a200 Chunks 1-4 (ranks 101-180)
+# Future chunks will add ranks 181-200
 A200_ADDITION_LIST = [
     # Chunk 1: Extended MA Types (ranks 101-120)
     # TEMA - Triple Exponential Moving Average
@@ -134,9 +154,33 @@ A200_ADDITION_LIST = [
     "consecutive_down_days",
     "up_days_ratio_20d",
     "range_compression_5d",
+    # Chunk 4: MACD Extensions (ranks 161-164)
+    "macd_signal",
+    "macd_histogram_slope",
+    "days_since_macd_cross_signal",
+    "macd_signal_proximity",
+    # Chunk 4: Volume-Price Dynamics (ranks 165-168)
+    "volume_trend_5d",
+    "consecutive_volume_increase",
+    "volume_price_confluence",
+    "high_volume_direction_bias",
+    # Chunk 4: Calendar/Temporal (ranks 169-174)
+    "trading_day_of_week",
+    "is_monday",
+    "is_friday",
+    "days_to_month_end",
+    "month_of_year",
+    "is_quarter_end_month",
+    # Chunk 4: Candle Body/Wick Analysis (ranks 175-180)
+    "candle_body_pct",
+    "body_to_range_ratio",
+    "upper_wick_pct",
+    "lower_wick_pct",
+    "doji_indicator",
+    "range_vs_avg_range",
 ]
 
-# Complete a200 feature list = a100 (100) + 60 new (Chunks 1-3) = 160 total
+# Complete a200 feature list = a100 (100) + 80 new (Chunks 1-4) = 180 total
 FEATURE_LIST = tier_a100.FEATURE_LIST + A200_ADDITION_LIST
 
 
@@ -858,6 +902,243 @@ def _compute_consecutive_patterns(close: pd.Series, high: pd.Series, low: pd.Ser
     return features
 
 
+# =============================================================================
+# Chunk 4 computation functions (ranks 161-180)
+# =============================================================================
+
+
+def _compute_macd_extensions(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute MACD extension features (ranks 161-164).
+
+    Features:
+    - macd_signal: EMA(9) of MACD line
+    - macd_histogram_slope: 5-day change in histogram
+    - days_since_macd_cross_signal: Signed days since MACD crossed signal
+    - macd_signal_proximity: (MACD - signal) / abs(signal) * 100
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with MACD extension features
+    """
+    close_arr = close.values
+    features = {}
+
+    # Compute MACD components using TA-Lib
+    macd_line, signal_line, histogram = talib.MACD(
+        close_arr, fastperiod=12, slowperiod=26, signalperiod=9
+    )
+    macd_line = pd.Series(macd_line, index=close.index)
+    signal_line = pd.Series(signal_line, index=close.index)
+    histogram = pd.Series(histogram, index=close.index)
+
+    # macd_signal: EMA(9) of MACD line (this is what signal_line already is)
+    features["macd_signal"] = signal_line
+
+    # macd_histogram_slope: 5-day change in histogram
+    features["macd_histogram_slope"] = histogram - histogram.shift(5)
+
+    # days_since_macd_cross_signal: Signed days since MACD crossed signal
+    # Positive = MACD > signal (bullish), Negative = MACD < signal (bearish)
+    cross_recency = _ma_cross_recency(macd_line, signal_line)
+    features["days_since_macd_cross_signal"] = cross_recency
+
+    # macd_signal_proximity: (MACD - signal) / abs(signal) * 100
+    # Handle signal = 0 edge case by using absolute difference as fallback
+    abs_signal = signal_line.abs()
+    proximity = (macd_line - signal_line) / abs_signal.where(abs_signal > 0.0001, 1.0) * 100
+    features["macd_signal_proximity"] = proximity
+
+    return features
+
+
+def _compute_volume_dynamics(
+    close: pd.Series, volume: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute volume-price dynamics features (ranks 165-168).
+
+    Features:
+    - volume_trend_5d: Normalized 5d volume change (z-score like)
+    - consecutive_volume_increase: Days with volume > prior day
+    - volume_price_confluence: zscore(vol) * zscore(move)
+    - high_volume_direction_bias: Mean return on high-volume days (20d rolling)
+
+    Args:
+        close: Close price series
+        volume: Volume series
+
+    Returns:
+        Dict with volume dynamics features
+    """
+    features = {}
+
+    # volume_trend_5d: (current vol / avg vol past 20d) - 1, z-scored
+    vol_ma_20 = volume.rolling(20).mean()
+    vol_std_20 = volume.rolling(20).std()
+    # Normalized volume change: (vol - MA) / std
+    vol_zscore = (volume - vol_ma_20) / vol_std_20.where(vol_std_20 > 0, 1)
+    # 5-day trend in this z-score
+    features["volume_trend_5d"] = vol_zscore - vol_zscore.shift(5)
+
+    # consecutive_volume_increase: Days with volume > prior day
+    vol_increasing = (volume > volume.shift(1)).astype(int)
+    consecutive_vol_increase = pd.Series(0, index=close.index, dtype=int)
+    count = 0
+    for i in range(len(volume)):
+        if pd.isna(volume.iloc[i]) or pd.isna(volume.iloc[max(0, i - 1)]):
+            count = 0
+            consecutive_vol_increase.iloc[i] = 0
+        elif vol_increasing.iloc[i] == 1:
+            count += 1
+            consecutive_vol_increase.iloc[i] = count
+        else:
+            count = 0
+            consecutive_vol_increase.iloc[i] = 0
+    features["consecutive_volume_increase"] = consecutive_vol_increase
+
+    # volume_price_confluence: zscore(vol) * zscore(move)
+    # Where move is daily return
+    returns = close.pct_change() * 100
+    ret_ma_20 = returns.rolling(20).mean()
+    ret_std_20 = returns.rolling(20).std()
+    ret_zscore = (returns - ret_ma_20) / ret_std_20.where(ret_std_20 > 0, 1)
+    features["volume_price_confluence"] = vol_zscore * ret_zscore
+
+    # high_volume_direction_bias: Mean return on high-volume days (20d rolling)
+    # High volume = volume > 1.5 * 20d MA
+    high_vol_mask = volume > (1.5 * vol_ma_20)
+    # Rolling mean return when high volume occurred
+    high_vol_return = returns.where(high_vol_mask, np.nan)
+    features["high_volume_direction_bias"] = high_vol_return.rolling(20, min_periods=1).mean()
+    # Fill NaN with 0 (no high volume days in window means neutral bias)
+    features["high_volume_direction_bias"] = features["high_volume_direction_bias"].fillna(0)
+
+    return features
+
+
+def _compute_calendar_features(dates: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute calendar/temporal features (ranks 169-174).
+
+    Features:
+    - trading_day_of_week: 0=Mon, 4=Fri
+    - is_monday: Binary
+    - is_friday: Binary
+    - days_to_month_end: Business days remaining in month
+    - month_of_year: 1-12
+    - is_quarter_end_month: 1 if Mar/Jun/Sep/Dec
+
+    Args:
+        dates: Date series (datetime)
+
+    Returns:
+        Dict with calendar features
+    """
+    features = {}
+    dates = pd.to_datetime(dates)
+
+    # trading_day_of_week: 0=Mon, 4=Fri
+    features["trading_day_of_week"] = dates.dt.dayofweek
+
+    # is_monday: Binary
+    features["is_monday"] = (dates.dt.dayofweek == 0).astype(int)
+
+    # is_friday: Binary
+    features["is_friday"] = (dates.dt.dayofweek == 4).astype(int)
+
+    # days_to_month_end: Business days remaining in month
+    # Calculate month end for each date
+    def business_days_to_month_end(date: pd.Timestamp) -> int:
+        """Count business days from date to end of its month."""
+        month_end = date + pd.offsets.BMonthEnd(0)
+        if date > month_end:
+            month_end = date + pd.offsets.BMonthEnd(1)
+        # Count business days between date and month end
+        bdays = np.busday_count(
+            date.date(),
+            month_end.date() + pd.Timedelta(days=1)
+        )
+        return max(0, bdays - 1)  # -1 because we don't count the current day
+
+    features["days_to_month_end"] = dates.apply(business_days_to_month_end)
+
+    # month_of_year: 1-12
+    features["month_of_year"] = dates.dt.month
+
+    # is_quarter_end_month: 1 if Mar/Jun/Sep/Dec
+    quarter_end_months = {3, 6, 9, 12}
+    features["is_quarter_end_month"] = dates.dt.month.isin(quarter_end_months).astype(int)
+
+    return features
+
+
+def _compute_candle_features(
+    open_price: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute candle body/wick analysis features (ranks 175-180).
+
+    Features:
+    - candle_body_pct: abs(C-O)/O * 100
+    - body_to_range_ratio: abs(C-O)/(H-L), clamped to [0,1], 0.5 if H==L
+    - upper_wick_pct: (H-max(O,C))/(H-L), clamped to [0,1], 0 if H==L
+    - lower_wick_pct: (min(O,C)-L)/(H-L), clamped to [0,1], 0 if H==L
+    - doji_indicator: 1 if body_to_range < 0.1
+    - range_vs_avg_range: (H-L)/20d_avg_range
+
+    Note: Values are clamped to valid ranges to handle edge cases in synthetic
+    data where OHLC relationships may not be realistic (e.g., O > H).
+
+    Args:
+        open_price: Open price series
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with candle analysis features
+    """
+    features = {}
+
+    # candle_body_pct: abs(C-O)/O * 100
+    body = (close - open_price).abs()
+    features["candle_body_pct"] = (body / open_price) * 100
+
+    # Calculate range, handling H==L edge case
+    candle_range = high - low
+    range_safe = candle_range.where(candle_range > 0, 1.0)  # Avoid division by zero
+
+    # body_to_range_ratio: abs(C-O)/(H-L), 0.5 if H==L, clamped to [0, 1]
+    body_ratio = body / range_safe
+    body_ratio = body_ratio.where(candle_range > 0, 0.5)  # Default 0.5 for flat candles
+    body_ratio = body_ratio.clip(0, 1)  # Clamp to valid range
+    features["body_to_range_ratio"] = body_ratio
+
+    # upper_wick_pct: (H-max(O,C))/(H-L), 0 if H==L, clamped to [0, 1]
+    upper_wick = high - np.maximum(open_price, close)
+    upper_wick_pct = upper_wick / range_safe
+    upper_wick_pct = upper_wick_pct.where(candle_range > 0, 0.0)
+    upper_wick_pct = upper_wick_pct.clip(0, 1)  # Clamp to valid range
+    features["upper_wick_pct"] = upper_wick_pct
+
+    # lower_wick_pct: (min(O,C)-L)/(H-L), 0 if H==L, clamped to [0, 1]
+    lower_wick = np.minimum(open_price, close) - low
+    lower_wick_pct = lower_wick / range_safe
+    lower_wick_pct = lower_wick_pct.where(candle_range > 0, 0.0)
+    lower_wick_pct = lower_wick_pct.clip(0, 1)  # Clamp to valid range
+    features["lower_wick_pct"] = lower_wick_pct
+
+    # doji_indicator: 1 if body_to_range < 0.1
+    features["doji_indicator"] = (body_ratio < 0.1).astype(int)
+
+    # range_vs_avg_range: (H-L)/20d_avg_range
+    avg_range_20 = candle_range.rolling(20).mean()
+    # Handle edge case where avg_range is 0
+    avg_range_safe = avg_range_20.where(avg_range_20 > 0, 1.0)
+    features["range_vs_avg_range"] = candle_range / avg_range_safe
+
+    return features
+
+
 def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.DataFrame:
     """Build feature DataFrame with all tier_a200 indicators.
 
@@ -941,6 +1222,24 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
 
     # Consecutive pattern features (ranks 157-160)
     features.update(_compute_consecutive_patterns(close, high, low))
+
+    # =========================================================================
+    # Chunk 4: MACD Extensions, Volume Dynamics, Calendar, Candle Analysis
+    #          (ranks 161-180)
+    # =========================================================================
+
+    # MACD extension features (ranks 161-164)
+    features.update(_compute_macd_extensions(close))
+
+    # Volume-price dynamics features (ranks 165-168)
+    features.update(_compute_volume_dynamics(close, volume))
+
+    # Calendar/temporal features (ranks 169-174)
+    features.update(_compute_calendar_features(df["Date"]))
+
+    # Candle body/wick analysis features (ranks 175-180)
+    open_price = df["Open"]
+    features.update(_compute_candle_features(open_price, high, low, close))
 
     # Create feature DataFrame for new a200 features
     new_features_df = pd.DataFrame(features)

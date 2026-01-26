@@ -3,13 +3,16 @@
   "budget": "2M",
   "horizon": 1,
   "n_trials": 50,
-  "best_trial": 0,
-  "best_value": -Infinity,
+  "best_trial": 19,
+  "best_value": 0.7177897779129905,
   "best_params": {
-    "d_model": 48,
-    "n_layers": 4,
-    "n_heads": 4,
-    "d_ff_ratio": 2
+    "d_model": 96,
+    "n_layers": 2,
+    "n_heads": 8,
+    "d_ff_ratio": 4,
+    "learning_rate": 1e-05,
+    "dropout": 0.1,
+    "weight_decay": 0.001
   },
   "search_space": {
     "d_model": [
@@ -34,8 +37,26 @@
     "d_ff_ratio": [
       2,
       4
+    ],
+    "learning_rate": [
+      1e-05,
+      5e-05,
+      0.0001,
+      0.0005
+    ],
+    "dropout": [
+      0.1,
+      0.3,
+      0.5,
+      0.7
+    ],
+    "weight_decay": [
+      0.0,
+      1e-05,
+      0.0001,
+      0.001
     ]
   },
-  "total_time_min": 0.0007188320159912109,
-  "timestamp": "2026-01-25T17:46:57.841610"
+  "total_time_min": 20.039626534779867,
+  "timestamp": "2026-01-25T23:53:25.053461"
 }
