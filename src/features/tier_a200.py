@@ -1,7 +1,7 @@
 """Tier a200 indicator module - 200 total indicators (100 from a100 + 100 new).
 
 This module extends tier_a100 with 100 additional indicators.
-Currently implements Chunk 1 (ranks 101-120).
+Currently implements Chunk 1 (ranks 101-120) and Chunk 2 (ranks 121-140).
 
 Chunk 1 (rank 101-120): Extended MA Types
 - tema_{9,20,50,100} - Triple EMA at various periods
@@ -12,6 +12,20 @@ Chunk 1 (rank 101-120): Extended MA Types
 - tema_20_slope - 5-day change in TEMA_20
 - price_pct_from_tema_50 - % distance from TEMA_50
 - price_pct_from_kama_20 - % distance from KAMA_20
+
+Chunk 2 (rank 121-140): Duration Counters & Cross Proximity
+- days_above/below_sma_{9,50,200} - Consecutive days price above/below SMA
+- days_above/below_tema_20 - Consecutive days price above/below TEMA_20
+- days_above/below_kama_20 - Consecutive days price above/below KAMA_20
+- days_above/below_vwma_20 - Consecutive days price above/below VWMA_20
+- days_since_sma_9_50_cross - Days since SMA_9 crossed SMA_50
+- days_since_sma_50_200_cross - Days since golden/death cross
+- days_since_tema_sma_50_cross - Days since TEMA_20 crossed SMA_50
+- days_since_kama_sma_50_cross - Days since KAMA_20 crossed SMA_50
+- days_since_sma_9_200_cross - Days since SMA_9 crossed SMA_200
+- tema_20_sma_50_proximity - % difference between TEMA_20 and SMA_50
+- kama_20_sma_50_proximity - % difference between KAMA_20 and SMA_50
+- sma_9_200_proximity - % difference between SMA_9 and SMA_200
 """
 
 from __future__ import annotations
@@ -24,8 +38,8 @@ import talib
 
 from src.features import tier_a100
 
-# 20 new indicators added in tier a200 Chunk 1 (ranks 101-120)
-# Future chunks will add ranks 121-200
+# 40 new indicators added in tier a200 Chunks 1-2 (ranks 101-140)
+# Future chunks will add ranks 141-200
 A200_ADDITION_LIST = [
     # Chunk 1: Extended MA Types (ranks 101-120)
     # TEMA - Triple Exponential Moving Average
@@ -54,9 +68,33 @@ A200_ADDITION_LIST = [
     "tema_20_slope",
     "price_pct_from_tema_50",
     "price_pct_from_kama_20",
+    # Chunk 2: Duration Counters & Cross Proximity (ranks 121-140)
+    # Duration counters - Price vs MA (ranks 121-132)
+    "days_above_sma_9",
+    "days_below_sma_9",
+    "days_above_sma_50",
+    "days_below_sma_50",
+    "days_above_sma_200",
+    "days_below_sma_200",
+    "days_above_tema_20",
+    "days_below_tema_20",
+    "days_above_kama_20",
+    "days_below_kama_20",
+    "days_above_vwma_20",
+    "days_below_vwma_20",
+    # MA-to-MA cross recency (ranks 133-137)
+    "days_since_sma_9_50_cross",
+    "days_since_sma_50_200_cross",
+    "days_since_tema_sma_50_cross",
+    "days_since_kama_sma_50_cross",
+    "days_since_sma_9_200_cross",
+    # New MA proximity features (ranks 138-140)
+    "tema_20_sma_50_proximity",
+    "kama_20_sma_50_proximity",
+    "sma_9_200_proximity",
 ]
 
-# Complete a200 feature list = a100 (100) + 20 new (Chunk 1) = 120 total
+# Complete a200 feature list = a100 (100) + 40 new (Chunks 1-2) = 140 total
 FEATURE_LIST = tier_a100.FEATURE_LIST + A200_ADDITION_LIST
 
 
@@ -227,6 +265,247 @@ def _compute_derived_ma(
     return features
 
 
+# =============================================================================
+# Chunk 2 computation functions (ranks 121-140)
+# =============================================================================
+
+
+def _consecutive_days_above_below(close: pd.Series, ma: pd.Series) -> tuple[pd.Series, pd.Series]:
+    """Compute consecutive days price is above/below a moving average.
+
+    Uses the convention that price >= MA means "above".
+
+    Args:
+        close: Close price series
+        ma: Moving average series
+
+    Returns:
+        Tuple of (days_above, days_below) Series
+    """
+    # Price is above MA if close >= ma (inclusive for "above")
+    above_mask = close >= ma
+
+    # Compute run lengths for both states
+    days_above = pd.Series(0, index=close.index, dtype=int)
+    days_below = pd.Series(0, index=close.index, dtype=int)
+
+    above_count = 0
+    below_count = 0
+
+    for i in range(len(close)):
+        if pd.isna(ma.iloc[i]):
+            # During warmup, set both to 0
+            days_above.iloc[i] = 0
+            days_below.iloc[i] = 0
+            above_count = 0
+            below_count = 0
+        elif above_mask.iloc[i]:
+            above_count += 1
+            below_count = 0
+            days_above.iloc[i] = above_count
+            days_below.iloc[i] = 0
+        else:
+            below_count += 1
+            above_count = 0
+            days_below.iloc[i] = below_count
+            days_above.iloc[i] = 0
+
+    return days_above, days_below
+
+
+def _compute_duration_counters(
+    close: pd.Series,
+    tema_features: Mapping[str, pd.Series],
+    kama_features: Mapping[str, pd.Series],
+    vwma_features: Mapping[str, pd.Series],
+) -> Mapping[str, pd.Series]:
+    """Compute duration counters: consecutive days above/below various MAs.
+
+    These features capture overextension signals - prices tend to revert
+    when above/below MA for extended periods.
+
+    Args:
+        close: Close price series
+        tema_features: Dict containing tema_20
+        kama_features: Dict containing kama_20
+        vwma_features: Dict containing vwma_20
+
+    Returns:
+        Dict with days_above/below for sma_9, sma_50, sma_200, tema_20, kama_20, vwma_20
+    """
+    close_arr = close.values
+    features = {}
+
+    # Compute SMAs for duration tracking
+    sma_9 = pd.Series(talib.SMA(close_arr, timeperiod=9), index=close.index)
+    sma_50 = pd.Series(talib.SMA(close_arr, timeperiod=50), index=close.index)
+    sma_200 = pd.Series(talib.SMA(close_arr, timeperiod=200), index=close.index)
+
+    # SMA duration counters
+    above, below = _consecutive_days_above_below(close, sma_9)
+    features["days_above_sma_9"] = above
+    features["days_below_sma_9"] = below
+
+    above, below = _consecutive_days_above_below(close, sma_50)
+    features["days_above_sma_50"] = above
+    features["days_below_sma_50"] = below
+
+    above, below = _consecutive_days_above_below(close, sma_200)
+    features["days_above_sma_200"] = above
+    features["days_below_sma_200"] = below
+
+    # TEMA_20 duration counters
+    above, below = _consecutive_days_above_below(close, tema_features["tema_20"])
+    features["days_above_tema_20"] = above
+    features["days_below_tema_20"] = below
+
+    # KAMA_20 duration counters
+    above, below = _consecutive_days_above_below(close, kama_features["kama_20"])
+    features["days_above_kama_20"] = above
+    features["days_below_kama_20"] = below
+
+    # VWMA_20 duration counters
+    above, below = _consecutive_days_above_below(close, vwma_features["vwma_20"])
+    features["days_above_vwma_20"] = above
+    features["days_below_vwma_20"] = below
+
+    return features
+
+
+def _ma_cross_recency(short_ma: pd.Series, long_ma: pd.Series) -> pd.Series:
+    """Compute days since short MA crossed long MA (signed).
+
+    Positive values = short MA above long MA (bullish signal)
+    Negative values = short MA below long MA (bearish signal)
+    Magnitude = days since last cross
+
+    Args:
+        short_ma: Shorter period moving average
+        long_ma: Longer period moving average
+
+    Returns:
+        Series with signed days since cross
+    """
+    result = pd.Series(0, index=short_ma.index, dtype=int)
+
+    # Determine if short > long (bullish)
+    bullish_mask = short_ma >= long_ma
+
+    days_count = 0
+    prev_bullish = None
+
+    for i in range(len(short_ma)):
+        if pd.isna(short_ma.iloc[i]) or pd.isna(long_ma.iloc[i]):
+            result.iloc[i] = 0
+            days_count = 0
+            prev_bullish = None
+        else:
+            current_bullish = bullish_mask.iloc[i]
+            if prev_bullish is None:
+                # First valid point
+                days_count = 1
+            elif current_bullish != prev_bullish:
+                # Cross occurred - reset count
+                days_count = 1
+            else:
+                days_count += 1
+
+            # Sign: positive for bullish, negative for bearish
+            result.iloc[i] = days_count if current_bullish else -days_count
+            prev_bullish = current_bullish
+
+    return result
+
+
+def _compute_ma_cross_recency(
+    close: pd.Series,
+    tema_features: Mapping[str, pd.Series],
+    kama_features: Mapping[str, pd.Series],
+) -> Mapping[str, pd.Series]:
+    """Compute MA-to-MA cross recency features.
+
+    Days since various MA crossover events, with sign indicating direction.
+    Positive = short MA above long MA (bullish)
+    Negative = short MA below long MA (bearish)
+
+    Args:
+        close: Close price series (for computing SMAs)
+        tema_features: Dict containing tema_20
+        kama_features: Dict containing kama_20
+
+    Returns:
+        Dict with days_since_*_cross features
+    """
+    close_arr = close.values
+    features = {}
+
+    # Compute SMAs
+    sma_9 = pd.Series(talib.SMA(close_arr, timeperiod=9), index=close.index)
+    sma_50 = pd.Series(talib.SMA(close_arr, timeperiod=50), index=close.index)
+    sma_200 = pd.Series(talib.SMA(close_arr, timeperiod=200), index=close.index)
+
+    # SMA 9 vs SMA 50
+    features["days_since_sma_9_50_cross"] = _ma_cross_recency(sma_9, sma_50)
+
+    # SMA 50 vs SMA 200 (golden/death cross)
+    features["days_since_sma_50_200_cross"] = _ma_cross_recency(sma_50, sma_200)
+
+    # TEMA 20 vs SMA 50
+    features["days_since_tema_sma_50_cross"] = _ma_cross_recency(
+        tema_features["tema_20"], sma_50
+    )
+
+    # KAMA 20 vs SMA 50
+    features["days_since_kama_sma_50_cross"] = _ma_cross_recency(
+        kama_features["kama_20"], sma_50
+    )
+
+    # SMA 9 vs SMA 200 (extreme momentum)
+    features["days_since_sma_9_200_cross"] = _ma_cross_recency(sma_9, sma_200)
+
+    return features
+
+
+def _compute_new_proximity(
+    close: pd.Series,
+    tema_features: Mapping[str, pd.Series],
+    kama_features: Mapping[str, pd.Series],
+) -> Mapping[str, pd.Series]:
+    """Compute new MA proximity features.
+
+    Proximity indicates how close two MAs are to crossing.
+    Formula: (short_MA - long_MA) / long_MA * 100
+
+    Args:
+        close: Close price series (for computing SMAs)
+        tema_features: Dict containing tema_20
+        kama_features: Dict containing kama_20
+
+    Returns:
+        Dict with proximity features
+    """
+    close_arr = close.values
+    features = {}
+
+    # Compute SMAs
+    sma_9 = pd.Series(talib.SMA(close_arr, timeperiod=9), index=close.index)
+    sma_50 = pd.Series(talib.SMA(close_arr, timeperiod=50), index=close.index)
+    sma_200 = pd.Series(talib.SMA(close_arr, timeperiod=200), index=close.index)
+
+    # TEMA 20 vs SMA 50 proximity
+    tema_20 = tema_features["tema_20"]
+    features["tema_20_sma_50_proximity"] = (tema_20 - sma_50) / sma_50 * 100
+
+    # KAMA 20 vs SMA 50 proximity
+    kama_20 = kama_features["kama_20"]
+    features["kama_20_sma_50_proximity"] = (kama_20 - sma_50) / sma_50 * 100
+
+    # SMA 9 vs SMA 200 proximity (extreme divergence indicator)
+    features["sma_9_200_proximity"] = (sma_9 - sma_200) / sma_200 * 100
+
+    return features
+
+
 def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.DataFrame:
     """Build feature DataFrame with all tier_a200 indicators.
 
@@ -248,8 +527,12 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
     a100_features = tier_a100.build_feature_dataframe(raw_df, vix_df)
     a100_features = a100_features.set_index("Date")
 
-    # Build all new a200 Chunk 1 features
+    # Build all new a200 features
     features = {}
+
+    # =========================================================================
+    # Chunk 1: Extended MA Types (ranks 101-120)
+    # =========================================================================
 
     # TEMA indicators
     tema_features = _compute_tema(close)
@@ -266,10 +549,26 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
     features.update(_compute_hma(close))
 
     # VWMA indicators
-    features.update(_compute_vwma(close, volume))
+    vwma_features = _compute_vwma(close, volume)
+    features.update(vwma_features)
 
     # Derived MA indicators (slope, pct_from)
     features.update(_compute_derived_ma(close, tema_features, kama_features))
+
+    # =========================================================================
+    # Chunk 2: Duration Counters & Cross Proximity (ranks 121-140)
+    # =========================================================================
+
+    # Duration counters: consecutive days above/below various MAs
+    features.update(
+        _compute_duration_counters(close, tema_features, kama_features, vwma_features)
+    )
+
+    # MA-to-MA cross recency: days since crossover events
+    features.update(_compute_ma_cross_recency(close, tema_features, kama_features))
+
+    # New MA proximity features
+    features.update(_compute_new_proximity(close, tema_features, kama_features))
 
     # Create feature DataFrame for new a200 features
     new_features_df = pd.DataFrame(features)
