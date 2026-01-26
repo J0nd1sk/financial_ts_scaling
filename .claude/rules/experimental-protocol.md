@@ -109,7 +109,7 @@ Each tier is a superset of the previous. Actual feature counts may differ slight
 - a20: 20 features (baseline)
 - a50: 50 features
 - a100: 100 features
-- a200: 206 features (26 extra from Ichimoku/Donchian/Entropy groupings)
+- a200: 206 features (6 extra from Chunk 5's Ichimoku/Donchian/Entropy groupings)
 
 ---
 
