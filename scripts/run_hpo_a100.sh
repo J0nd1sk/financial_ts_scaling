@@ -57,10 +57,10 @@ run_hpo() {
         echo "[$TOTAL/6] FAILED: $exp"
     fi
 
-    # Longer thermal pause for HPO (intensive computation)
+    # Thermal pause between HPO runs
     echo ""
-    echo "Cooling pause (2 min)..."
-    sleep 120
+    echo "Cooling pause (30s)..."
+    sleep 30
 }
 
 # Run all 6 HPO experiments

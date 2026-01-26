@@ -1,114 +1,161 @@
 # Workstream 3 Context: Phase 6C Experiments
-# Last Updated: 2026-01-25 16:45
+# Last Updated: 2026-01-26 00:30
 
 ## Identity
 - **ID**: ws3
 - **Name**: phase6c
 - **Focus**: Phase 6C feature scaling experiments (a50 → a100 tier)
-- **Status**: **S1 COMPLETE** - Baselines done, HPO next
+- **Status**: **Phase 1 Complete** - Ready for Phase 2 (HPO search space expansion)
 
 ## Current Task
-- **Working on**: Phase 6C a100 HPO experiments
-- **Status**: ✅ S1 baselines complete, ready for HPO
+- **Working on**: Deep Code Audit - Phase 6C HPO & Training Infrastructure
+- **Status**: Phase 1 COMPLETE, Phases 2-4 pending
 
 ---
 
-## Session 2026-01-25 (S1 Baselines + Analysis)
+## Session 2026-01-26: Deep Code Audit (Phase 1 Complete)
 
-### Completed
-1. ✅ Fixed broken runner scripts (`run_s1_a100.sh`, `run_hpo_a100.sh`)
-   - Added `set -o pipefail`
-   - Added `mkdir -p outputs/phase6c_a100`
-   - Safe venv activation with `set +e`/`set -e` wrapper
-   - Replaced tee pattern with direct execution + pass/fail tracking
+### Completed This Session
 
-2. ✅ Ran all 12 S1 baseline experiments (3 budgets × 4 horizons)
-   - All 12 passed successfully
-   - Results in `outputs/phase6c_a100/s1_*/results.json`
+#### 1. Added Recall/Precision Metrics to Trainer ✅
+**File**: `src/training/trainer.py`
+- Added `recall` and `precision` calculation in `_evaluate_detailed()` method
+- Added `pred_range` (min, max) for detecting probability collapse
+- Updated `train()` method to return these metrics when `verbose=True`
+- Now tracks: recall, precision, pred_range in addition to accuracy/AUC
 
-3. ✅ Performed threshold sweep analysis on all models
+#### 2. Fixed HPO Exception Handling ✅ (All 6 scripts)
+**Files**: All `experiments/phase6c_a100/hpo_*.py`
+- Replaced bare `except Exception` with specific exception handling
+- OOM/MPS errors → `raise optuna.TrialPruned()` (don't poison study with 0.5)
+- NaN/Inf errors → `raise optuna.TrialPruned()`
+- KeyboardInterrupt → re-raise (let user stop)
+- All errors logged to trial metadata via `trial.set_user_attr("error", ...)`
 
-### Key Findings
+#### 3. Fixed Experiment Numbering / Path Issues ✅
+**Files**: `statistical_validation.py`, `compare_all_tiers.py`
+- Fixed `RESULT_DIRS["a20"]` path: `phase6a` → `phase6a_final`
+- Added tier-aware experiment naming:
+  - a20 (Phase 6A): `phase6a_2m_h1` naming convention
+  - a50/a100 (Phase 6C): `s1_01_2m_h1` sequential numbering convention
+- Updated `load_tier_results()` in compare_all_tiers.py similarly
 
-#### Scaling Law Results (Preliminary)
-| Horizon | 2M AUC | 20M AUC | 200M AUC | Winner |
-|---------|--------|---------|----------|--------|
-| H1 | **0.709** | 0.712 | 0.705 | 20M (marginal) |
-| H2 | 0.632 | 0.631 | **0.636** | 200M |
-| H3 | 0.609 | 0.616 | **0.632** | 200M |
-| H5 | 0.583 | **0.631** | 0.613 | 20M |
+### Tests
+- **786 passed**, 2 skipped - All tests passing
 
-**Conclusion**: No clear scaling benefit. Inverse scaling at H1. Marginal benefit at longer horizons.
+### Not Done Yet (Phases 2-4)
 
-#### Precision-Recall Tradeoff (H5 20M example)
-| Threshold | Precision | Recall |
-|-----------|-----------|--------|
-| 0.712 | 100% | 3.2% |
-| 0.711 | 90.9% | 4.0% |
-| 0.694 | 75.0% | 22.7% |
-| 0.674 | 70.0% | 46.6% |
-| 0.643 (optimal F1) | 62.7% | 96.4% |
+#### Phase 2: Expand HPO Search Space (User's main intent)
+Add to all 6 HPO scripts:
+```python
+SEARCH_SPACE = {
+    # Architecture (existing)
+    "d_model": [...],
+    "n_layers": [...],
+    "n_heads": [...],
+    "d_ff_ratio": [2, 4],
 
-**Key insight**: High precision (90%+) means catching very few opportunities (3-7% recall).
+    # Training hyperparameters (NEW)
+    "learning_rate": [1e-5, 5e-5, 1e-4, 5e-4],
+    "dropout": [0.1, 0.3, 0.5, 0.7],
+    "weight_decay": [0.0, 1e-5, 1e-4, 1e-3],
+    "batch_size": [32, 64, 128],  # Independent, not d_model-derived
+}
+```
+- Remove d_model-based batch_size derivation
+- Pass `weight_decay` to Trainer (already supported but not passed!)
+- Use sampled values instead of fixed LEARNING_RATE/DROPOUT constants
 
-#### Model Behavior
-- 200M models are more selective (higher precision, lower recall)
-- Default 0.5 threshold was suboptimal; optimal thresholds range 0.50-0.64
-- Longer horizons have better PR-AUC but worse ROC-AUC
-- Models trained with 105 features (100 indicators + OHLCV), not 100 as documented
+#### Phase 3: High Severity Fixes
+- Log AUC=None with warnings
+- Fix gradient accumulation edge case
+- Validate high_prices column presence
+- Update default context_length to 80 in experiment.py
+- Add device selection logging
+
+#### Phase 4: Medium Severity Fixes
+- Division by zero risk in compare_all_tiers.py
+- Float formatting crash for None values
+- Bootstrap CI iteration counting
+- Remove dead code (threshold_0.5pct)
+- File I/O error handling
 
 ---
 
 ## Files Modified This Session
-- `scripts/run_s1_a100.sh` - Rewritten (fixed)
-- `scripts/run_hpo_a100.sh` - Rewritten (fixed)
+- `src/training/trainer.py` - Added recall/precision/pred_range metrics
+- `experiments/phase6c_a100/hpo_2m_h1.py` - Fixed exception handling
+- `experiments/phase6c_a100/hpo_2m_h5.py` - Fixed exception handling
+- `experiments/phase6c_a100/hpo_20m_h1.py` - Fixed exception handling
+- `experiments/phase6c_a100/hpo_20m_h5.py` - Fixed exception handling
+- `experiments/phase6c_a100/hpo_200m_h1.py` - Fixed exception handling
+- `experiments/phase6c_a100/hpo_200m_h5.py` - Fixed exception handling
+- `experiments/phase6c_a100/statistical_validation.py` - Fixed paths and naming
+- `experiments/phase6c_a100/compare_all_tiers.py` - Fixed paths and naming
 
-## Outputs Created
+---
+
+## Outputs Status
 ```
 outputs/phase6c_a100/
-├── s1_01_2m_h1/    (results.json, best_checkpoint.pt)
-├── s1_02_20m_h1/
-├── ...
-└── s1_12_200m_h5/
+├── s1_01_2m_h1/ through s1_12_200m_h5/  (all 12 complete)
+├── hpo_2m_h1/  (exists but untested with fixes)
+├── hpo_20m_h1/ (exists but untested)
+├── hpo_200m_h1/ (partial)
 ```
 
 ---
 
 ## Next Session Should
 
-1. **Run HPO experiments**:
+1. **Phase 2: Expand HPO search space** (user's main intent)
+   - Add learning_rate, dropout, weight_decay, batch_size to search
+   - Update all 6 HPO scripts
+   - Remove d_model-based batch derivation
+   - Pass weight_decay to Trainer
+
+2. **Test one HPO script manually** after Phase 2:
    ```bash
-   caffeinate ./scripts/run_hpo_a100.sh
+   ./venv/bin/python experiments/phase6c_a100/hpo_2m_h1.py
    ```
-   - 6 HPO runs (3 budgets × H1, H5)
-   - 50 trials each, ~6-12 hours total
 
-2. **Analyze HPO results**:
-   - Compare tuned vs baseline performance
-   - Check if dropout/lr tuning helps larger models
+3. **Phase 3-4**: High/Medium severity fixes (optional, lower priority)
 
-3. **Consider**: Whether to add threshold as HPO parameter
+4. **Run full HPO overnight** after fixes verified
+
+---
+
+## Lessons Learned (Audit Findings)
+
+1. **HPO only searched architecture, not training params** - Fixed constants for LR, dropout, weight_decay meant we never explored their interaction with architecture
+
+2. **Exception masking poisons Optuna studies** - Returning 0.5 for failed trials makes them indistinguishable from actual 0.5 AUC results. Use `optuna.TrialPruned()` instead.
+
+3. **Experiment naming conventions differ between phases** - Phase 6A uses `phase6a_2m_h1`, Phase 6C uses `s1_01_2m_h1`. Analysis scripts must handle both.
+
+4. **Missing metrics (recall/precision) hide model failures** - A model predicting all negatives passes silently without recall tracking. CLAUDE.md explicitly requires these metrics.
 
 ---
 
 ## Memory Entities (This Session)
-- `Phase6C_A100_S1_Results` - Baseline experiment results
-- `Phase6C_ThresholdSweep_Findings` - Precision-recall analysis
-- `Phase6C_A100_RunnerScripts_Fix` - Technical fix documentation
-- `Phase6C_ScalingLaw_Preliminary` - Research finding on scaling
+- `Phase6C_DeepCodeAudit_Phase1_20260126` - (to be created)
 
 ---
 
 ## Session History
 
-### 2026-01-25 16:45 (S1 Complete + Analysis)
-- Fixed runner scripts (were completely broken)
+### 2026-01-26 00:30 (Deep Code Audit - Phase 1)
+- Completed Phase 1 of deep code audit (4 critical issues)
+- Added recall/precision/pred_range metrics to Trainer
+- Fixed exception handling in all 6 HPO scripts
+- Fixed experiment paths and naming conventions
+- Ready for Phase 2 (HPO search space expansion)
+
+### 2026-01-25 17:15 (S1 Complete, HPO Blocked)
 - Ran all 12 S1 baselines successfully
 - Performed threshold sweep analysis
-- Key finding: No clear scaling benefit, steep precision-recall tradeoff
-- Ready for HPO
+- Started HPO but stopped due to "-inf AUC" bug
+- Identified 3 bugs in HPO scripts
 
-### 2026-01-25 23:50 (Pipeline Creation - INCOMPLETE)
-- Created full a100 experimentation pipeline
-- All scripts pass syntax check but runner didn't work
-- Session ended with troubleshooting needed
+### 2026-01-25 16:00 (Runner Script Fixes)
+- Fixed broken runner scripts

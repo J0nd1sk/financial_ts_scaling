@@ -1,147 +1,152 @@
 # Workstream 2 Context: foundation
-# Last Updated: 2026-01-25 23:55
+# Last Updated: 2026-01-25 15:00
 
 ## Identity
 - **ID**: ws2
 - **Name**: foundation
-- **Focus**: Foundation model investigation - testing pre-trained time series models
-- **Status**: active
+- **Focus**: Foundation model & alternative architecture investigation
+- **Status**: INVESTIGATION COMPLETE - Both paths rejected
 
 ---
 
 ## Current Task
-- **Working on**: TimesFM a50/a100 covariate experiments (TFM-07 through TFM-10)
-- **Status**: NOTEBOOKS CREATED - Ready for Colab execution
+- **Working on**: Alternative Architecture Investigation (ARCH-01, ARCH-02)
+- **Status**: COMPLETE - Both architectures failed vs PatchTST
 
 ---
 
 ## Investigation Summary
 
-### Research Question
-Can pre-trained foundation models (Lag-Llama, TimesFM) beat task-specific PatchTST on SPY direction prediction?
+### Research Questions
+1. Can pre-trained foundation models (Lag-Llama, TimesFM) beat task-specific PatchTST?
+2. Can alternative transformer architectures (iTransformer, Informer) beat PatchTST?
 
-### Results So Far
+### Final Results - Foundation Models
 
-| Experiment | AUC | Precision | Recall | Status |
-|------------|-----|-----------|--------|--------|
-| **PatchTST H1** | **0.718** | 0.58 | 0.45 | BASELINE |
-| Lag-Llama (all modes) | 0.499-0.576 | ~0.50 | ~0.50 | FAILED |
-| TimesFM TFM-01 | **0.364** | 0.0 | 0.0 | **ANTI-CORRELATED** |
-| TFM-01 Inverted | 0.636 | 0.33 | 0.49 | Below PatchTST |
+| Experiment | Val AUC | vs PatchTST | Status |
+|------------|---------|-------------|--------|
+| **PatchTST 200M** | **0.718** | Baseline | BEST |
+| TimesFM TFM-01 | 0.364 | -49% | Anti-correlated |
+| TimesFM TFM-07 (50 features) | 0.364 | -49% | **IDENTICAL to TFM-01** |
+| TimesFM (inverted) | 0.636 | -11% | Still below baseline |
+| Lag-Llama (all modes) | 0.499-0.576 | -20% to -30% | FAILED |
 
-### Key Finding: TFM-01 NOT Fair Comparison
-- TFM-01 was zero-shot with ONLY 1 feature (close price)
-- PatchTST was trained on 20 features
-- Need to test TimesFM with covariates for fair comparison
+### Final Results - Alternative Architectures (NEW - 2026-01-25)
+
+| Experiment | Val AUC | vs PatchTST | Status |
+|------------|---------|-------------|--------|
+| **PatchTST 200M** | **0.718** | Baseline | BEST |
+| iTransformer (ARCH-01) | 0.517 | **-28%** | FAILED - barely above random |
+| Informer (ARCH-02) | 0.587 | **-18%** | FAILED - probability collapse |
+
+### Critical Discovery: Covariates Ignored (Foundation Models)
+- TimesFM predictions identical with 1 vs 50 features (correlation 1.0000000000)
+- Foundation models cannot use feature engineering
+
+### Critical Discovery: Architecture Mismatch (Alternative Architectures)
+- iTransformer's inverted attention loses temporal patterns
+- Informer's forecasting→threshold approach causes probability collapse
+- Both show narrow prediction ranges (collapsed to mean)
 
 ---
 
-## Last Session Work (2026-01-25 23:55)
+## Last Session Work (2026-01-25 15:00)
 
-### Created a50/a100 Covariate Experiment Notebooks
-Created two Colab notebooks for testing TimesFM with engineered features:
+### Alternative Architecture Investigation
+1. Fixed NeuralForecast loss API bug (`loss="MSE"` → `loss=MSE()`)
+2. Fixed early stopping conflicts with cross_validation
+3. Fixed Informer parameter naming (`e_layers` → `encoder_layers`)
+4. Ran ARCH-01 (iTransformer): **AUC 0.517** (-28% vs baseline)
+5. Ran ARCH-02 (Informer): **AUC 0.587** (-18% vs baseline)
+6. Updated `docs/architecture_comparison_results.md` with full analysis
 
-| Notebook | Experiments | Features | Data File |
-|----------|-------------|----------|-----------|
-| `TimesFM_a50_Experiments.ipynb` | TFM-07, TFM-08 | 50 | `SPY_dataset_a50_combined.parquet` |
-| `TimesFM_a100_Experiments.ipynb` | TFM-09, TFM-10 | 100 | `SPY_dataset_a100_combined.parquet` |
+### Bugs Fixed
+- NeuralForecast requires loss objects, not strings
+- Early stopping conflicts with cross_validation (removed)
+- Parameter naming differences between original papers and NeuralForecast
 
-### Experiment Matrix
-| ID | Features | Mode | Description |
-|----|----------|------|-------------|
-| TFM-07 | 50 (a50) | Zero-shot | Covariates with 50 features |
-| TFM-08 | 50 (a50) | Fine-tuned | Train on 1% threshold with 50 features |
-| TFM-09 | 100 (a100) | Zero-shot | Covariates with 100 features |
-| TFM-10 | 100 (a100) | Fine-tuned | Train on 1% threshold with 100 features |
-
-### Bug Fix: Wrong File Uploaded
-User initially uploaded `SPY_dataset_a50.parquet` (features only, no OHLCV) instead of `SPY_dataset_a50_combined.parquet` (OHLCV + features).
-
-**Fixed by**: Added clear validation in Cell 2:
-- Shows warning if filename doesn't contain "_combined"
-- Lists all columns for diagnostics
-- Clear error message explaining which file to use
-
-### Files Created This Session
-- `experiments/foundation/TimesFM_a50_Experiments.ipynb` - NEW
-- `experiments/foundation/TimesFM_a100_Experiments.ipynb` - NEW
+### Files Created/Modified
+- `experiments/architectures/itransformer_forecast.py` - FIXED
+- `experiments/architectures/informer_forecast.py` - FIXED
+- `outputs/architectures/itransformer_forecast/results.json` - NEW
+- `outputs/architectures/informer_forecast/results.json` - NEW
+- `docs/architecture_comparison_results.md` - UPDATED with results
 
 ---
 
 ## Files Owned/Modified
 - `experiments/foundation/` - PRIMARY
-  - `TimesFM_SPY_Experiments.ipynb` - Original TFM-01 notebook
-  - `TimesFM_a50_Experiments.ipynb` - **NEW** (TFM-07, TFM-08)
-  - `TimesFM_a100_Experiments.ipynb` - **NEW** (TFM-09, TFM-10)
-  - `analyze_timesfm_thresholds.py` - Local threshold analysis script
-- `outputs/foundation/` - Results storage
-  - `timesfm_tfm-01_results.json` - TFM-01 results
-  - `timesfm_tfm-01_comprehensive.json` - TFM-01 full analysis
-  - `timesfm_tfm-01_predictions.npz` - Raw predictions
+- `experiments/architectures/` - PRIMARY (NEW)
+- `outputs/foundation/` - Results
+- `outputs/architectures/` - Results (NEW)
+- `docs/foundation_model_results.md` - Documentation
+- `docs/architecture_comparison_results.md` - Documentation (UPDATED)
 
 ---
 
 ## Key Decisions (Workstream-Specific)
 
-### Data File Naming Clarification (2026-01-25)
-- **Two versions exist**: `SPY_dataset_a50.parquet` vs `SPY_dataset_a50_combined.parquet`
-- **Without "_combined"**: Features ONLY (no OHLCV columns)
-- **With "_combined"**: OHLCV + Features (needed for experiments)
-- **Lesson**: Always validate column presence before proceeding
+### Alternative Architecture Investigation Closed (2026-01-25)
+- **Context**: Tested iTransformer and Informer via NeuralForecast
+- **Finding**: Both significantly worse than PatchTST (17-28% lower AUC)
+- **Root cause**: Task mismatch (forecasting→threshold) and attention mechanism unsuitability
+- **Decision**: ABANDON architecture investigation
 
-### TFM-01 Not Fair Comparison (2026-01-25)
-- TFM-01 used 1 feature (close), PatchTST used 20
-- Created TFM-07 through TFM-10 for fair comparison with covariates
+### Foundation Model Investigation Closed (2026-01-26)
+- **Finding**: TimesFM ignores covariates entirely
+- **Decision**: Foundation model path is not viable
 
 ---
 
 ## Session History
 
+### 2026-01-25 15:00
+- Implemented Alternative Architecture Investigation plan
+- Fixed NeuralForecast bugs (loss API, early stopping, parameter naming)
+- Ran iTransformer: AUC 0.517 (-28%)
+- Ran Informer: AUC 0.587 (-18%)
+- Documented results in architecture_comparison_results.md
+- **Conclusion**: Both architectures FAILED
+
+### 2026-01-26 09:00
+- Analyzed TFM-07 results - discovered covariates completely ignored
+- Created foundation_model_results.md with full analysis
+- Computed prediction correlation (1.0000000000)
+
 ### 2026-01-25 23:55
-- Created TimesFM_a50_Experiments.ipynb and TimesFM_a100_Experiments.ipynb
-- Fixed Cell 2 data upload with better validation and error messages
-- Diagnosed wrong file upload issue (non-combined vs combined parquet)
-
-### 2026-01-25 19:45
-- Fixed cell-27 JSON serialization bug (numpy bool → Python bool)
-
-### 2026-01-25 09:30
-- Analyzed TFM-01 results - discovered anti-correlation
-
-### 2026-01-24
-- Completed Lag-Llama investigation, created TimesFM notebook
+- Created TimesFM_a50/a100 notebooks
 
 ---
 
 ## Next Session Should
 
-### Priority 1: Run TFM-07 in Colab
-1. Upload `SPY_dataset_a50_combined.parquet` (note: _combined!)
-2. Run all cells
-3. Check if anti-correlation persists with 50 features
-4. Download results
+1. **Discuss and analyze** what happened (per user request)
+   - Why did iTransformer fail so badly?
+   - Why did Informer show probability collapse?
+   - What does this tell us about financial time series?
 
-### Priority 2: Run Remaining Experiments
-Order: TFM-07 → TFM-08 → TFM-09 → TFM-10
+2. **Make final decision** on closing ws2
+   - Both foundation models AND alternative architectures failed
+   - Strong evidence to focus exclusively on PatchTST + feature scaling
 
-### Priority 3: Analyze Results
-- Does adding features help?
-- Does fine-tuning fix anti-correlation?
-- Can TimesFM beat PatchTST with proper features?
-
-### Key Question
-Does adding 50-100 engineered features help TimesFM overcome the anti-correlation issue seen in TFM-01 (1 feature)?
+3. **Archive** or **continue** (user choice)
+   - If archive: Move to archive, update global context
+   - If continue: Could test direct classification (Phase 2 of arch plan)
 
 ---
 
-## Data Files for Upload
+## Investigation Conclusions
 
-| File | Size | Location |
-|------|------|----------|
-| `SPY_dataset_a50_combined.parquet` | 4.0 MB | `data/processed/v1/` |
-| `SPY_dataset_a100_combined.parquet` | 7.2 MB | `data/processed/v1/` |
+### Foundation Models: NOT VIABLE
+1. Lag-Llama: 20% below PatchTST
+2. TimesFM: Anti-correlated AND ignores all covariates
 
-**IMPORTANT**: Upload the `_combined` versions (have OHLCV + features)
+### Alternative Architectures: NOT VIABLE
+1. iTransformer: 28% below PatchTST (inverted attention loses temporal patterns)
+2. Informer: 18% below PatchTST (probability collapse, all-negative predictions)
+
+### Recommendation
+**FOCUS ON PHASE 6C** with PatchTST. The baseline architecture is actually the best option discovered. Feature scaling (tier_a100 → tier_a200) is the most promising path forward.
 
 ---
 

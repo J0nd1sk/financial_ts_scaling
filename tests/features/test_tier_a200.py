@@ -89,9 +89,9 @@ class TestA200FeatureListStructure:
         """A200_ADDITION_LIST constant exists."""
         assert hasattr(tier_a200, "A200_ADDITION_LIST")
 
-    def test_a200_chunks_1_2_count_is_40(self) -> None:
-        """A200_ADDITION_LIST has exactly 40 indicators for Chunks 1-2."""
-        assert len(tier_a200.A200_ADDITION_LIST) == 40
+    def test_a200_chunks_1_2_3_count_is_60(self) -> None:
+        """A200_ADDITION_LIST has exactly 60 indicators for Chunks 1-3."""
+        assert len(tier_a200.A200_ADDITION_LIST) == 60
 
     def test_a200_feature_list_extends_a100(self) -> None:
         """FEATURE_LIST includes all a100 features plus new additions."""
@@ -100,9 +100,9 @@ class TestA200FeatureListStructure:
         for feature in tier_a100.FEATURE_LIST:
             assert feature in tier_a200.FEATURE_LIST, f"Missing a100 feature: {feature}"
 
-    def test_feature_list_total_140(self) -> None:
-        """FEATURE_LIST has exactly 140 features (100 a100 + 40 a200 Chunks 1-2)."""
-        assert len(tier_a200.FEATURE_LIST) == 140
+    def test_feature_list_total_160(self) -> None:
+        """FEATURE_LIST has exactly 160 features (100 a100 + 60 a200 Chunks 1-3)."""
+        assert len(tier_a200.FEATURE_LIST) == 160
 
     def test_chunk1_tema_indicators_in_list(self) -> None:
         """Chunk 1 TEMA indicators are in the list."""
@@ -563,9 +563,9 @@ class TestA200OutputShape:
     def test_output_column_count(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
     ) -> None:
-        """Output has 141 columns (Date + 140 features)."""
+        """Output has 161 columns (Date + 160 features)."""
         result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
-        assert len(result.columns) == 141, f"Expected 141 columns, got {len(result.columns)}"
+        assert len(result.columns) == 161, f"Expected 161 columns, got {len(result.columns)}"
 
     def test_output_fewer_rows_than_input(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
@@ -1066,3 +1066,547 @@ class TestChunk2FeatureListStructure:
         ]
         for indicator in proximity_indicators:
             assert indicator in tier_a200.A200_ADDITION_LIST, f"Missing: {indicator}"
+
+
+# =============================================================================
+# Chunk 3 Tests (rank 141-160): BB Extension, RSI Duration, Mean Reversion,
+#                               Consecutive Patterns
+# =============================================================================
+
+
+class TestChunk3FeatureListStructure:
+    """Test Chunk 3 feature list structure and counts."""
+
+    def test_a200_chunks_1_2_3_count_is_60(self) -> None:
+        """A200_ADDITION_LIST has exactly 60 indicators for Chunks 1-3."""
+        assert len(tier_a200.A200_ADDITION_LIST) == 60
+
+    def test_feature_list_total_160(self) -> None:
+        """FEATURE_LIST has exactly 160 features (100 a100 + 60 a200 Chunks 1-3)."""
+        assert len(tier_a200.FEATURE_LIST) == 160
+
+    def test_chunk3_bb_extension_in_list(self) -> None:
+        """Chunk 3 BB extension indicators are in the list."""
+        bb_indicators = [
+            "pct_from_upper_band",
+            "pct_from_lower_band",
+            "days_above_upper_band",
+            "days_below_lower_band",
+            "bb_squeeze_indicator",
+            "bb_squeeze_duration",
+        ]
+        for indicator in bb_indicators:
+            assert indicator in tier_a200.A200_ADDITION_LIST, f"Missing: {indicator}"
+
+    def test_chunk3_rsi_duration_in_list(self) -> None:
+        """Chunk 3 RSI duration indicators are in the list."""
+        rsi_indicators = [
+            "rsi_distance_from_50",
+            "days_rsi_overbought",
+            "days_rsi_oversold",
+            "rsi_percentile_60d",
+        ]
+        for indicator in rsi_indicators:
+            assert indicator in tier_a200.A200_ADDITION_LIST, f"Missing: {indicator}"
+
+    def test_chunk3_mean_reversion_in_list(self) -> None:
+        """Chunk 3 mean reversion indicators are in the list."""
+        mr_indicators = [
+            "zscore_from_20d_mean",
+            "zscore_from_50d_mean",
+            "percentile_in_52wk_range",
+            "distance_from_52wk_high_pct",
+            "days_since_52wk_high",
+            "days_since_52wk_low",
+        ]
+        for indicator in mr_indicators:
+            assert indicator in tier_a200.A200_ADDITION_LIST, f"Missing: {indicator}"
+
+    def test_chunk3_consecutive_patterns_in_list(self) -> None:
+        """Chunk 3 consecutive pattern indicators are in the list."""
+        pattern_indicators = [
+            "consecutive_up_days",
+            "consecutive_down_days",
+            "up_days_ratio_20d",
+            "range_compression_5d",
+        ]
+        for indicator in pattern_indicators:
+            assert indicator in tier_a200.A200_ADDITION_LIST, f"Missing: {indicator}"
+
+
+class TestChunk3BollingerBandExtension:
+    """Test BB extension features (ranks 141-144)."""
+
+    # --- Existence tests ---
+
+    def test_pct_from_upper_band_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_from_upper_band column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "pct_from_upper_band" in result.columns
+
+    def test_pct_from_lower_band_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_from_lower_band column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "pct_from_lower_band" in result.columns
+
+    def test_days_above_upper_band_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_above_upper_band column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_above_upper_band" in result.columns
+
+    def test_days_below_lower_band_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_below_lower_band column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_below_lower_band" in result.columns
+
+    # --- Range tests ---
+
+    def test_pct_from_upper_band_sign_convention(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_from_upper_band: negative when inside band, positive when above."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["pct_from_upper_band"]
+        # Should have both negative (below upper) and possibly positive (above upper)
+        assert col.min() < 0, "Price should be below upper band sometimes"
+
+    def test_pct_from_lower_band_sign_convention(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_from_lower_band: positive when inside band, negative when below."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["pct_from_lower_band"]
+        # Should have positive (above lower) most of the time
+        assert col.max() > 0, "Price should be above lower band sometimes"
+
+    def test_days_above_upper_band_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_above_upper_band should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["days_above_upper_band"] >= 0).all()
+
+    def test_days_below_lower_band_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_below_lower_band should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["days_below_lower_band"] >= 0).all()
+
+    # --- No-NaN test ---
+
+    def test_bb_extension_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in BB extension columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        bb_cols = [
+            "pct_from_upper_band",
+            "pct_from_lower_band",
+            "days_above_upper_band",
+            "days_below_lower_band",
+        ]
+        for col in bb_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk3BBSqueeze:
+    """Test BB squeeze indicators (ranks 145-146)."""
+
+    # --- Existence tests ---
+
+    def test_bb_squeeze_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """bb_squeeze_indicator column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "bb_squeeze_indicator" in result.columns
+
+    def test_bb_squeeze_duration_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """bb_squeeze_duration column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "bb_squeeze_duration" in result.columns
+
+    # --- Range tests ---
+
+    def test_bb_squeeze_indicator_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """bb_squeeze_indicator should be 0 or 1."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["bb_squeeze_indicator"]
+        assert set(vals.unique()).issubset({0, 1}), f"Non-binary values: {vals.unique()}"
+
+    def test_bb_squeeze_duration_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """bb_squeeze_duration should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["bb_squeeze_duration"] >= 0).all()
+
+    # --- No-NaN test ---
+
+    def test_bb_squeeze_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in BB squeeze columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        squeeze_cols = ["bb_squeeze_indicator", "bb_squeeze_duration"]
+        for col in squeeze_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk3RSIDuration:
+    """Test RSI duration and percentile features (ranks 147-150)."""
+
+    # --- Existence tests ---
+
+    def test_rsi_distance_from_50_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """rsi_distance_from_50 column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "rsi_distance_from_50" in result.columns
+
+    def test_days_rsi_overbought_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_rsi_overbought column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_rsi_overbought" in result.columns
+
+    def test_days_rsi_oversold_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_rsi_oversold column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_rsi_oversold" in result.columns
+
+    def test_rsi_percentile_60d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """rsi_percentile_60d column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "rsi_percentile_60d" in result.columns
+
+    # --- Range tests ---
+
+    def test_rsi_distance_from_50_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """rsi_distance_from_50 should be in [-50, +50] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["rsi_distance_from_50"]
+        assert col.min() >= -50, f"rsi_distance_from_50 below -50: {col.min()}"
+        assert col.max() <= 50, f"rsi_distance_from_50 above 50: {col.max()}"
+
+    def test_days_rsi_overbought_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_rsi_overbought should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["days_rsi_overbought"] >= 0).all()
+
+    def test_days_rsi_oversold_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_rsi_oversold should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["days_rsi_oversold"] >= 0).all()
+
+    def test_rsi_percentile_60d_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """rsi_percentile_60d should be in [0, 1] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["rsi_percentile_60d"]
+        assert col.min() >= 0, f"rsi_percentile_60d below 0: {col.min()}"
+        assert col.max() <= 1, f"rsi_percentile_60d above 1: {col.max()}"
+
+    # --- No-NaN test ---
+
+    def test_rsi_duration_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in RSI duration columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        rsi_cols = [
+            "rsi_distance_from_50",
+            "days_rsi_overbought",
+            "days_rsi_oversold",
+            "rsi_percentile_60d",
+        ]
+        for col in rsi_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk3MeanReversion:
+    """Test mean reversion features (ranks 151-156)."""
+
+    # --- Existence tests ---
+
+    def test_zscore_from_20d_mean_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """zscore_from_20d_mean column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "zscore_from_20d_mean" in result.columns
+
+    def test_zscore_from_50d_mean_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """zscore_from_50d_mean column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "zscore_from_50d_mean" in result.columns
+
+    def test_percentile_in_52wk_range_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """percentile_in_52wk_range column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "percentile_in_52wk_range" in result.columns
+
+    def test_distance_from_52wk_high_pct_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """distance_from_52wk_high_pct column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "distance_from_52wk_high_pct" in result.columns
+
+    def test_days_since_52wk_high_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_52wk_high column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_since_52wk_high" in result.columns
+
+    def test_days_since_52wk_low_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_52wk_low column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_since_52wk_low" in result.columns
+
+    # --- Range tests ---
+
+    def test_zscore_from_20d_mean_reasonable_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """zscore_from_20d_mean typically in [-4, +4] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["zscore_from_20d_mean"]
+        assert col.min() >= -5, f"zscore_from_20d_mean too low: {col.min()}"
+        assert col.max() <= 5, f"zscore_from_20d_mean too high: {col.max()}"
+
+    def test_zscore_from_50d_mean_reasonable_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """zscore_from_50d_mean typically in [-4, +4] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["zscore_from_50d_mean"]
+        assert col.min() >= -5, f"zscore_from_50d_mean too low: {col.min()}"
+        assert col.max() <= 5, f"zscore_from_50d_mean too high: {col.max()}"
+
+    def test_percentile_in_52wk_range_bounds(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """percentile_in_52wk_range should be in [0, 1] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["percentile_in_52wk_range"]
+        assert col.min() >= 0, f"percentile_in_52wk_range below 0: {col.min()}"
+        assert col.max() <= 1, f"percentile_in_52wk_range above 1: {col.max()}"
+
+    def test_distance_from_52wk_high_pct_non_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """distance_from_52wk_high_pct should be <= 0 (always at or below high)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["distance_from_52wk_high_pct"]
+        assert col.max() <= 0, f"distance_from_52wk_high_pct above 0: {col.max()}"
+
+    def test_days_since_52wk_high_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_52wk_high should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["days_since_52wk_high"] >= 0).all()
+
+    def test_days_since_52wk_low_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_52wk_low should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["days_since_52wk_low"] >= 0).all()
+
+    # --- No-NaN test ---
+
+    def test_mean_reversion_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in mean reversion columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        mr_cols = [
+            "zscore_from_20d_mean",
+            "zscore_from_50d_mean",
+            "percentile_in_52wk_range",
+            "distance_from_52wk_high_pct",
+            "days_since_52wk_high",
+            "days_since_52wk_low",
+        ]
+        for col in mr_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk3ConsecutivePatterns:
+    """Test consecutive pattern features (ranks 157-160)."""
+
+    # --- Existence tests ---
+
+    def test_consecutive_up_days_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_up_days column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "consecutive_up_days" in result.columns
+
+    def test_consecutive_down_days_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_down_days column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "consecutive_down_days" in result.columns
+
+    def test_up_days_ratio_20d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """up_days_ratio_20d column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "up_days_ratio_20d" in result.columns
+
+    def test_range_compression_5d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_compression_5d column is present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "range_compression_5d" in result.columns
+
+    # --- Range tests ---
+
+    def test_consecutive_up_days_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_up_days should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["consecutive_up_days"] >= 0).all()
+
+    def test_consecutive_down_days_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_down_days should be >= 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["consecutive_down_days"] >= 0).all()
+
+    def test_consecutive_days_mutually_exclusive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """When consecutive_up_days > 0, consecutive_down_days should be 0."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        up = result["consecutive_up_days"]
+        down = result["consecutive_down_days"]
+        # One must be 0 at each point (or both 0 for unchanged)
+        assert ((up == 0) | (down == 0)).all(), "Both up and down > 0 simultaneously"
+
+    def test_up_days_ratio_20d_bounds(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """up_days_ratio_20d should be in [0, 1] range."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        col = result["up_days_ratio_20d"]
+        assert col.min() >= 0, f"up_days_ratio_20d below 0: {col.min()}"
+        assert col.max() <= 1, f"up_days_ratio_20d above 1: {col.max()}"
+
+    def test_range_compression_5d_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_compression_5d should be positive (ratio of ranges)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["range_compression_5d"] > 0).all()
+
+    # --- No-NaN test ---
+
+    def test_consecutive_patterns_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in consecutive pattern columns after warmup."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        pattern_cols = [
+            "consecutive_up_days",
+            "consecutive_down_days",
+            "up_days_ratio_20d",
+            "range_compression_5d",
+        ]
+        for col in pattern_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk3OutputShape:
+    """Test output shape and structure for Chunk 3."""
+
+    def test_output_column_count_with_chunk3(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output has 161 columns (Date + 160 features)."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert len(result.columns) == 161, f"Expected 161 columns, got {len(result.columns)}"
+
+    def test_chunk3_all_features_present(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """All 20 Chunk 3 features are present in output."""
+        result = tier_a200.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        chunk3_features = [
+            # BB extension (141-144)
+            "pct_from_upper_band",
+            "pct_from_lower_band",
+            "days_above_upper_band",
+            "days_below_lower_band",
+            # BB squeeze (145-146)
+            "bb_squeeze_indicator",
+            "bb_squeeze_duration",
+            # RSI duration (147-150)
+            "rsi_distance_from_50",
+            "days_rsi_overbought",
+            "days_rsi_oversold",
+            "rsi_percentile_60d",
+            # Mean reversion (151-156)
+            "zscore_from_20d_mean",
+            "zscore_from_50d_mean",
+            "percentile_in_52wk_range",
+            "distance_from_52wk_high_pct",
+            "days_since_52wk_high",
+            "days_since_52wk_low",
+            # Consecutive patterns (157-160)
+            "consecutive_up_days",
+            "consecutive_down_days",
+            "up_days_ratio_20d",
+            "range_compression_5d",
+        ]
+
+        for feature in chunk3_features:
+            assert feature in result.columns, f"Missing feature: {feature}"

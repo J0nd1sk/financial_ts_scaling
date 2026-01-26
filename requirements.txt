@@ -76,3 +76,6 @@ python-dotenv>=1.0.0
 gluonts[torch]>=0.14.0,<0.16
 huggingface-hub>=0.20.0
 packaging>=21.0  # For version comparison in tests
+
+# Alternative Architecture Investigation
+neuralforecast>=1.7.0  # iTransformer, Informer models

@@ -44,10 +44,14 @@ DATA_PATHS = {
 }
 
 RESULT_DIRS = {
-    "a20": PROJECT_ROOT / "outputs/phase6a",
+    "a20": PROJECT_ROOT / "outputs/phase6a_final",  # Phase 6A experiments (different naming)
     "a50": PROJECT_ROOT / "outputs/phase6c",
     "a100": PROJECT_ROOT / "outputs/phase6c_a100",
 }
+
+# Naming conventions differ by tier:
+# - a20 (Phase 6A): phase6a_2m_h1, phase6a_20m_h1, etc.
+# - a50/a100 (Phase 6C): s1_01_2m_h1, s1_02_20m_h1, etc. (sequential numbering)
 
 # Experiments to compare
 BUDGETS = ["2M", "20M", "200M"]
@@ -125,11 +129,16 @@ def bootstrap_auc_difference_ci(labels, preds1, preds2, n_bootstrap=N_BOOTSTRAP,
 
 def get_model_predictions(tier, budget, horizon, device):
     """Load model and get validation predictions."""
-    # Construct experiment name
-    budget_idx = BUDGETS.index(budget)
-    horizon_idx = HORIZONS.index(horizon)
-    exp_num = budget_idx + horizon_idx * 3 + 1
-    exp_name = f"s1_{exp_num:02d}_{budget.lower()}_h{horizon}"
+    # Construct experiment name (naming convention differs by tier)
+    if tier == "a20":
+        # Phase 6A naming: phase6a_2m_h1, phase6a_20m_h1, etc.
+        exp_name = f"phase6a_{budget.lower()}_h{horizon}"
+    else:
+        # Phase 6C naming: s1_01_2m_h1, s1_02_20m_h1, etc. (sequential numbering)
+        budget_idx = BUDGETS.index(budget)
+        horizon_idx = HORIZONS.index(horizon)
+        exp_num = budget_idx + horizon_idx * 3 + 1
+        exp_name = f"s1_{exp_num:02d}_{budget.lower()}_h{horizon}"
 
     checkpoint_path = RESULT_DIRS[tier] / exp_name / "best_checkpoint.pt"
     data_path = DATA_PATHS[tier]

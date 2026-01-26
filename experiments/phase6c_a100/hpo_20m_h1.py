@@ -2,8 +2,8 @@
 """
 Phase 6C A100 HPO: 20M parameters, horizon=1
 
-Hyperparameter optimization for architecture within 20M budget.
-Search space focuses on architecture (training params already validated).
+Hyperparameter optimization for architecture and training within 20M budget.
+Search space includes architecture and training hyperparameters.
 
 Trials: 50
 Metric: val_auc (maximize)
@@ -37,23 +37,26 @@ BUDGET = "20M"
 HORIZON = 1
 N_TRIALS = 50
 
-# Architecture search space (within 20M budget)
+# Search space (within 20M budget)
 SEARCH_SPACE = {
+    # Architecture
     "d_model": [64, 96, 128, 160, 192],
     "n_layers": [4, 5, 6, 7, 8],
     "n_heads": [4, 8],
     "d_ff_ratio": [2, 4],
+    # Training hyperparameters
+    "learning_rate": [1e-5, 5e-5, 1e-4, 5e-4],
+    "dropout": [0.1, 0.3, 0.5, 0.7],
+    "weight_decay": [0.0, 1e-5, 1e-4, 1e-3],
 }
 
 # Fixed hyperparameters (ablation-validated)
-LEARNING_RATE = 1e-4
-DROPOUT = 0.5
 CONTEXT_LENGTH = 80
 EPOCHS = 50
 
 # Data
 DATA_PATH = PROJECT_ROOT / "data/processed/v1/SPY_dataset_a100_combined.parquet"
-NUM_FEATURES = 100
+NUM_FEATURES = 105  # 100 indicators + 5 OHLCV (auto-adjusted by Trainer)
 
 # Output
 OUTPUT_DIR = PROJECT_ROOT / "outputs/phase6c_a100" / EXPERIMENT_NAME
@@ -72,17 +75,14 @@ def objective(trial):
     d_ff_ratio = trial.suggest_categorical("d_ff_ratio", SEARCH_SPACE["d_ff_ratio"])
     d_ff = d_model * d_ff_ratio
 
+    # Sample training hyperparameters
+    learning_rate = trial.suggest_categorical("learning_rate", SEARCH_SPACE["learning_rate"])
+    dropout = trial.suggest_categorical("dropout", SEARCH_SPACE["dropout"])
+    weight_decay = trial.suggest_categorical("weight_decay", SEARCH_SPACE["weight_decay"])
+
     # Validate n_heads divides d_model
     if d_model % n_heads != 0:
-        return float("-inf")
-
-    # Estimate parameter count (rough)
-    param_estimate = d_model * n_layers * (4 * d_model + d_ff)
-    budget_target = {"2M": 2e6, "20M": 20e6, "200M": 200e6}[BUDGET]
-
-    # Skip if too far from target
-    if param_estimate > budget_target * 1.5 or param_estimate < budget_target * 0.3:
-        return float("-inf")
+        raise optuna.TrialPruned("d_model not divisible by n_heads")
 
     device = "mps" if torch.backends.mps.is_available() else "cpu"
 
@@ -117,7 +117,7 @@ def objective(trial):
         n_heads=n_heads,
         n_layers=n_layers,
         d_ff=d_ff,
-        dropout=DROPOUT,
+        dropout=dropout,
         head_dropout=0.0,
     )
 
@@ -137,7 +137,8 @@ def objective(trial):
         experiment_config=experiment_config,
         model_config=model_config,
         batch_size=batch_size,
-        learning_rate=LEARNING_RATE,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
         epochs=EPOCHS,
         device=device,
         checkpoint_dir=trial_dir,
@@ -152,8 +153,32 @@ def objective(trial):
     try:
         result = trainer.train(verbose=False)
         val_auc = result.get("val_auc", 0.5)
+    except (torch.cuda.OutOfMemoryError, RuntimeError) as e:
+        # OOM or MPS memory errors - prune trial, don't poison study with 0.5
+        error_msg = str(e)
+        if "out of memory" in error_msg.lower() or "mps" in error_msg.lower():
+            trial.set_user_attr("error", f"OOM: {error_msg[:200]}")
+            raise optuna.TrialPruned(f"OOM error: {error_msg[:100]}")
+        # Other RuntimeErrors - log and return 0.5 (but log it)
+        trial.set_user_attr("error", f"RuntimeError: {error_msg[:200]}")
+        print(f"Trial {trial.number} failed (RuntimeError): {e}")
+        val_auc = 0.5
+    except ValueError as e:
+        # NaN/Inf or data issues - prune trial
+        error_msg = str(e)
+        trial.set_user_attr("error", f"ValueError: {error_msg[:200]}")
+        if "nan" in error_msg.lower() or "inf" in error_msg.lower():
+            raise optuna.TrialPruned(f"NaN/Inf error: {error_msg[:100]}")
+        print(f"Trial {trial.number} failed (ValueError): {e}")
+        val_auc = 0.5
+    except KeyboardInterrupt:
+        # Don't catch keyboard interrupt - let user stop
+        raise
     except Exception as e:
-        print(f"Trial {trial.number} failed: {e}")
+        # Catch-all for unexpected errors - log but don't silently ignore
+        error_msg = str(e)
+        trial.set_user_attr("error", f"Unexpected: {type(e).__name__}: {error_msg[:200]}")
+        print(f"Trial {trial.number} failed ({type(e).__name__}): {e}")
         val_auc = 0.5
 
     return val_auc if val_auc else 0.5

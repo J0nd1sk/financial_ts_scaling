@@ -537,11 +537,17 @@ class Trainer:
             # Compute detailed final metrics with confusion matrix
             train_metrics = self._evaluate_detailed(self.train_dataloader)
             result["train_accuracy"] = train_metrics.get("accuracy")
+            result["train_recall"] = train_metrics.get("recall")
+            result["train_precision"] = train_metrics.get("precision")
+            result["train_pred_range"] = train_metrics.get("pred_range")
             result["train_confusion"] = train_metrics.get("confusion_matrix")
 
             if self.val_dataloader is not None:
                 val_metrics = self._evaluate_detailed(self.val_dataloader)
                 result["val_accuracy"] = val_metrics.get("accuracy")
+                result["val_recall"] = val_metrics.get("recall")
+                result["val_precision"] = val_metrics.get("precision")
+                result["val_pred_range"] = val_metrics.get("pred_range")
                 result["val_confusion"] = val_metrics.get("confusion_matrix")
 
             # Add split statistics
@@ -676,6 +682,12 @@ class Trainer:
 
             accuracy = (tp + tn) / max(tp + tn + fp + fn, 1)
 
+            # Compute recall (sensitivity) and precision
+            # Recall = TP / (TP + FN) - what fraction of actual positives were detected
+            # Precision = TP / (TP + FP) - what fraction of positive predictions were correct
+            recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+
             # Compute AUC-ROC (requires both classes present)
             auc: float | None = None
             unique_classes = np.unique(target_binary)
@@ -686,10 +698,17 @@ class Trainer:
                     # Edge case: sklearn may still fail
                     auc = None
 
+            # Prediction range for detecting probability collapse
+            pred_min = float(np.min(preds))
+            pred_max = float(np.max(preds))
+
             return {
                 "loss": avg_loss,
                 "accuracy": accuracy,
                 "auc": auc,
+                "recall": recall,
+                "precision": precision,
+                "pred_range": (pred_min, pred_max),
                 "confusion_matrix": {
                     "tp": tp,
                     "tn": tn,

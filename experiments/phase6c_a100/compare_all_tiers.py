@@ -31,7 +31,7 @@ OUTPUT_DIR = PROJECT_ROOT / "outputs/phase6c_a100"
 
 # Results directories for each tier
 TIER_RESULTS = {
-    "a20": PROJECT_ROOT / "outputs/phase6a",  # Adjust path if different
+    "a20": PROJECT_ROOT / "outputs/phase6a_final",  # Phase 6A experiments
     "a50": PROJECT_ROOT / "outputs/phase6c",
     "a100": PROJECT_ROOT / "outputs/phase6c_a100",
 }
@@ -67,11 +67,20 @@ def load_tier_results(tier, results_dir):
 
     for budget in BUDGETS:
         for horizon in HORIZONS:
-            # Try different naming conventions
-            exp_patterns = [
-                f"s1_{BUDGETS.index(budget)+1:02d}_{budget.lower()}_h{horizon}",
-                f"s1_{(BUDGETS.index(budget)+1) + (HORIZONS.index(horizon))*3:02d}_{budget.lower()}_h{horizon}",
-            ]
+            # Naming conventions differ by tier
+            if tier == "a20":
+                # Phase 6A naming: phase6a_2m_h1, phase6a_20m_h1, etc.
+                exp_patterns = [f"phase6a_{budget.lower()}_h{horizon}"]
+            else:
+                # Phase 6C naming: s1_01_2m_h1, s1_02_20m_h1, etc.
+                budget_idx = BUDGETS.index(budget)
+                horizon_idx = HORIZONS.index(horizon)
+                exp_num = budget_idx + horizon_idx * 3 + 1
+                exp_patterns = [
+                    f"s1_{exp_num:02d}_{budget.lower()}_h{horizon}",
+                    # Fallback patterns for legacy naming
+                    f"s1_{BUDGETS.index(budget)+1:02d}_{budget.lower()}_h{horizon}",
+                ]
 
             for exp_name in exp_patterns:
                 results_path = results_dir / exp_name / "results.json"
