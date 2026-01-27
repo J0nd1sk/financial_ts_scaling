@@ -51,6 +51,7 @@ from src.config.experiment import ExperimentConfig
 from src.models.patchtst import PatchTSTConfig
 from src.data.dataset import SimpleSplitter
 from src.training.trainer import Trainer
+from src.training.hpo_coverage import CoverageTracker
 
 # ============================================================================
 # CONFIGURATION - Edit this section for your experiment
@@ -193,6 +194,8 @@ def create_objective(
     dry_run: bool = False,
 ):
     """Create Optuna objective function with full metrics capture."""
+    # Coverage tracker for architecture exploration (shared across trials)
+    coverage_tracker = CoverageTracker(search_space)
 
     def objective(trial: optuna.Trial) -> float:
         """Optuna objective function."""
@@ -226,6 +229,19 @@ def create_objective(
                 "dropout": trial.suggest_categorical("dropout", search_space["dropout"]),
                 "weight_decay": trial.suggest_categorical("weight_decay", search_space["weight_decay"]),
             }
+
+            # Coverage-aware redirect: avoid testing duplicate architecture combos
+            # Reconstruct tracker state from study to handle resume correctly
+            tracker = CoverageTracker.from_study(trial.study, search_space)
+            original_config = config.copy()
+            config = tracker.suggest_coverage_config(config)
+            if config != original_config:
+                trial.set_user_attr("coverage_redirect", True)
+                trial.set_user_attr("original_d_model", original_config["d_model"])
+                trial.set_user_attr("original_n_layers", original_config["n_layers"])
+                trial.set_user_attr("original_n_heads", original_config["n_heads"])
+                for k in ["d_model", "n_layers", "n_heads"]:
+                    trial.set_user_attr(f"actual_{k}", config[k])
 
         # Validate n_heads divides d_model
         if config["d_model"] % config["n_heads"] != 0:

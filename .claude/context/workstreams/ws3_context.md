@@ -1,26 +1,39 @@
 # Workstream 3 Context: Phase 6C HPO Analysis
-# Last Updated: 2026-01-26 14:30
+# Last Updated: 2026-01-26 16:30
 
 ## Identity
 - **ID**: ws3
 - **Name**: phase6c_hpo_analysis
-- **Focus**: HPO methodology improvement and calibration
-- **Status**: **METHODOLOGY COMPLETE** - Ready for execution
+- **Focus**: HPO methodology improvement and tier HPO execution
+- **Status**: active
 
 ## Current Task
-- **Working on**: HPO Execution Phase
-- **Status**: All 4 methodology tasks complete, ready to run improved HPO experiments
+- **Working on**: Running HPO experiments with improved methodology
+- **Status**: a100 HPO in progress (user running in tmux), a50 HPO next
+
+---
 
 ## Progress Summary
 
 ### Completed
-- [x] Task 1: Created `scripts/analyze_hpo_coverage.py`
-- [x] Task 2: Created `experiments/templates/hpo_template.py` with full metrics + 2-phase HPO
-- [x] Task 3: Created `scripts/analyze_hpo_results.py` with comprehensive analysis
+- [x] Task 1: Created `scripts/analyze_hpo_coverage.py` (analysis)
+- [x] Task 2: Created `experiments/templates/hpo_template.py` with 2-phase HPO
+- [x] Task 3: Created `scripts/analyze_hpo_results.py` (analysis)
 - [x] Task 4: Created `src/evaluation/calibration.py` + `tests/test_calibration.py` (26 tests)
+- [x] Task 5: Created `src/training/hpo_coverage.py` + `tests/test_hpo_coverage.py` (8 tests)
+- [x] Task 6: Created `scripts/validate_cross_budget.py` + `tests/test_cross_budget_validation.py` (6 tests)
+
+### ✅ Implementation Status of Recommended Improvements
+
+| Improvement | Status | Notes |
+|-------------|--------|-------|
+| Two-phase HPO (6 forced + TPE) | ✅ DONE | Lines 118-179, 201-228 in template |
+| Capture all metrics | ✅ DONE | precision/recall/pred_range captured |
+| Coverage-aware sampling | ✅ DONE | `CoverageTracker` in hpo_coverage.py, integrated in template |
+| Cross-budget validation | ✅ DONE | `scripts/validate_cross_budget.py` with dry-run support |
 
 ### Test Status
-- **970 passed**, 2 skipped (944 existing + 26 new calibration tests)
+- **1006 passed**, 2 skipped
 
 ---
 
@@ -38,68 +51,54 @@
 | 20M    | 0.7     | 1e-4          | 0.0          | 64      | 4        |
 | 200M   | 0.3     | 1e-5          | 0.0001       | 128     | 6        |
 
-### Trial Efficiency Problems
+### Trial Efficiency Problems (Pre-Improvement)
 - 43 total wasted trials across budgets (18% 2M, 32% 20M, 36% 200M)
 - TPE converges to local optima too quickly
 - No forced extreme trials in original runs
 
-### Parameter Importance (varies by budget)
-- 2M: learning_rate (0.29) > dropout (0.18) > d_model (0.15)
-- 20M: dropout (0.45) > n_layers (0.36) > d_model (0.33)
-- 200M: learning_rate (0.57) > d_model (0.17) > weight_decay (0.13)
-
 ---
 
-## Files Created (All Complete)
+## Files Created/Modified
 
-### Scripts
-1. `scripts/analyze_hpo_coverage.py` - Coverage analysis, gap detection
-2. `scripts/analyze_hpo_results.py` - Standardized analysis pipeline
+### Coverage Tracking (NEW)
+1. `src/training/hpo_coverage.py` - CoverageTracker class
+2. `tests/test_hpo_coverage.py` - 8 comprehensive tests
 
-### Templates
-3. `experiments/templates/hpo_template.py` - Enhanced HPO with:
-   - Full metrics capture (AUC, precision, recall, pred_range)
-   - Two-phase strategy (6 forced extremes + TPE)
-   - SQLite storage, incremental saving
+### Cross-Budget Validation (NEW)
+3. `scripts/validate_cross_budget.py` - Validation script
+4. `tests/test_cross_budget_validation.py` - 6 tests
 
-### Calibration Module
-4. `src/evaluation/__init__.py` - Module init with exports
-5. `src/evaluation/calibration.py` - Calibration classes and metrics:
-   - PlattScaling (sklearn LogisticRegression wrapper)
-   - IsotonicCalibration (sklearn IsotonicRegression wrapper)
-   - TemperatureScaling (scipy L-BFGS-B optimization)
-   - expected_calibration_error() function
-   - reliability_diagram_data() function
+### HPO Template (MODIFIED)
+5. `experiments/templates/hpo_template.py` - Now includes all 4 improvements
 
-### Tests
-6. `tests/test_calibration.py` - 26 comprehensive tests
+### HPO Execution Infrastructure (NEW - 2026-01-26)
+6. `docs/hpo_methodology.md` - Complete HPO methodology documentation (340 lines)
+7. `scripts/run_hpo_batch.sh` - Batch runner for tier HPO (2M→20M→200M)
 
-### Outputs Generated
-7. `outputs/phase6c_a100/hpo_coverage_report.md`
-8. `outputs/phase6c_a100/hpo_analysis_report.md`
+### Previous Work (Committed: a997e21)
+8. `scripts/analyze_hpo_coverage.py` - Coverage analysis
+9. `scripts/analyze_hpo_results.py` - Standardized analysis pipeline
+10. `src/evaluation/calibration.py` - PlattScaling, IsotonicCalibration, TemperatureScaling
+11. `tests/test_calibration.py` - 26 tests
 
 ---
 
 ## Key Commands
 
 ```bash
-# Run HPO with improved methodology (NEXT STEP)
-caffeinate -i ./venv/bin/python experiments/templates/hpo_template.py \
-  --budget 20M --tier a100 --horizon h1 --trials 50 \
-  2>&1 | tee outputs/phase6c_a100/hpo_20M_h1_v2.log
+# Run full tier HPO (PREFERRED - runs 2M→20M→200M with auto cross-validation)
+caffeinate -i ./scripts/run_hpo_batch.sh a50 2>&1 | tee outputs/hpo_a50_batch.log
 
+# Run single budget HPO
 caffeinate -i ./venv/bin/python experiments/templates/hpo_template.py \
-  --budget 200M --tier a100 --horizon h1 --trials 50 \
-  2>&1 | tee outputs/phase6c_a100/hpo_200M_h1_v2.log
+  --budget 20M --tier a100 --horizon 1 --trials 50 \
+  2>&1 | tee outputs/phase6c_a100/hpo_20M_h1.log
+
+# Cross-budget validation (dry-run first)
+./venv/bin/python scripts/validate_cross_budget.py --tier a100 --horizon 1 --dry-run
 
 # Analyze results after HPO
 ./venv/bin/python scripts/analyze_hpo_results.py --all
-
-# Test calibration on best model
-from src.evaluation import PlattScaling, expected_calibration_error
-calibrator = PlattScaling().fit(val_probs, val_targets)
-calibrated = calibrator.predict(test_probs)
-ece = expected_calibration_error(calibrated, test_targets)
 
 # All tests (ALWAYS run before git add)
 make test
@@ -107,68 +106,43 @@ make test
 
 ---
 
-## Implementation Plan Reference
-
-**Phase 1: Analysis** - ✅ DONE
-- Created analyze_hpo_coverage.py
-- Identified 43 wasted trials, inconsistent patterns
-
-**Phase 2: Gap Filling** - FUTURE (after new HPO runs)
-- Use findings to run targeted experiments
-
-**Phase 3: Methodology** - ✅ DONE
-- Created hpo_template.py with 2-phase strategy
-- Created analyze_hpo_results.py for standardized analysis
-
-**Phase 4: Calibration** - ✅ DONE
-- Created calibration.py with Platt/Isotonic/Temperature
-- Created test_calibration.py with 26 tests
-
----
-
 ## Next Session Should
 
-### Priority 1: Re-run HPO with Improved Template
-```bash
-# 20M HPO (replaces underexplored original)
-caffeinate -i ./venv/bin/python experiments/templates/hpo_template.py \
-  --budget 20M --tier a100 --horizon h1 --trials 50 \
-  2>&1 | tee outputs/phase6c_a100/hpo_20M_h1_v2.log
-
-# 200M HPO
-caffeinate -i ./venv/bin/python experiments/templates/hpo_template.py \
-  --budget 200M --tier a100 --horizon h1 --trials 50 \
-  2>&1 | tee outputs/phase6c_a100/hpo_200M_h1_v2.log
-```
-
-### Priority 2: Cross-Budget Validation
-Test best configs from each budget on other budgets to validate findings.
-
-### Priority 3: Apply Calibration
-Address probability collapse on best models from new HPO runs.
-
-### Priority 4: Final Analysis
-Compare new runs vs original - did methodology improvements help?
+1. **Monitor a100 HPO** - Check progress in user's tmux session
+2. **Run a50 HPO** - After a100 completes: `caffeinate -i ./scripts/run_hpo_batch.sh a50`
+3. **Post-HPO analysis** - Compare HPO-optimized results vs fixed-config baselines
+4. **Feature scaling analysis** - Compare a50 vs a100 results for scaling patterns
 
 ---
 
 ## Session History
 
+### 2026-01-26 16:30 (HPO Execution Started)
+- Created `docs/hpo_methodology.md` (340 lines) - complete HPO methodology documentation
+- Created `scripts/run_hpo_batch.sh` - batch runner for tier HPO (2M→20M→200M)
+- Verified a50 data exists (`SPY_dataset_a50_combined.parquet`, 55 features)
+- **Discovery**: a50 "HPO" was actually fixed-config runs, not search - needs real HPO
+- Started a100 HPO with improved methodology (running in user's tmux)
+- Planned a50 HPO (after a100 completes)
+
+### 2026-01-26 14:45 (All Improvements Complete)
+- Implemented coverage-aware sampling (`src/training/hpo_coverage.py`)
+- Created cross-budget validation script (`scripts/validate_cross_budget.py`)
+- Added 14 new tests (8 coverage + 6 validation)
+- All 984 tests pass
+- **4/4 HPO methodology improvements now complete**
+
 ### 2026-01-26 14:30 (Calibration Complete)
 - Created `src/evaluation/calibration.py` with PlattScaling, IsotonicCalibration, TemperatureScaling
 - Created `tests/test_calibration.py` with 26 tests
-- All 970 tests pass (944 + 26 new)
-- Stored methodology learnings in Memory MCP (HPO_Methodology_Phase6C, Calibration_Module)
-- **Methodology phase complete, ready for HPO execution**
 
 ### 2026-01-26 12:45 (HPO Analysis & Methodology)
 - Created comprehensive analysis scripts
 - Created HPO template with 2-phase strategy
-- Started calibration module (init only)
 - Key finding: scaling law violated, HPs inconsistent across budgets
 
 ---
 
-## Memory MCP Entities (for durability)
+## Memory MCP Entities
 - **HPO_Methodology_Phase6C**: Two-phase strategy, forced extremes, metrics capture, findings
 - **Calibration_Module**: Module location, classes, functions, usage

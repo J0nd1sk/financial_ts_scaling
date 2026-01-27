@@ -1,18 +1,1 @@
-❯ keep as-is.... we'll merge everything back to main and just stick with the same branch for now.  we know what we're doing here       
-  (indicator / feature development planning/design/etc.).                                                                              
-                                                                                                                                       
-  I see you have "fractal_dimension", is that the fractal technical analysis set of indicators?  If not, web research fractal          
-  technical indicators and how to implement it as a feature.  Besides that and things like wavelets and hurst_exponent, what other     
-  fractal analysis / fractal market analysis techniques can we apply as features?  Things like Levy Index, Power-Law Distributions,    
-  Katz’s Fractal Dimension (KFD), Higuchi’s Fractal Dimension (HFD), etc.?  Research the web.                                          
-                                                                                                                                       
-  What about Ergodic Theory & Ergodic Economics methods/tools?  Could any of that contribute to signal?                                
-                                                                                                                                       
-  I know we are already doing Fourier Transform analysis.  What other spectral analytic methods may apply to market analysis and       
-  provide signal, which we haven't already covered?  (Research the web.)                                                               
-                                                                                                                                       
-  Look into Cubic, Quintic, and Higher-Order Polynomial Indicators; Girsanov Theorem & Risk-Neutral Pricing; Backward Stochastic       
-  Differential Equations; and Coherence & de Finetti’s Principle.                                                                      
-                                                                                                                                       
-  Review https://www.perplexity.ai/search/i-m-looking-for-a-comprehensiv-gCqKAVUtQ72EwsIhe_EDFQ#0 and look into other ideas like       
-  deterministic topographical anlalytic methods, fractional brownian motion (and other fractional calculus), etc.       
+caffeinate -i ./scripts/run_hpo_batch.sh a50 2>&1 | tee outputs/hpo_a50_batch.log    

@@ -1,0 +1,174 @@
+{
+  "tier": "a100",
+  "horizon": 1,
+  "configs_found": [
+    "2M",
+    "20M",
+    "200M"
+  ],
+  "matrix": {
+    "2M_config_on_2M_budget": {
+      "auc": 0.7177897779129905,
+      "precision": null,
+      "recall": null,
+      "pred_range": null,
+      "epochs_run": 50,
+      "config": {
+        "d_model": 96,
+        "n_layers": 2,
+        "n_heads": 8,
+        "d_ff_ratio": 4,
+        "learning_rate": 1e-05,
+        "dropout": 0.1,
+        "weight_decay": 0.001
+      },
+      "config_source": "2M",
+      "budget_used": "2M"
+    },
+    "2M_config_on_20M_budget": {
+      "auc": 0.7177897779129905,
+      "precision": null,
+      "recall": null,
+      "pred_range": null,
+      "epochs_run": 50,
+      "config": {
+        "d_model": 96,
+        "n_layers": 2,
+        "n_heads": 8,
+        "d_ff_ratio": 4,
+        "learning_rate": 1e-05,
+        "dropout": 0.1,
+        "weight_decay": 0.001
+      },
+      "config_source": "2M",
+      "budget_used": "20M"
+    },
+    "2M_config_on_200M_budget": {
+      "auc": 0.7177897779129905,
+      "precision": null,
+      "recall": null,
+      "pred_range": null,
+      "epochs_run": 50,
+      "config": {
+        "d_model": 96,
+        "n_layers": 2,
+        "n_heads": 8,
+        "d_ff_ratio": 4,
+        "learning_rate": 1e-05,
+        "dropout": 0.1,
+        "weight_decay": 0.001
+      },
+      "config_source": "2M",
+      "budget_used": "200M"
+    },
+    "20M_config_on_2M_budget": {
+      "auc": 0.7245968968664435,
+      "precision": null,
+      "recall": null,
+      "pred_range": null,
+      "epochs_run": 50,
+      "config": {
+        "d_model": 64,
+        "n_layers": 4,
+        "n_heads": 8,
+        "d_ff_ratio": 2,
+        "learning_rate": 0.0001,
+        "dropout": 0.7,
+        "weight_decay": 0.0
+      },
+      "config_source": "20M",
+      "budget_used": "2M"
+    },
+    "20M_config_on_20M_budget": {
+      "auc": 0.7245968968664435,
+      "precision": null,
+      "recall": null,
+      "pred_range": null,
+      "epochs_run": 50,
+      "config": {
+        "d_model": 64,
+        "n_layers": 4,
+        "n_heads": 8,
+        "d_ff_ratio": 2,
+        "learning_rate": 0.0001,
+        "dropout": 0.7,
+        "weight_decay": 0.0
+      },
+      "config_source": "20M",
+      "budget_used": "20M"
+    },
+    "20M_config_on_200M_budget": {
+      "auc": 0.7245968968664435,
+      "precision": null,
+      "recall": null,
+      "pred_range": null,
+      "epochs_run": 50,
+      "config": {
+        "d_model": 64,
+        "n_layers": 4,
+        "n_heads": 8,
+        "d_ff_ratio": 2,
+        "learning_rate": 0.0001,
+        "dropout": 0.7,
+        "weight_decay": 0.0
+      },
+      "config_source": "20M",
+      "budget_used": "200M"
+    },
+    "200M_config_on_2M_budget": {
+      "auc": 0.7147094615150593,
+      "precision": null,
+      "recall": null,
+      "pred_range": null,
+      "epochs_run": 50,
+      "config": {
+        "d_model": 128,
+        "n_layers": 6,
+        "n_heads": 16,
+        "d_ff_ratio": 4,
+        "learning_rate": 1e-05,
+        "dropout": 0.3,
+        "weight_decay": 0.0001
+      },
+      "config_source": "200M",
+      "budget_used": "2M"
+    },
+    "200M_config_on_20M_budget": {
+      "auc": 0.7147094615150593,
+      "precision": null,
+      "recall": null,
+      "pred_range": null,
+      "epochs_run": 50,
+      "config": {
+        "d_model": 128,
+        "n_layers": 6,
+        "n_heads": 16,
+        "d_ff_ratio": 4,
+        "learning_rate": 1e-05,
+        "dropout": 0.3,
+        "weight_decay": 0.0001
+      },
+      "config_source": "200M",
+      "budget_used": "20M"
+    },
+    "200M_config_on_200M_budget": {
+      "auc": 0.7147094615150593,
+      "precision": null,
+      "recall": null,
+      "pred_range": null,
+      "epochs_run": 50,
+      "config": {
+        "d_model": 128,
+        "n_layers": 6,
+        "n_heads": 16,
+        "d_ff_ratio": 4,
+        "learning_rate": 1e-05,
+        "dropout": 0.3,
+        "weight_decay": 0.0001
+      },
+      "config_source": "200M",
+      "budget_used": "200M"
+    }
+  },
+  "timestamp": "2026-01-26T18:26:48.512150"
+}

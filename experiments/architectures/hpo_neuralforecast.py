@@ -75,8 +75,6 @@ FIXED_PARAMS = {
     "input_size": 80,  # Context length
     "h": 1,  # Forecast horizon
     "random_seed": 42,
-    "early_stop_patience_steps": 10,
-    "val_size": 100,  # Validation samples for early stopping
 }
 
 # Model-specific parameter mappings
@@ -220,7 +218,6 @@ def create_objective(model_type: str, data: dict, verbose: bool = False):
             "dropout": dropout,
             "loss": MSE(),
             "random_seed": FIXED_PARAMS["random_seed"],
-            "early_stop_patience_steps": FIXED_PARAMS["early_stop_patience_steps"],
             **extra_fixed,
         }
 
@@ -234,8 +231,8 @@ def create_objective(model_type: str, data: dict, verbose: bool = False):
             # Create NeuralForecast wrapper
             nf = NeuralForecast(models=[model], freq="D")
 
-            # Train (val_size required for early stopping)
-            nf.fit(df=data["df_train"], val_size=FIXED_PARAMS["val_size"])
+            # Train
+            nf.fit(df=data["df_train"])
 
             # Get validation predictions via cross-validation
             cv_results = nf.cross_validation(
