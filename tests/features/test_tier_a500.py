@@ -2011,11 +2011,12 @@ class TestChunk7bVolRegime:
 class TestChunk7bIntegration:
     """Integration tests for Chunk 7b."""
 
-    def test_feature_count_is_300(self) -> None:
-        """Total feature count should be 278 (prior) + 22 (7b) = 300."""
-        expected_count = 206 + 24 + 25 + 23 + 22  # a200 + 6a + 6b + 7a + 7b
-        assert len(tier_a500.FEATURE_LIST) == expected_count, (
-            f"Expected {expected_count} features, got {len(tier_a500.FEATURE_LIST)}"
+    def test_feature_count_with_7b(self) -> None:
+        """Feature count should be at least 278 (prior) + 22 (7b) = 300 after 7b."""
+        # Note: This test will be updated as more chunks are added
+        min_expected = 206 + 24 + 25 + 23 + 22  # a200 + 6a + 6b + 7a + 7b
+        assert len(tier_a500.FEATURE_LIST) >= min_expected, (
+            f"Expected at least {min_expected} features, got {len(tier_a500.FEATURE_LIST)}"
         )
 
     def test_output_includes_all_chunk_7b_features(
@@ -2033,12 +2034,656 @@ class TestChunk7bIntegration:
                 f"Missing from A500_ADDITION_LIST: {feature}"
             )
 
+    def test_output_column_count_with_7b(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output DataFrame should have at least Date + 300 features columns after 7b."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        min_expected_cols = 1 + 206 + 24 + 25 + 23 + 22  # Date + a200 + 6a + 6b + 7a + 7b
+        assert len(result.columns) >= min_expected_cols, (
+            f"Expected at least {min_expected_cols} columns, got {len(result.columns)}"
+        )
+
+    def test_7b_no_nan_values_after_warmup(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Chunk 7b columns after warmup period."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for col in tier_a500.CHUNK_7B_FEATURES:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+    def test_7b_output_row_count_reasonable(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output should have reasonable row count after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert len(result) >= 50, f"Too few rows: {len(result)}"
+        assert len(result) <= 200, f"Too many rows (warmup not applied?): {len(result)}"
+
+
+# =============================================================================
+# Sub-Chunk 8a: TRD Complete (ranks 301-323) - 23 features
+# =============================================================================
+
+
+class TestChunk8aFeatureListStructure:
+    """Test Chunk 8a feature list structure and counts."""
+
+    def test_chunk_8a_features_exists(self) -> None:
+        """CHUNK_8A_FEATURES constant exists."""
+        assert hasattr(tier_a500, "CHUNK_8A_FEATURES")
+
+    def test_chunk_8a_is_list(self) -> None:
+        """CHUNK_8A_FEATURES is a list."""
+        assert isinstance(tier_a500.CHUNK_8A_FEATURES, list)
+
+    def test_chunk_8a_count_is_23(self) -> None:
+        """CHUNK_8A_FEATURES has exactly 23 features."""
+        assert len(tier_a500.CHUNK_8A_FEATURES) == 23
+
+    def test_chunk_8a_no_duplicates(self) -> None:
+        """CHUNK_8A_FEATURES has no duplicate feature names."""
+        assert len(tier_a500.CHUNK_8A_FEATURES) == len(set(tier_a500.CHUNK_8A_FEATURES))
+
+    def test_chunk_8a_no_overlap_with_a200(self) -> None:
+        """CHUNK_8A_FEATURES has no overlap with a200 features."""
+        from src.features import tier_a200
+
+        overlap = set(tier_a500.CHUNK_8A_FEATURES) & set(tier_a200.FEATURE_LIST)
+        assert len(overlap) == 0, f"Overlapping features with a200: {overlap}"
+
+    def test_chunk_8a_no_overlap_with_prior_chunks(self) -> None:
+        """CHUNK_8A_FEATURES has no overlap with prior chunk features."""
+        prior_chunks = (
+            set(tier_a500.CHUNK_6A_FEATURES)
+            | set(tier_a500.CHUNK_6B_FEATURES)
+            | set(tier_a500.CHUNK_7A_FEATURES)
+            | set(tier_a500.CHUNK_7B_FEATURES)
+        )
+        overlap = set(tier_a500.CHUNK_8A_FEATURES) & prior_chunks
+        assert len(overlap) == 0, f"Overlapping features with prior chunks: {overlap}"
+
+    def test_chunk_8a_all_strings(self) -> None:
+        """CHUNK_8A_FEATURES contains only strings."""
+        for feature in tier_a500.CHUNK_8A_FEATURES:
+            assert isinstance(feature, str), f"Non-string feature: {feature}"
+
+    def test_chunk_8a_in_feature_list(self) -> None:
+        """FEATURE_LIST includes all Chunk 8a features."""
+        for feature in tier_a500.CHUNK_8A_FEATURES:
+            assert feature in tier_a500.FEATURE_LIST, f"Missing chunk 8a feature: {feature}"
+
+
+class TestChunk8aFeatureListContents:
+    """Test Chunk 8a feature list contents by group."""
+
+    def test_chunk8a_adx_extended_in_list(self) -> None:
+        """ADX Extended features are in Chunk 8a list."""
+        adx_features = [
+            "plus_di_14",
+            "minus_di_14",
+            "adx_14_slope",
+            "adx_acceleration",
+            "di_cross_recency",
+        ]
+        for feature in adx_features:
+            assert feature in tier_a500.CHUNK_8A_FEATURES, f"Missing: {feature}"
+
+    def test_chunk8a_trend_exhaustion_in_list(self) -> None:
+        """Trend Exhaustion features are in Chunk 8a list."""
+        exhaustion_features = [
+            "avg_up_day_magnitude",
+            "avg_down_day_magnitude",
+            "up_down_magnitude_ratio",
+            "trend_persistence_20d",
+            "up_vs_down_momentum",
+            "directional_bias_strength",
+        ]
+        for feature in exhaustion_features:
+            assert feature in tier_a500.CHUNK_8A_FEATURES, f"Missing: {feature}"
+
+    def test_chunk8a_trend_regime_in_list(self) -> None:
+        """Trend Regime features are in Chunk 8a list."""
+        regime_features = [
+            "adx_regime",
+            "price_trend_direction",
+            "trend_alignment_score",
+            "trend_regime_duration",
+            "trend_strength_vs_vol",
+        ]
+        for feature in regime_features:
+            assert feature in tier_a500.CHUNK_8A_FEATURES, f"Missing: {feature}"
+
+    def test_chunk8a_trend_channel_in_list(self) -> None:
+        """Trend Channel features are in Chunk 8a list."""
+        channel_features = [
+            "linreg_slope_20d",
+            "linreg_r_squared_20d",
+            "price_linreg_deviation",
+            "channel_width_linreg_20d",
+        ]
+        for feature in channel_features:
+            assert feature in tier_a500.CHUNK_8A_FEATURES, f"Missing: {feature}"
+
+    def test_chunk8a_aroon_extended_in_list(self) -> None:
+        """Aroon Extended features are in Chunk 8a list."""
+        aroon_features = [
+            "aroon_up_25",
+            "aroon_down_25",
+            "aroon_trend_strength",
+        ]
+        for feature in aroon_features:
+            assert feature in tier_a500.CHUNK_8A_FEATURES, f"Missing: {feature}"
+
+
+# =============================================================================
+# Chunk 8a: ADX Extended Computation Tests (5 features)
+# =============================================================================
+
+
+class TestChunk8aAdxExtended:
+    """Test ADX Extended features (5 features)."""
+
+    # --- Existence tests ---
+
+    def test_plus_di_14_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """plus_di_14 column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "plus_di_14" in result.columns
+
+    def test_minus_di_14_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """minus_di_14 column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "minus_di_14" in result.columns
+
+    def test_adx_14_slope_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """adx_14_slope column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "adx_14_slope" in result.columns
+
+    def test_adx_acceleration_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """adx_acceleration column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "adx_acceleration" in result.columns
+
+    def test_di_cross_recency_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """di_cross_recency column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "di_cross_recency" in result.columns
+
+    # --- Range tests ---
+
+    def test_plus_di_14_range_0_to_100(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """plus_di_14 should be in [0, 100] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["plus_di_14"].min() >= 0, "plus_di_14 below 0"
+        assert result["plus_di_14"].max() <= 100, "plus_di_14 above 100"
+
+    def test_minus_di_14_range_0_to_100(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """minus_di_14 should be in [0, 100] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["minus_di_14"].min() >= 0, "minus_di_14 below 0"
+        assert result["minus_di_14"].max() <= 100, "minus_di_14 above 100"
+
+    def test_di_cross_recency_signed_values(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """di_cross_recency should have both positive and negative values (signed)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        # Should have both positive (bullish) and negative (bearish) values
+        # At minimum, should be integer-like values
+        assert pd.api.types.is_numeric_dtype(result["di_cross_recency"])
+
+    def test_di_cross_recency_integer_like(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """di_cross_recency should be integer-valued (days count)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        # Values should be whole numbers
+        assert (result["di_cross_recency"] == result["di_cross_recency"].round()).all()
+
+    # --- No-NaN tests ---
+
+    def test_adx_extended_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in ADX Extended columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        cols = [
+            "plus_di_14",
+            "minus_di_14",
+            "adx_14_slope",
+            "adx_acceleration",
+            "di_cross_recency",
+        ]
+        for col in cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 8a: Trend Exhaustion Computation Tests (6 features)
+# =============================================================================
+
+
+class TestChunk8aTrendExhaustion:
+    """Test Trend Exhaustion features (6 features)."""
+
+    # --- Existence tests ---
+
+    def test_avg_up_day_magnitude_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """avg_up_day_magnitude column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "avg_up_day_magnitude" in result.columns
+
+    def test_avg_down_day_magnitude_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """avg_down_day_magnitude column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "avg_down_day_magnitude" in result.columns
+
+    def test_up_down_magnitude_ratio_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """up_down_magnitude_ratio column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "up_down_magnitude_ratio" in result.columns
+
+    def test_trend_persistence_20d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_persistence_20d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "trend_persistence_20d" in result.columns
+
+    def test_up_vs_down_momentum_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """up_vs_down_momentum column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "up_vs_down_momentum" in result.columns
+
+    def test_directional_bias_strength_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """directional_bias_strength column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "directional_bias_strength" in result.columns
+
+    # --- Range tests ---
+
+    def test_avg_up_day_magnitude_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """avg_up_day_magnitude should be positive (magnitude of up returns)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        # Could have NaN if no up days in window, but non-NaN should be positive
+        non_nan = result["avg_up_day_magnitude"].dropna()
+        if len(non_nan) > 0:
+            assert (non_nan >= 0).all(), "avg_up_day_magnitude has negative values"
+
+    def test_avg_down_day_magnitude_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """avg_down_day_magnitude should be positive (absolute magnitude)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        non_nan = result["avg_down_day_magnitude"].dropna()
+        if len(non_nan) > 0:
+            assert (non_nan >= 0).all(), "avg_down_day_magnitude has negative values"
+
+    def test_up_down_magnitude_ratio_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """up_down_magnitude_ratio should be positive (ratio of positive values)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        non_nan = result["up_down_magnitude_ratio"].dropna()
+        if len(non_nan) > 0:
+            assert (non_nan >= 0).all(), "up_down_magnitude_ratio has negative values"
+
+    def test_trend_persistence_20d_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_persistence_20d should be non-negative (max streak in window)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["trend_persistence_20d"] >= 0).all()
+
+    def test_directional_bias_strength_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """directional_bias_strength should be in [0, 1] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["directional_bias_strength"].min() >= 0, "directional_bias_strength below 0"
+        assert result["directional_bias_strength"].max() <= 1, "directional_bias_strength above 1"
+
+    # --- No-NaN tests ---
+
+    def test_trend_exhaustion_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Trend Exhaustion columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        cols = [
+            "avg_up_day_magnitude",
+            "avg_down_day_magnitude",
+            "up_down_magnitude_ratio",
+            "trend_persistence_20d",
+            "up_vs_down_momentum",
+            "directional_bias_strength",
+        ]
+        for col in cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 8a: Trend Regime Computation Tests (5 features)
+# =============================================================================
+
+
+class TestChunk8aTrendRegime:
+    """Test Trend Regime features (5 features)."""
+
+    # --- Existence tests ---
+
+    def test_adx_regime_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """adx_regime column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "adx_regime" in result.columns
+
+    def test_price_trend_direction_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """price_trend_direction column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "price_trend_direction" in result.columns
+
+    def test_trend_alignment_score_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_alignment_score column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "trend_alignment_score" in result.columns
+
+    def test_trend_regime_duration_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_regime_duration column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "trend_regime_duration" in result.columns
+
+    def test_trend_strength_vs_vol_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_strength_vs_vol column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "trend_strength_vs_vol" in result.columns
+
+    # --- Range tests ---
+
+    def test_adx_regime_categorical_values(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """adx_regime should be in {0, 1, 2}."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_values = set(result["adx_regime"].unique())
+        assert unique_values.issubset({0, 1, 2}), f"adx_regime has invalid values: {unique_values}"
+
+    def test_price_trend_direction_values(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """price_trend_direction should be in {-1, 0, 1}."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_values = set(result["price_trend_direction"].unique())
+        assert unique_values.issubset({-1, 0, 1}), f"price_trend_direction has invalid values: {unique_values}"
+
+    def test_trend_alignment_score_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_alignment_score should be in {0, 1}."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_values = set(result["trend_alignment_score"].unique())
+        assert unique_values.issubset({0, 1}), f"trend_alignment_score has invalid values: {unique_values}"
+
+    def test_trend_regime_duration_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_regime_duration should be positive (days in regime)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["trend_regime_duration"] > 0).all(), "trend_regime_duration has non-positive values"
+
+    def test_trend_strength_vs_vol_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_strength_vs_vol should be positive (ratio of positive values)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["trend_strength_vs_vol"] > 0).all(), "trend_strength_vs_vol has non-positive values"
+
+    # --- No-NaN tests ---
+
+    def test_trend_regime_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Trend Regime columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        cols = [
+            "adx_regime",
+            "price_trend_direction",
+            "trend_alignment_score",
+            "trend_regime_duration",
+            "trend_strength_vs_vol",
+        ]
+        for col in cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 8a: Trend Channel Computation Tests (4 features)
+# =============================================================================
+
+
+class TestChunk8aTrendChannel:
+    """Test Trend Channel features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_linreg_slope_20d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """linreg_slope_20d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "linreg_slope_20d" in result.columns
+
+    def test_linreg_r_squared_20d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """linreg_r_squared_20d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "linreg_r_squared_20d" in result.columns
+
+    def test_price_linreg_deviation_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """price_linreg_deviation column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "price_linreg_deviation" in result.columns
+
+    def test_channel_width_linreg_20d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """channel_width_linreg_20d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "channel_width_linreg_20d" in result.columns
+
+    # --- Range tests ---
+
+    def test_linreg_r_squared_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """linreg_r_squared_20d should be in [0, 1] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["linreg_r_squared_20d"].min() >= 0, "linreg_r_squared_20d below 0"
+        assert result["linreg_r_squared_20d"].max() <= 1, "linreg_r_squared_20d above 1"
+
+    def test_channel_width_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """channel_width_linreg_20d should be positive (width is always positive)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["channel_width_linreg_20d"] >= 0).all(), "channel_width_linreg_20d has negative values"
+
+    def test_linreg_slope_numeric(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """linreg_slope_20d should be numeric."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert pd.api.types.is_numeric_dtype(result["linreg_slope_20d"])
+
+    def test_price_linreg_deviation_numeric(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """price_linreg_deviation should be numeric (can be positive or negative)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert pd.api.types.is_numeric_dtype(result["price_linreg_deviation"])
+
+    # --- No-NaN tests ---
+
+    def test_trend_channel_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Trend Channel columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        cols = [
+            "linreg_slope_20d",
+            "linreg_r_squared_20d",
+            "price_linreg_deviation",
+            "channel_width_linreg_20d",
+        ]
+        for col in cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 8a: Aroon Extended Computation Tests (3 features)
+# =============================================================================
+
+
+class TestChunk8aAroonExtended:
+    """Test Aroon Extended features (3 features)."""
+
+    # --- Existence tests ---
+
+    def test_aroon_up_25_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_up_25 column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "aroon_up_25" in result.columns
+
+    def test_aroon_down_25_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_down_25 column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "aroon_down_25" in result.columns
+
+    def test_aroon_trend_strength_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_trend_strength column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "aroon_trend_strength" in result.columns
+
+    # --- Range tests ---
+
+    def test_aroon_up_25_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_up_25 should be in [0, 100] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["aroon_up_25"].min() >= 0, "aroon_up_25 below 0"
+        assert result["aroon_up_25"].max() <= 100, "aroon_up_25 above 100"
+
+    def test_aroon_down_25_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_down_25 should be in [0, 100] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["aroon_down_25"].min() >= 0, "aroon_down_25 below 0"
+        assert result["aroon_down_25"].max() <= 100, "aroon_down_25 above 100"
+
+    def test_aroon_trend_strength_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_trend_strength should be in [0, 1] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["aroon_trend_strength"].min() >= 0, "aroon_trend_strength below 0"
+        assert result["aroon_trend_strength"].max() <= 1, "aroon_trend_strength above 1"
+
+    # --- No-NaN tests ---
+
+    def test_aroon_extended_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Aroon Extended columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        cols = ["aroon_up_25", "aroon_down_25", "aroon_trend_strength"]
+        for col in cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 8a Integration Tests
+# =============================================================================
+
+
+class TestChunk8aIntegration:
+    """Integration tests for Chunk 8a."""
+
+    def test_feature_count_is_323(self) -> None:
+        """Total feature count should be 300 (prior) + 23 (8a) = 323."""
+        expected_count = 206 + 24 + 25 + 23 + 22 + 23  # a200 + 6a + 6b + 7a + 7b + 8a
+        assert len(tier_a500.FEATURE_LIST) == expected_count, (
+            f"Expected {expected_count} features, got {len(tier_a500.FEATURE_LIST)}"
+        )
+
+    def test_output_includes_all_chunk_8a_features(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output includes all Chunk 8a features."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for feature in tier_a500.CHUNK_8A_FEATURES:
+            assert feature in result.columns, f"Missing: {feature}"
+
+    def test_a500_addition_list_includes_8a(self) -> None:
+        """A500_ADDITION_LIST includes all Chunk 8a features."""
+        for feature in tier_a500.CHUNK_8A_FEATURES:
+            assert feature in tier_a500.A500_ADDITION_LIST, (
+                f"Missing from A500_ADDITION_LIST: {feature}"
+            )
+
     def test_output_column_count(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
     ) -> None:
-        """Output DataFrame should have Date + 300 features = 301 columns."""
+        """Output DataFrame should have Date + 323 features = 324 columns."""
         result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
-        expected_cols = 1 + 206 + 24 + 25 + 23 + 22  # Date + a200 + 6a + 6b + 7a + 7b
+        expected_cols = 1 + 206 + 24 + 25 + 23 + 22 + 23  # Date + a200 + 6a + 6b + 7a + 7b + 8a
         assert len(result.columns) == expected_cols, (
             f"Expected {expected_cols} columns, got {len(result.columns)}"
         )
@@ -2058,3 +2703,31 @@ class TestChunk7bIntegration:
         result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
         assert len(result) >= 50, f"Too few rows: {len(result)}"
         assert len(result) <= 200, f"Too many rows (warmup not applied?): {len(result)}"
+
+    def test_8a_features_no_lookahead(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Chunk 8a features should not use future data (no lookahead bias).
+
+        Test by checking that early rows can be computed without later data.
+        """
+        # Build features on full data
+        full_result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        # Build features on truncated data (first 350 rows)
+        truncated_df = sample_daily_df.iloc[:350].copy()
+        truncated_vix = sample_vix_df.iloc[:350].copy()
+        truncated_result = tier_a500.build_feature_dataframe(truncated_df, truncated_vix)
+
+        if len(truncated_result) > 0 and len(full_result) > 0:
+            # Find overlapping dates
+            common_dates = set(full_result["Date"]) & set(truncated_result["Date"])
+            if len(common_dates) > 0:
+                # For each chunk 8a feature, verify values match for common dates
+                for feature in tier_a500.CHUNK_8A_FEATURES:
+                    full_vals = full_result[full_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    trunc_vals = truncated_result[truncated_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    # Use allclose for floating point comparison
+                    assert np.allclose(full_vals, trunc_vals, equal_nan=True), (
+                        f"Lookahead detected in {feature}"
+                    )

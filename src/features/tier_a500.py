@@ -171,6 +171,38 @@ CHUNK_7B_FEATURES = [
     "volume_trend_strength",
 ]
 
+# Sub-Chunk 8a: TRD Complete (ranks 301-323) - 23 features
+CHUNK_8A_FEATURES = [
+    # ADX Extended (5 features)
+    "plus_di_14",
+    "minus_di_14",
+    "adx_14_slope",
+    "adx_acceleration",
+    "di_cross_recency",
+    # Trend Exhaustion (6 features)
+    "avg_up_day_magnitude",
+    "avg_down_day_magnitude",
+    "up_down_magnitude_ratio",
+    "trend_persistence_20d",
+    "up_vs_down_momentum",
+    "directional_bias_strength",
+    # Trend Regime (5 features)
+    "adx_regime",
+    "price_trend_direction",
+    "trend_alignment_score",
+    "trend_regime_duration",
+    "trend_strength_vs_vol",
+    # Trend Channel (4 features)
+    "linreg_slope_20d",
+    "linreg_r_squared_20d",
+    "price_linreg_deviation",
+    "channel_width_linreg_20d",
+    # Aroon Extended (3 features)
+    "aroon_up_25",
+    "aroon_down_25",
+    "aroon_trend_strength",
+]
+
 # 294 new indicators added in tier a500 (ranks 207-500)
 # Built incrementally across sub-chunks 6a through 11b
 A500_ADDITION_LIST = (
@@ -178,6 +210,7 @@ A500_ADDITION_LIST = (
     + CHUNK_6B_FEATURES
     + CHUNK_7A_FEATURES
     + CHUNK_7B_FEATURES
+    + CHUNK_8A_FEATURES
     # ... remaining chunks
 )
 
@@ -1476,6 +1509,429 @@ def _compute_chunk_7b(
     return features
 
 
+# =============================================================================
+# Sub-Chunk 8a computation functions (ranks 301-323)
+# =============================================================================
+
+
+def _compute_8a_adx_extended(
+    high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute ADX Extended features.
+
+    Features:
+    - plus_di_14: Raw +DI (0-100)
+    - minus_di_14: Raw -DI (0-100)
+    - adx_14_slope: ADX - ADX.shift(5)
+    - adx_acceleration: adx_slope - adx_slope.shift(5)
+    - di_cross_recency: Signed days since +DI crossed -DI
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 5 ADX Extended features
+    """
+    high_arr = high.values
+    low_arr = low.values
+    close_arr = close.values
+    features = {}
+
+    # Compute +DI and -DI using TA-Lib
+    plus_di = pd.Series(talib.PLUS_DI(high_arr, low_arr, close_arr, timeperiod=14), index=close.index)
+    minus_di = pd.Series(talib.MINUS_DI(high_arr, low_arr, close_arr, timeperiod=14), index=close.index)
+    adx = pd.Series(talib.ADX(high_arr, low_arr, close_arr, timeperiod=14), index=close.index)
+
+    features["plus_di_14"] = plus_di
+    features["minus_di_14"] = minus_di
+
+    # ADX slope (5-day change)
+    adx_slope = adx - adx.shift(5)
+    features["adx_14_slope"] = adx_slope
+
+    # ADX acceleration (change in slope)
+    features["adx_acceleration"] = adx_slope - adx_slope.shift(5)
+
+    # DI cross recency: signed days since +DI crossed -DI
+    # Positive = +DI > -DI (bullish), Negative = -DI > +DI (bearish)
+    result = pd.Series(0, index=close.index, dtype=int)
+    bullish_mask = plus_di >= minus_di
+    days_count = 0
+    prev_bullish = None
+
+    for i in range(len(close)):
+        if pd.isna(plus_di.iloc[i]) or pd.isna(minus_di.iloc[i]):
+            result.iloc[i] = 0
+            days_count = 0
+            prev_bullish = None
+        else:
+            current_bullish = bullish_mask.iloc[i]
+            if prev_bullish is None:
+                days_count = 1
+            elif current_bullish != prev_bullish:
+                days_count = 1
+            else:
+                days_count += 1
+            result.iloc[i] = days_count if current_bullish else -days_count
+            prev_bullish = current_bullish
+
+    features["di_cross_recency"] = result
+
+    return features
+
+
+def _compute_8a_trend_exhaustion(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute Trend Exhaustion features.
+
+    Features:
+    - avg_up_day_magnitude: 20d mean of returns where ret > 0
+    - avg_down_day_magnitude: 20d mean of abs(returns where ret < 0)
+    - up_down_magnitude_ratio: avg_up / avg_down
+    - trend_persistence_20d: 20d max of consecutive up/down streaks
+    - up_vs_down_momentum: sum(up returns) / sum(abs(down returns)) over 20d
+    - directional_bias_strength: abs(up_days_ratio - 0.5) * 2
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with 6 Trend Exhaustion features
+    """
+    features = {}
+    window = 20
+
+    # Calculate returns
+    ret = close.pct_change() * 100  # As percentage for easier interpretation
+
+    # Separate up and down returns
+    up_ret = ret.where(ret > 0, 0)
+    down_ret = ret.where(ret < 0, 0).abs()  # Absolute value of down returns
+
+    # Count up and down days
+    up_day = (ret > 0).astype(int)
+    down_day = (ret < 0).astype(int)
+
+    # Rolling sums and counts
+    up_sum = up_ret.rolling(window=window, min_periods=window).sum()
+    down_sum = down_ret.rolling(window=window, min_periods=window).sum()
+    up_count = up_day.rolling(window=window, min_periods=window).sum()
+    down_count = down_day.rolling(window=window, min_periods=window).sum()
+
+    # Average magnitude of up days
+    avg_up = up_sum / up_count.replace(0, np.nan)
+    avg_up = avg_up.fillna(0)  # If no up days, magnitude is 0
+    features["avg_up_day_magnitude"] = avg_up
+
+    # Average magnitude of down days
+    avg_down = down_sum / down_count.replace(0, np.nan)
+    avg_down = avg_down.fillna(0)  # If no down days, magnitude is 0
+    features["avg_down_day_magnitude"] = avg_down
+
+    # Up/down magnitude ratio (handle division by zero)
+    ratio = avg_up / avg_down.replace(0, np.nan)
+    ratio = ratio.fillna(1.0)  # If no down days, ratio is 1.0 (neutral)
+    features["up_down_magnitude_ratio"] = ratio
+
+    # Trend persistence: max consecutive streak in 20-day window
+    # Calculate consecutive up/down streaks
+    up_streak = pd.Series(0, index=close.index, dtype=int)
+    down_streak = pd.Series(0, index=close.index, dtype=int)
+    current_up = 0
+    current_down = 0
+
+    for i in range(len(close)):
+        if pd.isna(ret.iloc[i]):
+            up_streak.iloc[i] = 0
+            down_streak.iloc[i] = 0
+            current_up = 0
+            current_down = 0
+        elif ret.iloc[i] > 0:
+            current_up += 1
+            current_down = 0
+            up_streak.iloc[i] = current_up
+            down_streak.iloc[i] = 0
+        elif ret.iloc[i] < 0:
+            current_down += 1
+            current_up = 0
+            down_streak.iloc[i] = current_down
+            up_streak.iloc[i] = 0
+        else:  # ret == 0
+            # Flat day - reset both streaks
+            current_up = 0
+            current_down = 0
+            up_streak.iloc[i] = 0
+            down_streak.iloc[i] = 0
+
+    # Max streak in rolling window (max of up or down streak)
+    max_streak = pd.concat([up_streak, down_streak], axis=1).max(axis=1)
+    features["trend_persistence_20d"] = max_streak.rolling(window=window, min_periods=window).max()
+
+    # Up vs down momentum
+    momentum = up_sum / down_sum.replace(0, np.nan)
+    momentum = momentum.fillna(1.0)  # If no down returns, momentum is neutral
+    features["up_vs_down_momentum"] = momentum
+
+    # Directional bias strength
+    up_days_ratio = up_count / window
+    directional_bias = (up_days_ratio - 0.5).abs() * 2
+    features["directional_bias_strength"] = directional_bias
+
+    return features
+
+
+def _compute_8a_trend_regime(
+    high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Trend Regime features.
+
+    Features:
+    - adx_regime: 0 if ADX < 20, 1 if 20-25, 2 if > 25
+    - price_trend_direction: sign(SMA_50_slope) with threshold
+    - trend_alignment_score: 1 if DI-spread and price direction agree
+    - trend_regime_duration: Days in current adx_regime
+    - trend_strength_vs_vol: ADX / (ATR_pct * 10)
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 5 Trend Regime features
+    """
+    high_arr = high.values
+    low_arr = low.values
+    close_arr = close.values
+    features = {}
+
+    # Get ADX
+    adx = pd.Series(talib.ADX(high_arr, low_arr, close_arr, timeperiod=14), index=close.index)
+
+    # ADX regime: 0 = ranging (ADX < 20), 1 = weak trend (20-25), 2 = strong trend (> 25)
+    adx_regime = pd.Series(0, index=close.index, dtype=int)
+    adx_regime = adx_regime.where(adx < 20, 1)  # Set to 1 where ADX >= 20
+    adx_regime = adx_regime.where(adx <= 25, 2)  # Set to 2 where ADX > 25
+    # Handle NaN in ADX - set to 0 (ranging)
+    adx_regime = adx_regime.fillna(0).astype(int)
+    features["adx_regime"] = adx_regime
+
+    # Price trend direction: based on SMA_50 slope
+    sma_50 = pd.Series(talib.SMA(close_arr, timeperiod=50), index=close.index)
+    sma_50_slope = sma_50 - sma_50.shift(5)
+
+    # Threshold: slope > 0.5% of price is bullish, < -0.5% is bearish, else neutral
+    slope_pct = sma_50_slope / sma_50 * 100
+    price_trend_direction = pd.Series(0, index=close.index, dtype=int)
+    price_trend_direction = price_trend_direction.where(slope_pct.abs() <= 0.5, 0)
+    price_trend_direction = price_trend_direction.mask(slope_pct > 0.5, 1)
+    price_trend_direction = price_trend_direction.mask(slope_pct < -0.5, -1)
+    price_trend_direction = price_trend_direction.fillna(0).astype(int)
+    features["price_trend_direction"] = price_trend_direction
+
+    # Trend alignment: DI-spread direction agrees with price direction
+    plus_di = pd.Series(talib.PLUS_DI(high_arr, low_arr, close_arr, timeperiod=14), index=close.index)
+    minus_di = pd.Series(talib.MINUS_DI(high_arr, low_arr, close_arr, timeperiod=14), index=close.index)
+    di_direction = np.sign(plus_di - minus_di)
+
+    # Alignment: both bullish (DI > 0 and price = 1) or both bearish (DI < 0 and price = -1)
+    # or both neutral
+    alignment = ((di_direction > 0) & (price_trend_direction == 1)) | \
+                ((di_direction < 0) & (price_trend_direction == -1)) | \
+                ((di_direction == 0) & (price_trend_direction == 0))
+    features["trend_alignment_score"] = alignment.astype(int)
+
+    # Trend regime duration: consecutive days in current regime
+    regime_duration = pd.Series(0, index=close.index, dtype=int)
+    days_count = 0
+    prev_regime = None
+
+    for i in range(len(close)):
+        current_regime = adx_regime.iloc[i]
+        if pd.isna(adx.iloc[i]):
+            regime_duration.iloc[i] = 1
+            days_count = 1
+            prev_regime = None
+        else:
+            if prev_regime is None or current_regime != prev_regime:
+                days_count = 1
+            else:
+                days_count += 1
+            regime_duration.iloc[i] = days_count
+            prev_regime = current_regime
+
+    features["trend_regime_duration"] = regime_duration
+
+    # Trend strength vs volatility: ADX / (ATR_pct * 10)
+    atr = pd.Series(talib.ATR(high_arr, low_arr, close_arr, timeperiod=14), index=close.index)
+    atr_pct = atr / close * 100
+    # Scale ATR_pct to make ratio more interpretable
+    trend_vs_vol = adx / (atr_pct * 10).replace(0, np.nan)
+    trend_vs_vol = trend_vs_vol.fillna(0)
+    features["trend_strength_vs_vol"] = trend_vs_vol
+
+    return features
+
+
+def _compute_8a_trend_channel(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute Trend Channel features using linear regression.
+
+    Features:
+    - linreg_slope_20d: Linear regression slope annualized as %
+    - linreg_r_squared_20d: R-squared (goodness of fit) in [0, 1]
+    - price_linreg_deviation: (Close - linreg) / Close * 100
+    - channel_width_linreg_20d: 2 * std(residuals) / Close * 100
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with 4 Trend Channel features
+    """
+    close_arr = close.values
+    features = {}
+    window = 20
+
+    # Use TA-Lib's LINEARREG for regression value
+    linreg = pd.Series(talib.LINEARREG(close_arr, timeperiod=window), index=close.index)
+    linreg_slope = pd.Series(talib.LINEARREG_SLOPE(close_arr, timeperiod=window), index=close.index)
+
+    # Annualized slope as percentage of price
+    # slope is price change per day, annualize by * 252, then express as % of price
+    linreg_slope_pct = (linreg_slope * 252) / close * 100
+    features["linreg_slope_20d"] = linreg_slope_pct
+
+    # R-squared: compute manually using rolling window
+    def compute_r_squared(x):
+        """Compute R-squared for a rolling window."""
+        if len(x) < window:
+            return np.nan
+        y = np.array(x)
+        t = np.arange(len(y))
+        if np.std(y) == 0:
+            return 1.0  # Perfect fit if no variance
+        # Linear regression
+        slope, intercept = np.polyfit(t, y, 1)
+        y_pred = slope * t + intercept
+        ss_res = np.sum((y - y_pred) ** 2)
+        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        if ss_tot == 0:
+            return 1.0
+        return 1 - ss_res / ss_tot
+
+    r_squared = close.rolling(window=window, min_periods=window).apply(
+        compute_r_squared, raw=True
+    )
+    features["linreg_r_squared_20d"] = r_squared
+
+    # Price deviation from linear regression
+    deviation = (close - linreg) / close * 100
+    features["price_linreg_deviation"] = deviation
+
+    # Channel width: 2 * std of residuals as % of price
+    def compute_channel_width(x, idx):
+        """Compute channel width as 2*std of residuals."""
+        if len(x) < window:
+            return np.nan
+        y = np.array(x)
+        t = np.arange(len(y))
+        # Linear regression
+        slope, intercept = np.polyfit(t, y, 1)
+        y_pred = slope * t + intercept
+        residuals = y - y_pred
+        return 2 * np.std(residuals)
+
+    # Rolling std of residuals
+    def channel_width_rolling(x):
+        if len(x) < window:
+            return np.nan
+        y = np.array(x)
+        t = np.arange(len(y))
+        slope, intercept = np.polyfit(t, y, 1)
+        y_pred = slope * t + intercept
+        residuals = y - y_pred
+        current_price = y[-1]
+        return 2 * np.std(residuals) / current_price * 100
+
+    channel_width = close.rolling(window=window, min_periods=window).apply(
+        channel_width_rolling, raw=True
+    )
+    features["channel_width_linreg_20d"] = channel_width
+
+    return features
+
+
+def _compute_8a_aroon_extended(
+    high: pd.Series, low: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Aroon Extended features.
+
+    Features:
+    - aroon_up_25: Aroon Up with 25-period
+    - aroon_down_25: Aroon Down with 25-period
+    - aroon_trend_strength: abs(aroon_up - aroon_down) / 100
+
+    Args:
+        high: High price series
+        low: Low price series
+
+    Returns:
+        Dict with 3 Aroon Extended features
+    """
+    high_arr = high.values
+    low_arr = low.values
+    features = {}
+
+    # TA-Lib AROON returns (aroon_down, aroon_up)
+    aroon_down, aroon_up = talib.AROON(high_arr, low_arr, timeperiod=25)
+    aroon_up = pd.Series(aroon_up, index=high.index)
+    aroon_down = pd.Series(aroon_down, index=high.index)
+
+    features["aroon_up_25"] = aroon_up
+    features["aroon_down_25"] = aroon_down
+
+    # Trend strength: magnitude of difference
+    features["aroon_trend_strength"] = (aroon_up - aroon_down).abs() / 100
+
+    return features
+
+
+def _compute_chunk_8a(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+) -> Mapping[str, pd.Series]:
+    """Compute all Sub-Chunk 8a features.
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with all 23 Chunk 8a features
+    """
+    features = {}
+
+    # ADX Extended (5 features)
+    features.update(_compute_8a_adx_extended(high, low, close))
+
+    # Trend Exhaustion (6 features)
+    features.update(_compute_8a_trend_exhaustion(close))
+
+    # Trend Regime (5 features)
+    features.update(_compute_8a_trend_regime(high, low, close))
+
+    # Trend Channel (4 features)
+    features.update(_compute_8a_trend_channel(close))
+
+    # Aroon Extended (3 features)
+    features.update(_compute_8a_aroon_extended(high, low))
+
+    return features
+
+
 def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.DataFrame:
     """Build feature DataFrame with all tier_a500 indicators.
 
@@ -1538,6 +1994,11 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
     # =========================================================================
     volume = df["Volume"]
     features.update(_compute_chunk_7b(close, high, low, volume))
+
+    # =========================================================================
+    # Sub-Chunk 8a: TRD Complete (ranks 301-323)
+    # =========================================================================
+    features.update(_compute_chunk_8a(high, low, close))
 
     # Create feature DataFrame for new a500 features
     new_features_df = pd.DataFrame(features)
