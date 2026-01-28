@@ -14,7 +14,7 @@ class TestLoadBestParams:
         """Test that load_best_params returns dict for valid file."""
         from scripts.validate_cross_budget import load_best_params
 
-        # Create test best_params.json
+        # Create test best_params.json (using legacy h1 format)
         params = {
             "best_params": {"d_model": 64, "n_layers": 3, "n_heads": 4},
             "best_value": 0.72,
@@ -24,17 +24,37 @@ class TestLoadBestParams:
         with open(budget_dir / "best_params.json", "w") as f:
             json.dump(params, f)
 
-        result = load_best_params("2M", str(tmp_path), 1)
+        result = load_best_params("2M", str(tmp_path), 1, "a100")
 
         assert result is not None
         assert result["best_params"]["d_model"] == 64
         assert result["best_value"] == 0.72
 
+    def test_load_best_params_current_format(self, tmp_path):
+        """Test that load_best_params finds current naming format."""
+        from scripts.validate_cross_budget import load_best_params
+
+        # Create test best_params.json (using current format: hpo_2m_1_a50)
+        params = {
+            "best_params": {"d_model": 96, "n_layers": 4, "n_heads": 8},
+            "best_value": 0.73,
+        }
+        budget_dir = tmp_path / "hpo_2m_1_a50"
+        budget_dir.mkdir()
+        with open(budget_dir / "best_params.json", "w") as f:
+            json.dump(params, f)
+
+        result = load_best_params("2M", str(tmp_path), 1, "a50")
+
+        assert result is not None
+        assert result["best_params"]["d_model"] == 96
+        assert result["best_value"] == 0.73
+
     def test_load_best_params_missing(self, tmp_path):
         """Test that load_best_params returns None for missing file."""
         from scripts.validate_cross_budget import load_best_params
 
-        result = load_best_params("2M", str(tmp_path), 1)
+        result = load_best_params("2M", str(tmp_path), 1, "a100")
 
         assert result is None
 

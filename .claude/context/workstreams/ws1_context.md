@@ -1,36 +1,50 @@
 # Workstream 1 Context: Feature Generation (tier_a500)
-# Last Updated: 2026-01-27 16:30
+# Last Updated: 2026-01-27 21:00
 
 ## Identity
 - **ID**: ws1
 - **Name**: feature_generation
-- **Focus**: tier_a500 implementation (Sub-Chunk 6a complete)
+- **Focus**: tier_a500 implementation (Sub-Chunks 6a + 6b + 7a complete)
 - **Status**: active
 
 ---
 
 ## Current Task
-- **Working on**: tier_a500 Sub-Chunk 6a implementation
-- **Status**: ✅ COMPLETE - 24 features implemented, tests passing
+- **Working on**: tier_a500 Sub-Chunk 7a implementation
+- **Status**: COMPLETE - 23 VOL features implemented, all tests passing, COMMITTED
 
 ---
 
 ## Progress Summary
 
-### Completed This Session (2026-01-27)
-- [x] Created `src/features/tier_a500.py` skeleton
-- [x] Created `tests/features/test_tier_a500.py` (56 tests)
-- [x] Implemented Sub-Chunk 6a: MA Extended Part 1 (24 features)
-- [x] All 1062 tests pass
+### Completed This Session (2026-01-27 - Night)
+- [x] Wrote ~58 new tests for Sub-Chunk 7a (TDD red phase)
+- [x] Implemented Sub-Chunk 7a: VOL Complete (23 features)
+- [x] All 1178 tier_a500 tests pass
+- [x] COMMITTED: `fb5eeab feat: Add tier_a500 Sub-Chunk 7a (23 VOL features)`
 
-### Sub-Chunk 6a Features (24 total)
+### Sub-Chunk 7a Features (23 total)
 | Category | Features |
 |----------|----------|
-| New SMA periods (4) | sma_5, sma_14, sma_21, sma_63 |
-| New EMA periods (5) | ema_5, ema_9, ema_50, ema_100, ema_200 |
-| MA slopes (6) | sma_5_slope, sma_21_slope, sma_63_slope, ema_9_slope, ema_50_slope, ema_100_slope |
-| Price distances (5) | price_pct_from_sma_5, price_pct_from_sma_21, price_pct_from_ema_9, price_pct_from_ema_50, price_pct_from_ema_100 |
-| MA proximities (4) | sma_5_21_proximity, sma_21_50_proximity, sma_63_200_proximity, ema_9_50_proximity |
+| Extended ATR (4) | atr_5, atr_21, atr_5_pct, atr_21_pct |
+| ATR Dynamics (4) | atr_5_21_ratio, atr_expansion_5d, atr_acceleration, atr_percentile_20d |
+| True Range (3) | tr_pct, tr_pct_zscore_20d, consecutive_high_vol_days |
+| Vol Estimators (3) | rogers_satchell_volatility, yang_zhang_volatility, historical_volatility_10d |
+| BB Extended (4) | bb_width_slope, bb_width_acceleration, bb_width_percentile_20d, price_bb_band_position |
+| Keltner Channel (3) | kc_width, kc_position, bb_kc_ratio |
+| Vol Regime (2) | vol_regime_change_intensity, vol_clustering_score |
+
+### Custom Implementations in 7a
+Several features required custom implementations (not TA-Lib):
+- **Rogers-Satchell volatility**: Handles price drift
+- **Yang-Zhang volatility**: Combines overnight, open-to-close, RS components (most efficient estimator)
+- **Rolling percentile functions**: For atr_percentile_20d and bb_width_percentile_20d
+- **Consecutive high vol days**: Run-length encoder for volatility spikes
+- **Vol clustering score**: Uses pandas autocorrelation for GARCH-like behavior
+
+### Previous Sessions
+- **2026-01-27 18:30**: Sub-Chunk 6b (25 features) - COMMITTED as part of 6a commit
+- **2026-01-27 16:30**: Sub-Chunk 6a (24 features) - COMMITTED `9ab9dea`
 
 ### Previously Completed
 - **tier_a100 implementation** (all 8 chunks, 100 indicators)
@@ -40,20 +54,21 @@
 - **SPY_dataset_a200_combined.parquet** - built and validated
 
 ### Test Status
-- **1062 passed**, 2 skipped (56 new tests for tier_a500)
+- **1178 passed**, 2 skipped
+- Includes ~168 tests for tier_a500 (56 for 6a, 54 for 6b, 58 for 7a)
 
 ---
 
-## tier_a500 Plan Summary
+## tier_a500 Progress
 
 **Target**: 500 total features (206 from a200 + 294 new)
 **Structure**: 12 sub-chunks (6a through 11b), ~25 features each
 
 | Sub-Chunk | Ranks | Features | Status |
 |-----------|-------|----------|--------|
-| **6a** | 207-230 | 24 | ✅ COMPLETE |
-| 6b | 231-255 | ~25 | PENDING - MA Durations/Crosses + OSC Extended |
-| 7a | 256-278 | ~23 | PENDING - VOL Complete |
+| **6a** | 207-230 | 24 | COMPLETE (COMMITTED) |
+| **6b** | 231-255 | 25 | COMPLETE (COMMITTED) |
+| **7a** | 256-278 | 23 | COMPLETE (COMMITTED) |
 | 7b | 279-300 | ~22 | PENDING - VLM Complete |
 | 8a | 301-323 | ~23 | PENDING - TRD Complete |
 | 8b | 324-345 | ~22 | PENDING - SR Complete |
@@ -64,30 +79,31 @@
 | 11a | 446-472 | ~27 | PENDING - ADV Part 1 |
 | 11b | 473-500 | ~28 | PENDING - ADV Part 2 |
 
-**Current Feature Count**: 206 (a200) + 24 (Chunk 6a) = **230 features**
+**Current Feature Count**: 206 (a200) + 24 (6a) + 25 (6b) + 23 (7a) = **278 features**
 
 ---
 
-## Files Created This Session
+## Files Committed This Session
 
-1. `src/features/tier_a500.py` (~200 lines)
-   - CHUNK_6A_FEATURES list (24 items)
-   - A500_ADDITION_LIST = CHUNK_6A_FEATURES (will grow)
-   - FEATURE_LIST = tier_a200.FEATURE_LIST + A500_ADDITION_LIST
-   - _compute_new_sma(), _compute_new_ema()
-   - _compute_ma_slopes(), _compute_price_ma_distance()
-   - _compute_ma_proximity(), _compute_chunk_6a()
-   - build_feature_dataframe()
+1. `src/features/tier_a500.py`
+   - Added CHUNK_7A_FEATURES list (23 items)
+   - Updated A500_ADDITION_LIST = CHUNK_6A + CHUNK_6B + CHUNK_7A
+   - Added helper functions: _compute_7a_atr_extended(), _compute_7a_atr_dynamics()
+   - Added _compute_7a_true_range(), _compute_7a_vol_estimators()
+   - Added _compute_7a_bb_extended(), _compute_7a_keltner_channel()
+   - Added _compute_7a_vol_regime(), _compute_chunk_7a()
+   - Updated build_feature_dataframe() to call _compute_chunk_7a()
 
-2. `tests/features/test_tier_a500.py` (~600 lines)
-   - TestA500FeatureListStructure (7 tests)
-   - TestChunk6aFeatureListContents (8 tests)
-   - TestChunk6aSmaIndicators (7 tests)
-   - TestChunk6aEmaIndicators (8 tests)
-   - TestChunk6aSlopeIndicators (7 tests)
-   - TestChunk6aPriceDistanceIndicators (8 tests)
-   - TestChunk6aProximityIndicators (7 tests)
-   - TestChunk6aIntegration (6 tests)
+2. `tests/features/test_tier_a500.py`
+   - Added TestChunk7aFeatureListStructure (9 tests)
+   - Added TestChunk7aAtrExtended (7 tests)
+   - Added TestChunk7aAtrDynamics (8 tests)
+   - Added TestChunk7aTrueRange (6 tests)
+   - Added TestChunk7aVolEstimators (5 tests)
+   - Added TestChunk7aBbExtended (7 tests)
+   - Added TestChunk7aKeltnerChannel (7 tests)
+   - Added TestChunk7aVolRegimeExtended (4 tests)
+   - Added TestChunk7aIntegration (6 tests)
 
 ---
 
@@ -99,7 +115,7 @@ make test
 
 # Check feature count
 ./venv/bin/python -c "from src.features import tier_a500; print(len(tier_a500.FEATURE_LIST))"
-# Current: 230
+# Current: 278
 
 # Generate features (when ready)
 PYTHONPATH=. ./venv/bin/python scripts/build_dataset_combined.py \
@@ -113,24 +129,38 @@ PYTHONPATH=. ./venv/bin/python scripts/build_dataset_combined.py \
 
 ## Next Session Should
 
-1. **Sub-Chunk 6b** - MA Durations/Crosses + OSC Extended (~25 features)
-   - days_above/below_ema_9, ema_50, sma_21
-   - days_since_ema_9_50_cross, ema_50_200_cross, sma_21_50_cross, sma_5_21_cross
-   - rsi_5, rsi_9, rsi_21, rsi_28 + slopes + duration
-   - stoch_k_5, stoch_d_5, cci_5, cci_20, williams_r_5, williams_r_21
+1. **Continue with Sub-Chunk 7b** - VLM Complete (~22 features)
+   - Extended volume indicators
+   - TDD cycle: tests first -> implementation
 
-2. Continue TDD cycle: tests first → implementation
+2. **Pattern for remaining chunks**:
+   - 7b: VLM Complete (~22 features)
+   - 8a: TRD Complete (~23 features)
+   - 8b: SR Complete (~22 features)
+   - etc.
 
 ---
 
 ## Session History
 
-### 2026-01-27 (tier_a500 Sub-Chunk 6a)
+### 2026-01-27 21:00 (tier_a500 Sub-Chunk 7a)
+- Wrote ~58 failing tests for Chunk 7a (TDD red phase)
+- Implemented 23 VOL features (TDD green phase)
+- Custom implementations: Rogers-Satchell, Yang-Zhang, rolling percentiles, vol clustering
+- COMMITTED: `fb5eeab feat: Add tier_a500 Sub-Chunk 7a (23 VOL features)`
+- All 1178 tests pass
+
+### 2026-01-27 18:30 (tier_a500 Sub-Chunk 6b)
+- Wrote 54 failing tests for Chunk 6b (TDD red phase)
+- Implemented 25 features (TDD green phase)
+- Refactored build_feature_dataframe to share MA/slope features between 6a and 6b
+- All 1117 tests pass
+
+### 2026-01-27 16:30 (tier_a500 Sub-Chunk 6a)
 - Created tier_a500 module skeleton
 - Wrote 56 failing tests for Chunk 6a (TDD red phase)
 - Implemented 24 features (TDD green phase)
 - Fixed test fixture (400 days instead of 300 for warmup)
-- All 1062 tests pass
 
 ### 2026-01-26 15:45 (a200 Data Pipeline)
 - Implemented `validate_parquet_file.py` (TDD green phase)

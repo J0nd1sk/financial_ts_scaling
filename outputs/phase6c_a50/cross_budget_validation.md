@@ -1,8 +1,8 @@
 # Cross-Budget Validation Report
 
-**Tier**: a100
+**Tier**: a50
 **Horizon**: 1
-**Timestamp**: 2026-01-27T14:53:31.702081
+**Timestamp**: 2026-01-27T14:53:21.440997
 
 **Configs Found**: 2M, 20M, 200M
 

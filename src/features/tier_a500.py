@@ -140,12 +140,44 @@ CHUNK_7A_FEATURES = [
     "vol_clustering_score",
 ]
 
+# Sub-Chunk 7b: VLM Complete (ranks 279-300) - 22 features
+CHUNK_7B_FEATURES = [
+    # Volume Vectors (4 features)
+    "volume_trend_3d",
+    "volume_ma_ratio_5_20",
+    "consecutive_decreasing_vol",
+    "volume_acceleration",
+    # VWAP Extended (5 features)
+    "pct_from_vwap_20",
+    "vwap_slope_5d",
+    "vwap_pct_change_1d",
+    "vwap_price_divergence",
+    "price_vwap_cross_recency",
+    # Volume Indicators (5 features)
+    "cmf_20",
+    "emv_14",
+    "nvi_signal",
+    "pvi_signal",
+    "vpt_slope",
+    # Volume-Price Confluence (4 features)
+    "volume_spike_price_flat",
+    "volume_price_spike_both",
+    "sequential_vol_buildup_3d",
+    "vol_breakout_confirmation",
+    # Volume Regime (4 features)
+    "volume_percentile_20d",
+    "volume_zscore_20d",
+    "avg_vol_up_vs_down_days",
+    "volume_trend_strength",
+]
+
 # 294 new indicators added in tier a500 (ranks 207-500)
 # Built incrementally across sub-chunks 6a through 11b
 A500_ADDITION_LIST = (
     CHUNK_6A_FEATURES
     + CHUNK_6B_FEATURES
     + CHUNK_7A_FEATURES
+    + CHUNK_7B_FEATURES
     # ... remaining chunks
 )
 
@@ -1070,6 +1102,380 @@ def _compute_chunk_7a(
     return features
 
 
+# =============================================================================
+# Sub-Chunk 7b computation functions (ranks 279-300)
+# =============================================================================
+
+
+def _compute_7b_volume_vectors(volume: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute volume vector features.
+
+    Features:
+    - volume_trend_3d: (vol - vol.shift(3)) / vol.rolling(20).std()
+    - volume_ma_ratio_5_20: vol.rolling(5).mean() / vol.rolling(20).mean()
+    - consecutive_decreasing_vol: Count of consecutive days vol < vol[t-1]
+    - volume_acceleration: volume_trend_3d - volume_trend_3d.shift(3)
+
+    Args:
+        volume: Volume series
+
+    Returns:
+        Dict with 4 volume vector features
+    """
+    features = {}
+
+    # Volume trend (3-day normalized)
+    vol_std_20 = volume.rolling(window=20, min_periods=20).std()
+    volume_trend_3d = (volume - volume.shift(3)) / vol_std_20
+    features["volume_trend_3d"] = volume_trend_3d
+
+    # Volume MA ratio (5/20)
+    vol_ma_5 = volume.rolling(window=5, min_periods=5).mean()
+    vol_ma_20 = volume.rolling(window=20, min_periods=20).mean()
+    features["volume_ma_ratio_5_20"] = vol_ma_5 / vol_ma_20
+
+    # Consecutive decreasing volume days
+    decreasing_mask = volume < volume.shift(1)
+    consecutive_decreasing = pd.Series(0, index=volume.index, dtype=int)
+    count = 0
+    for i in range(len(volume)):
+        if pd.isna(decreasing_mask.iloc[i]):
+            consecutive_decreasing.iloc[i] = 0
+            count = 0
+        elif decreasing_mask.iloc[i]:
+            count += 1
+            consecutive_decreasing.iloc[i] = count
+        else:
+            count = 0
+            consecutive_decreasing.iloc[i] = 0
+    features["consecutive_decreasing_vol"] = consecutive_decreasing
+
+    # Volume acceleration (change in volume trend)
+    features["volume_acceleration"] = volume_trend_3d - volume_trend_3d.shift(3)
+
+    return features
+
+
+def _compute_7b_vwap_extended(close: pd.Series, volume: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute VWAP extended features.
+
+    Features:
+    - pct_from_vwap_20: (close - vwap_20) / vwap_20 * 100
+    - vwap_slope_5d: vwap_20 - vwap_20.shift(5)
+    - vwap_pct_change_1d: (vwap_20 - vwap_20.shift(1)) / vwap_20.shift(1) * 100
+    - vwap_price_divergence: 1 if sign(price_slope) != sign(vwap_slope), else 0
+    - price_vwap_cross_recency: Signed days since close crossed vwap_20
+
+    Args:
+        close: Close price series
+        volume: Volume series
+
+    Returns:
+        Dict with 5 VWAP extended features
+    """
+    features = {}
+
+    # Compute 20-day rolling VWAP: sum(close * volume) / sum(volume)
+    pv = close * volume
+    vwap_20 = pv.rolling(window=20, min_periods=20).sum() / volume.rolling(window=20, min_periods=20).sum()
+
+    # Pct from VWAP
+    features["pct_from_vwap_20"] = (close - vwap_20) / vwap_20 * 100
+
+    # VWAP slope (5-day change)
+    vwap_slope = vwap_20 - vwap_20.shift(5)
+    features["vwap_slope_5d"] = vwap_slope
+
+    # VWAP pct change (1-day)
+    features["vwap_pct_change_1d"] = (vwap_20 - vwap_20.shift(1)) / vwap_20.shift(1) * 100
+
+    # Price-VWAP divergence: sign of price slope != sign of VWAP slope
+    price_slope = close - close.shift(5)
+    divergence = ((np.sign(price_slope) != np.sign(vwap_slope)) &
+                  (~pd.isna(price_slope)) & (~pd.isna(vwap_slope))).astype(int)
+    features["vwap_price_divergence"] = divergence
+
+    # Price-VWAP cross recency (signed days since cross)
+    # Positive = price above VWAP, Negative = price below VWAP
+    result = pd.Series(0, index=close.index, dtype=int)
+    bullish_mask = close >= vwap_20
+    days_count = 0
+    prev_bullish = None
+
+    for i in range(len(close)):
+        if pd.isna(vwap_20.iloc[i]):
+            result.iloc[i] = 0
+            days_count = 0
+            prev_bullish = None
+        else:
+            current_bullish = bullish_mask.iloc[i]
+            if prev_bullish is None:
+                days_count = 1
+            elif current_bullish != prev_bullish:
+                days_count = 1
+            else:
+                days_count += 1
+            result.iloc[i] = days_count if current_bullish else -days_count
+            prev_bullish = current_bullish
+
+    features["price_vwap_cross_recency"] = result
+
+    return features
+
+
+def _compute_7b_volume_indicators(
+    high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute volume indicator features.
+
+    Features:
+    - cmf_20: Chaikin Money Flow (20-period) - Range [-1, 1]
+    - emv_14: Ease of Movement (14-period smoothed)
+    - nvi_signal: Negative Volume Index vs 255-day EMA
+    - pvi_signal: Positive Volume Index vs 255-day EMA
+    - vpt_slope: 5-day slope of Volume Price Trend
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+        volume: Volume series
+
+    Returns:
+        Dict with 5 volume indicator features
+    """
+    features = {}
+
+    # CMF (Chaikin Money Flow): CLV * Volume summed over period / Volume summed over period
+    # CLV = ((Close - Low) - (High - Close)) / (High - Low)
+    hl_range = high - low
+    # Handle division by zero (when high == low)
+    hl_range_safe = hl_range.replace(0, np.nan)
+    clv = ((close - low) - (high - close)) / hl_range_safe
+    clv = clv.fillna(0)  # If high == low, CLV is 0
+    clv_vol = clv * volume
+    cmf_20 = clv_vol.rolling(window=20, min_periods=20).sum() / volume.rolling(window=20, min_periods=20).sum()
+    features["cmf_20"] = cmf_20
+
+    # EMV (Ease of Movement)
+    # distance = (H + L) / 2 - (H[t-1] + L[t-1]) / 2
+    # box_ratio = (Volume / 1e6) / (H - L)
+    # EMV = distance / box_ratio, then 14-period EMA
+    mid_price = (high + low) / 2
+    distance = mid_price - mid_price.shift(1)
+    box_ratio = (volume / 1e6) / hl_range_safe
+    box_ratio = box_ratio.replace([np.inf, -np.inf], np.nan)
+    emv_raw = distance / box_ratio
+    emv_raw = emv_raw.replace([np.inf, -np.inf], np.nan)
+    emv_14 = emv_raw.ewm(span=14, adjust=False).mean()
+    features["emv_14"] = emv_14
+
+    # NVI (Negative Volume Index): updates only when volume decreases
+    # Start at 1000, add return only on days when vol < vol[t-1]
+    ret = close.pct_change()
+    vol_decreased = volume < volume.shift(1)
+
+    nvi = pd.Series(1000.0, index=close.index)
+    for i in range(1, len(close)):
+        if vol_decreased.iloc[i] and not pd.isna(ret.iloc[i]):
+            nvi.iloc[i] = nvi.iloc[i-1] * (1 + ret.iloc[i])
+        else:
+            nvi.iloc[i] = nvi.iloc[i-1]
+
+    nvi_ema = nvi.ewm(span=255, min_periods=255, adjust=False).mean()
+    nvi_signal = (nvi > nvi_ema).astype(int)
+    features["nvi_signal"] = nvi_signal
+
+    # PVI (Positive Volume Index): updates only when volume increases
+    vol_increased = volume > volume.shift(1)
+
+    pvi = pd.Series(1000.0, index=close.index)
+    for i in range(1, len(close)):
+        if vol_increased.iloc[i] and not pd.isna(ret.iloc[i]):
+            pvi.iloc[i] = pvi.iloc[i-1] * (1 + ret.iloc[i])
+        else:
+            pvi.iloc[i] = pvi.iloc[i-1]
+
+    pvi_ema = pvi.ewm(span=255, min_periods=255, adjust=False).mean()
+    pvi_signal = (pvi > pvi_ema).astype(int)
+    features["pvi_signal"] = pvi_signal
+
+    # VPT (Volume Price Trend) slope
+    # VPT = cumsum(volume * (close - close[t-1]) / close[t-1])
+    vpt = (volume * ret).cumsum()
+    vpt_slope = vpt - vpt.shift(5)
+    features["vpt_slope"] = vpt_slope
+
+    return features
+
+
+def _compute_7b_vol_price_confluence(
+    close: pd.Series, volume: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute volume-price confluence features.
+
+    Features:
+    - volume_spike_price_flat: 1 if vol_zscore > 2 AND abs(ret_zscore) < 0.5
+    - volume_price_spike_both: 1 if vol_zscore > 2 AND abs(ret_zscore) > 2
+    - sequential_vol_buildup_3d: Score: (days with vol > prior) / 3 over 3 days
+    - vol_breakout_confirmation: 1 if (price > 20d high) AND (vol > 1.5x avg)
+
+    Args:
+        close: Close price series
+        volume: Volume series
+
+    Returns:
+        Dict with 4 volume-price confluence features
+    """
+    features = {}
+
+    # Compute z-scores
+    vol_mean_20 = volume.rolling(window=20, min_periods=20).mean()
+    vol_std_20 = volume.rolling(window=20, min_periods=20).std()
+    vol_zscore = (volume - vol_mean_20) / vol_std_20
+
+    ret = close.pct_change()
+    ret_mean_20 = ret.rolling(window=20, min_periods=20).mean()
+    ret_std_20 = ret.rolling(window=20, min_periods=20).std()
+    ret_zscore = (ret - ret_mean_20) / ret_std_20
+
+    # Volume spike + price flat
+    volume_spike_price_flat = ((vol_zscore > 2) & (ret_zscore.abs() < 0.5)).astype(int)
+    features["volume_spike_price_flat"] = volume_spike_price_flat
+
+    # Both volume and price spike
+    volume_price_spike_both = ((vol_zscore > 2) & (ret_zscore.abs() > 2)).astype(int)
+    features["volume_price_spike_both"] = volume_price_spike_both
+
+    # Sequential volume buildup (3-day score)
+    # Count how many of the last 3 days had volume > prior day
+    vol_increasing = (volume > volume.shift(1)).astype(int)
+    sequential_buildup = (
+        vol_increasing +
+        vol_increasing.shift(1).fillna(0) +
+        vol_increasing.shift(2).fillna(0)
+    ) / 3
+    features["sequential_vol_buildup_3d"] = sequential_buildup
+
+    # Volume breakout confirmation
+    # Price > 20-day high AND volume > 1.5x 20-day average
+    price_high_20 = close.rolling(window=20, min_periods=20).max()
+    # Compare price to previous day's 20-day high (not including today)
+    price_breakout = close > price_high_20.shift(1)
+    vol_high = volume > (vol_mean_20 * 1.5)
+    vol_breakout_confirmation = (price_breakout & vol_high).astype(int)
+    features["vol_breakout_confirmation"] = vol_breakout_confirmation
+
+    return features
+
+
+def _compute_7b_vol_regime(
+    close: pd.Series, volume: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute volume regime features.
+
+    Features:
+    - volume_percentile_20d: Percentile rank of volume in 20-day window [0, 1]
+    - volume_zscore_20d: (vol - vol.rolling(20).mean()) / vol.rolling(20).std()
+    - avg_vol_up_vs_down_days: 20d avg: (vol on up days) / (vol on down days)
+    - volume_trend_strength: 20d rolling corr(volume, abs(return)) [-1, 1]
+
+    Args:
+        close: Close price series
+        volume: Volume series
+
+    Returns:
+        Dict with 4 volume regime features
+    """
+    features = {}
+
+    # Volume percentile in 20-day window
+    def rolling_percentile(x):
+        if len(x) < 2:
+            return np.nan
+        return (x < x.iloc[-1]).sum() / (len(x) - 1)
+
+    volume_percentile_20d = volume.rolling(window=20, min_periods=20).apply(
+        rolling_percentile, raw=False
+    )
+    features["volume_percentile_20d"] = volume_percentile_20d
+
+    # Volume z-score (20-day)
+    vol_mean_20 = volume.rolling(window=20, min_periods=20).mean()
+    vol_std_20 = volume.rolling(window=20, min_periods=20).std()
+    features["volume_zscore_20d"] = (volume - vol_mean_20) / vol_std_20
+
+    # Average volume on up days vs down days (20-day rolling)
+    ret = close.pct_change()
+    up_day = ret >= 0
+    down_day = ret < 0
+
+    # Rolling sum of volume on up days and down days
+    vol_up = (volume * up_day).rolling(window=20, min_periods=20).sum()
+    vol_down = (volume * down_day).rolling(window=20, min_periods=20).sum()
+    up_count = up_day.rolling(window=20, min_periods=20).sum()
+    down_count = down_day.rolling(window=20, min_periods=20).sum()
+
+    avg_vol_up = vol_up / up_count
+    avg_vol_down = vol_down / down_count
+    # Handle division by zero (all up or all down days)
+    avg_vol_up_vs_down = avg_vol_up / avg_vol_down.replace(0, np.nan)
+    # Fill edge cases with 1.0 (neutral)
+    avg_vol_up_vs_down = avg_vol_up_vs_down.replace([np.inf, -np.inf], np.nan).fillna(1.0)
+    features["avg_vol_up_vs_down_days"] = avg_vol_up_vs_down
+
+    # Volume trend strength: correlation of volume with absolute returns
+    abs_ret = ret.abs()
+
+    def rolling_corr_func(x, y, window):
+        """Compute rolling correlation."""
+        return x.rolling(window=window, min_periods=window).corr(y)
+
+    volume_trend_strength = rolling_corr_func(volume, abs_ret, 20)
+    # Handle NaN from constant values
+    volume_trend_strength = volume_trend_strength.fillna(0)
+    features["volume_trend_strength"] = volume_trend_strength
+
+    return features
+
+
+def _compute_chunk_7b(
+    close: pd.Series,
+    high: pd.Series,
+    low: pd.Series,
+    volume: pd.Series,
+) -> Mapping[str, pd.Series]:
+    """Compute all Sub-Chunk 7b features.
+
+    Args:
+        close: Close price series
+        high: High price series
+        low: Low price series
+        volume: Volume series
+
+    Returns:
+        Dict with all 22 Chunk 7b features
+    """
+    features = {}
+
+    # Volume Vectors (4 features)
+    features.update(_compute_7b_volume_vectors(volume))
+
+    # VWAP Extended (5 features)
+    features.update(_compute_7b_vwap_extended(close, volume))
+
+    # Volume Indicators (5 features)
+    features.update(_compute_7b_volume_indicators(high, low, close, volume))
+
+    # Volume-Price Confluence (4 features)
+    features.update(_compute_7b_vol_price_confluence(close, volume))
+
+    # Volume Regime (4 features)
+    features.update(_compute_7b_vol_regime(close, volume))
+
+    return features
+
+
 def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.DataFrame:
     """Build feature DataFrame with all tier_a500 indicators.
 
@@ -1126,6 +1532,12 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
     # Sub-Chunk 7a: VOL Complete (ranks 256-278)
     # =========================================================================
     features.update(_compute_chunk_7a(open_price, high, low, close))
+
+    # =========================================================================
+    # Sub-Chunk 7b: VLM Complete (ranks 279-300)
+    # =========================================================================
+    volume = df["Volume"]
+    features.update(_compute_chunk_7b(close, high, low, volume))
 
     # Create feature DataFrame for new a500 features
     new_features_df = pd.DataFrame(features)

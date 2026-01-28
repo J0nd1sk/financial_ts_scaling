@@ -4,24 +4,24 @@
 
 | Budget | Best AUC | Best d_model | Best n_layers | Best LR | Best dropout | Best WD |
 |--------|----------|--------------|---------------|---------|--------------|---------|
-| 2M | 0.7178 | 96 | 2 | 1e-05 | 0.1 | 0.001 |
-| 20M | 0.7246 | 64 | 4 | 0.0001 | 0.7 | 0.0 |
-| 200M | 0.7147 | 128 | 6 | 1e-05 | 0.3 | 0.0001 |
+| 2M | 0.7173 | 96 | 2 | 1e-05 | 0.1 | 1e-05 |
+| 20M | 0.7189 | 64 | 4 | 0.0005 | 0.7 | 0.001 |
+| 200M | 0.7152 | 320 | 12 | 1e-05 | 0.5 | 1e-05 |
 
 ## Scaling Law Analysis
 
-- 2M: 0.7178
-- 20M: 0.7246
-- 200M: 0.7147
+- 2M: 0.7173
+- 20M: 0.7189
+- 200M: 0.7152
 
 **Scaling law VIOLATED**: 20M > 2M > 200M
 This suggests larger models may be overfitting or need different regularization.
 
 ## Parameter Consistency Across Budgets
 
-- **dropout**: Inconsistent - {'2M': 0.1, '20M': 0.7, '200M': 0.3}
-- **learning_rate**: Inconsistent - {'2M': 1e-05, '20M': 0.0001, '200M': 1e-05}
-- **weight_decay**: Inconsistent - {'2M': 0.001, '20M': 0.0, '200M': 0.0001}
+- **dropout**: Inconsistent - {'2M': 0.1, '20M': 0.7, '200M': 0.5}
+- **learning_rate**: Inconsistent - {'2M': 1e-05, '20M': 0.0005, '200M': 1e-05}
+- **weight_decay**: Inconsistent - {'2M': 1e-05, '20M': 0.001, '200M': 1e-05}
 
 ## Probability Collapse by Budget
 
@@ -38,9 +38,9 @@ This suggests larger models may be overfitting or need different regularization.
 ## Summary Statistics
 
 - Total trials: 50
-- Best AUC: 0.7178
-- Mean AUC: 0.7009
-- Std AUC: 0.0152
+- Best AUC: 0.7173
+- Mean AUC: 0.7063
+- Std AUC: 0.0139
 
 **Best Configuration:**
   - d_model: 96
@@ -49,6 +49,167 @@ This suggests larger models may be overfitting or need different regularization.
   - d_ff_ratio: 4
   - learning_rate: 1e-05
   - dropout: 0.1
+  - weight_decay: 1e-05
+
+## Probability Collapse Analysis
+
+No probability collapse detected.
+
+## Parameter Importance
+
+(Fraction of AUC variance explained by each parameter)
+
+  dropout         | #################                                  | 0.3592
+  n_layers        | #################                                  | 0.3513
+  d_model         | #################                                  | 0.3413
+  d_ff_ratio      | ###############                                    | 0.3020
+  learning_rate   | ###########                                        | 0.2342
+  weight_decay    | ###########                                        | 0.2241
+  n_heads         | ##########                                         | 0.2068
+
+## Parameter Trends
+
+### d_model
+
+- Trend: **increasing**
+- Best value: 64 (mean AUC: 0.7108)
+- Worst value: 32 (mean AUC: 0.6847)
+
+| Value | Mean AUC | Std | Count |
+|-------|----------|-----|-------|
+| 32 | 0.6847 | 0.0230 | 5 |
+| 48 | 0.7003 | 0.0138 | 5 |
+| 64 | 0.7108 | 0.0077 | 10 |
+| 80 | 0.7022 | 0.0062 | 5 |
+| 96 | 0.7107 | 0.0104 | 25 |
+
+### n_layers
+
+- Trend: **flat**
+- Best value: 6 (mean AUC: 0.7143)
+- Worst value: 4 (mean AUC: 0.6917)
+
+| Value | Mean AUC | Std | Count |
+|-------|----------|-----|-------|
+| 2 | 0.7111 | 0.0108 | 25 |
+| 3 | 0.7064 | 0.0020 | 3 |
+| 4 | 0.6917 | 0.0184 | 10 |
+| 5 | 0.6996 | 0.0061 | 5 |
+| 6 | 0.7143 | 0.0019 | 7 |
+
+### n_heads
+
+- Trend: **increasing**
+- Best value: 4 (mean AUC: 0.7093)
+- Worst value: 2 (mean AUC: 0.6892)
+
+| Value | Mean AUC | Std | Count |
+|-------|----------|-----|-------|
+| 2 | 0.6892 | 0.0230 | 6 |
+| 4 | 0.7093 | 0.0092 | 16 |
+| 8 | 0.7082 | 0.0114 | 28 |
+
+### learning_rate
+
+- Trend: **decreasing**
+- Best value: 1e-05 (mean AUC: 0.7107)
+- Worst value: 0.0005 (mean AUC: 0.6882)
+
+| Value | Mean AUC | Std | Count |
+|-------|----------|-----|-------|
+| 1e-05 | 0.7107 | 0.0148 | 28 |
+| 5e-05 | 0.7043 | 0.0072 | 12 |
+| 0.0001 | 0.7039 | 0.0026 | 5 |
+| 0.0005 | 0.6882 | 0.0131 | 5 |
+
+### dropout
+
+- Trend: **decreasing**
+- Best value: 0.1 (mean AUC: 0.7124)
+- Worst value: 0.7 (mean AUC: 0.6849)
+
+| Value | Mean AUC | Std | Count |
+|-------|----------|-----|-------|
+| 0.1 | 0.7124 | 0.0086 | 29 |
+| 0.3 | 0.7003 | 0.0114 | 12 |
+| 0.5 | 0.7017 | 0.0108 | 5 |
+| 0.7 | 0.6849 | 0.0257 | 4 |
+
+### weight_decay
+
+- Trend: **flat**
+- Best value: 1e-05 (mean AUC: 0.7119)
+- Worst value: 0.001 (mean AUC: 0.6953)
+
+| Value | Mean AUC | Std | Count |
+|-------|----------|-----|-------|
+| 0.0 | 0.7017 | 0.0128 | 5 |
+| 1e-05 | 0.7119 | 0.0086 | 28 |
+| 0.0001 | 0.6995 | 0.0180 | 12 |
+| 0.001 | 0.6953 | 0.0160 | 5 |
+
+## Coverage Matrices
+
+(Count of trials testing each combination)
+
+### d_model × n_layers
+
+| d_model | 2 | 3 | 4 | 5 | 6 |
+| --- | --- | --- | --- | --- | --- |
+| 32 | 0 | 0 | 4 | 1 | 0 |
+| 48 | 2 | 0 | 1 | 2 | 0 |
+| 64 | 1 | 0 | 2 | 0 | 7 |
+| 80 | 1 | 1 | 1 | 2 | 0 |
+| 96 | 21 | 2 | 2 | 0 | 0 |
+
+### d_model × n_heads
+
+| d_model | 2 | 4 | 8 |
+| --- | --- | --- | --- |
+| 32 | 1 | 1 | 3 |
+| 48 | 0 | 3 | 2 |
+| 64 | 1 | 6 | 3 |
+| 80 | 3 | 1 | 1 |
+| 96 | 1 | 5 | 19 |
+
+### learning_rate × dropout
+
+| learning_rate | 0.1 | 0.3 | 0.5 | 0.7 |
+| --- | --- | --- | --- | --- |
+| 1e-05 | 24 | 1 | 2 | 1 |
+| 5e-05 | 3 | 7 | 1 | 1 |
+| 0.0001 | 1 | 3 | 0 | 1 |
+| 0.0005 | 1 | 1 | 2 | 1 |
+
+## Forced Extreme Trials
+
+| Trial | Extreme Type | AUC | d_model | n_layers | n_heads |
+|-------|--------------|-----|---------|----------|---------|
+| 0 | min_d_model | 0.7094 | 32 | 4 | 8 |
+| 1 | max_d_model | 0.7063 | 96 | 4 | 8 |
+| 2 | min_n_layers | 0.7148 | 64 | 2 | 8 |
+| 3 | max_n_layers | 0.7101 | 64 | 6 | 8 |
+| 4 | min_n_heads | 0.6971 | 64 | 4 | 2 |
+| 5 | max_n_heads | 0.6961 | 64 | 4 | 8 |
+
+---
+
+# HPO Analysis: 20M (a100)
+
+## Summary Statistics
+
+- Total trials: 50
+- Best AUC: 0.7189
+- Mean AUC: 0.7030
+- Std AUC: 0.0151
+
+**Best Configuration:**
+  - d_model: 64
+  - n_layers: 4
+  - n_heads: 8
+  - d_ff_ratio: 2
+  - learning_rate: 0.0005
+  - dropout: 0.7
   - weight_decay: 0.001
 
 ## Probability Collapse Analysis
@@ -59,243 +220,93 @@ No probability collapse detected.
 
 (Fraction of AUC variance explained by each parameter)
 
-  learning_rate   | ##############                                     | 0.2851
-  dropout         | #########                                          | 0.1807
-  d_model         | #######                                            | 0.1472
-  n_layers        | #####                                              | 0.1038
-  weight_decay    | ####                                               | 0.0833
-  d_ff_ratio      | ##                                                 | 0.0579
-  n_heads         |                                                    | 0.0099
-
-## Parameter Trends
-
-### d_model
-
-- Trend: **increasing**
-- Best value: 96 (mean AUC: 0.7045)
-- Worst value: 32 (mean AUC: 0.687)
-
-| Value | Mean AUC | Std | Count |
-|-------|----------|-----|-------|
-| 32 | 0.6870 | 0.0127 | 5 |
-| 48 | 0.7028 | 0.0114 | 6 |
-| 64 | 0.7010 | 0.0151 | 4 |
-| 80 | 0.6933 | 0.0133 | 6 |
-| 96 | 0.7045 | 0.0156 | 29 |
-
-### n_layers
-
-- Trend: **decreasing**
-- Best value: 2 (mean AUC: 0.7046)
-- Worst value: 6 (mean AUC: 0.6905)
-
-| Value | Mean AUC | Std | Count |
-|-------|----------|-----|-------|
-| 2 | 0.7046 | 0.0160 | 29 |
-| 3 | 0.6981 | 0.0183 | 4 |
-| 4 | 0.6938 | 0.0108 | 7 |
-| 5 | 0.7005 | 0.0130 | 6 |
-| 6 | 0.6905 | 0.0122 | 4 |
-
-### n_heads
-
-- Trend: **flat**
-- Best value: 8 (mean AUC: 0.7019)
-- Worst value: 2 (mean AUC: 0.6977)
-
-| Value | Mean AUC | Std | Count |
-|-------|----------|-----|-------|
-| 2 | 0.6977 | 0.0160 | 8 |
-| 4 | 0.7005 | 0.0114 | 10 |
-| 8 | 0.7019 | 0.0163 | 32 |
-
-### learning_rate
-
-- Trend: **decreasing**
-- Best value: 5e-05 (mean AUC: 0.7086)
-- Worst value: 0.0005 (mean AUC: 0.6822)
-
-| Value | Mean AUC | Std | Count |
-|-------|----------|-----|-------|
-| 1e-05 | 0.7042 | 0.0147 | 32 |
-| 5e-05 | 0.7086 | 0.0065 | 7 |
-| 0.0001 | 0.6916 | 0.0143 | 5 |
-| 0.0005 | 0.6822 | 0.0079 | 6 |
-
-### dropout
-
-- Trend: **decreasing**
-- Best value: 0.1 (mean AUC: 0.7055)
-- Worst value: 0.7 (mean AUC: 0.6894)
-
-| Value | Mean AUC | Std | Count |
-|-------|----------|-----|-------|
-| 0.1 | 0.7055 | 0.0162 | 32 |
-| 0.3 | 0.6970 | 0.0105 | 7 |
-| 0.5 | 0.6905 | 0.0064 | 6 |
-| 0.7 | 0.6894 | 0.0090 | 5 |
-
-### weight_decay
-
-- Trend: **increasing**
-- Best value: 0.001 (mean AUC: 0.7037)
-- Worst value: 0.0 (mean AUC: 0.6889)
-
-| Value | Mean AUC | Std | Count |
-|-------|----------|-----|-------|
-| 0.0 | 0.6889 | 0.0085 | 5 |
-| 1e-05 | 0.6993 | 0.0155 | 10 |
-| 0.0001 | 0.7006 | 0.0125 | 7 |
-| 0.001 | 0.7037 | 0.0161 | 28 |
-
-## Coverage Matrices
-
-(Count of trials testing each combination)
-
-### d_model × n_layers
-
-| d_model | 2 | 3 | 4 | 5 | 6 |
-| --- | --- | --- | --- | --- | --- |
-| 32 | 4 | 0 | 1 | 0 | 0 |
-| 48 | 2 | 0 | 1 | 2 | 1 |
-| 64 | 0 | 3 | 1 | 0 | 0 |
-| 80 | 2 | 0 | 1 | 3 | 0 |
-| 96 | 21 | 1 | 3 | 1 | 3 |
-
-### d_model × n_heads
-
-| d_model | 2 | 4 | 8 |
-| --- | --- | --- | --- |
-| 32 | 1 | 1 | 3 |
-| 48 | 0 | 3 | 3 |
-| 64 | 0 | 1 | 3 |
-| 80 | 2 | 1 | 3 |
-| 96 | 5 | 4 | 20 |
-
-### learning_rate × dropout
-
-| learning_rate | 0.1 | 0.3 | 0.5 | 0.7 |
-| --- | --- | --- | --- | --- |
-| 1e-05 | 22 | 2 | 4 | 4 |
-| 5e-05 | 4 | 2 | 1 | 0 |
-| 0.0001 | 3 | 2 | 0 | 0 |
-| 0.0005 | 3 | 1 | 1 | 1 |
-
----
-
-# HPO Analysis: 20M (a100)
-
-## Summary Statistics
-
-- Total trials: 50
-- Best AUC: 0.7246
-- Mean AUC: 0.7075
-- Std AUC: 0.0153
-
-**Best Configuration:**
-  - d_model: 64
-  - n_layers: 4
-  - n_heads: 8
-  - d_ff_ratio: 2
-  - learning_rate: 0.0001
-  - dropout: 0.7
-  - weight_decay: 0.0
-
-## Probability Collapse Analysis
-
-No probability collapse detected.
-
-## Parameter Importance
-
-(Fraction of AUC variance explained by each parameter)
-
-  dropout         | ######################                             | 0.4454
-  n_layers        | ##################                                 | 0.3626
-  d_model         | ################                                   | 0.3323
-  weight_decay    | ##########                                         | 0.2028
-  n_heads         | #######                                            | 0.1493
-  d_ff_ratio      | #####                                              | 0.1096
-  learning_rate   | #####                                              | 0.1080
+  dropout         | ###########################                        | 0.5432
+  d_model         | ##########################                         | 0.5380
+  n_layers        | ##############                                     | 0.2938
+  weight_decay    | ########                                           | 0.1697
+  n_heads         | ######                                             | 0.1389
+  learning_rate   | #####                                              | 0.1046
+  d_ff_ratio      | ##                                                 | 0.0591
 
 ## Parameter Trends
 
 ### d_model
 
 - Trend: **decreasing**
-- Best value: 64 (mean AUC: 0.7143)
-- Worst value: 160 (mean AUC: 0.6899)
+- Best value: 64 (mean AUC: 0.7115)
+- Worst value: 192 (mean AUC: 0.6802)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 64 | 0.7143 | 0.0115 | 30 |
-| 96 | 0.7016 | 0.0080 | 6 |
-| 128 | 0.6994 | 0.0156 | 5 |
-| 160 | 0.6899 | 0.0109 | 4 |
-| 192 | 0.6955 | 0.0230 | 5 |
+| 64 | 0.7115 | 0.0086 | 28 |
+| 96 | 0.6988 | 0.0060 | 5 |
+| 128 | 0.6985 | 0.0102 | 8 |
+| 160 | 0.6874 | 0.0134 | 3 |
+| 192 | 0.6802 | 0.0191 | 6 |
 
 ### n_layers
 
 - Trend: **decreasing**
-- Best value: 4 (mean AUC: 0.7155)
-- Worst value: 7 (mean AUC: 0.695)
+- Best value: 4 (mean AUC: 0.7106)
+- Worst value: 5 (mean AUC: 0.6898)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 4 | 0.7155 | 0.0109 | 28 |
-| 5 | 0.6951 | 0.0118 | 4 |
-| 6 | 0.7013 | 0.0059 | 5 |
-| 7 | 0.6950 | 0.0209 | 7 |
-| 8 | 0.6979 | 0.0130 | 6 |
+| 4 | 0.7106 | 0.0118 | 26 |
+| 5 | 0.6898 | 0.0093 | 3 |
+| 6 | 0.6979 | 0.0128 | 9 |
+| 7 | 0.6932 | 0.0221 | 6 |
+| 8 | 0.6938 | 0.0094 | 6 |
 
 ### n_heads
 
 - Trend: **increasing**
-- Best value: 8 (mean AUC: 0.7106)
-- Worst value: 4 (mean AUC: 0.6963)
+- Best value: 8 (mean AUC: 0.7059)
+- Worst value: 4 (mean AUC: 0.6923)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 4 | 0.6963 | 0.0170 | 11 |
-| 8 | 0.7106 | 0.0134 | 39 |
+| 4 | 0.6923 | 0.0155 | 11 |
+| 8 | 0.7059 | 0.0138 | 39 |
 
 ### learning_rate
 
 - Trend: **flat**
-- Best value: 0.0001 (mean AUC: 0.7114)
-- Worst value: 0.0005 (mean AUC: 0.6998)
+- Best value: 0.0005 (mean AUC: 0.7065)
+- Worst value: 0.0001 (mean AUC: 0.6917)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 1e-05 | 0.7059 | 0.0108 | 5 |
-| 5e-05 | 0.7011 | 0.0135 | 5 |
-| 0.0001 | 0.7114 | 0.0141 | 30 |
-| 0.0005 | 0.6998 | 0.0189 | 10 |
+| 1e-05 | 0.6975 | 0.0089 | 4 |
+| 5e-05 | 0.7005 | 0.0105 | 11 |
+| 0.0001 | 0.6917 | 0.0112 | 5 |
+| 0.0005 | 0.7065 | 0.0168 | 30 |
 
 ### dropout
 
 - Trend: **increasing**
-- Best value: 0.7 (mean AUC: 0.7144)
-- Worst value: 0.3 (mean AUC: 0.6834)
+- Best value: 0.7 (mean AUC: 0.7118)
+- Worst value: 0.1 (mean AUC: 0.6787)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 0.1 | 0.6995 | 0.0188 | 6 |
-| 0.3 | 0.6834 | 0.0172 | 5 |
-| 0.5 | 0.6999 | 0.0078 | 7 |
-| 0.7 | 0.7144 | 0.0097 | 32 |
+| 0.1 | 0.6787 | 0.0146 | 5 |
+| 0.3 | 0.6935 | 0.0152 | 11 |
+| 0.5 | 0.6991 | 0.0070 | 6 |
+| 0.7 | 0.7118 | 0.0077 | 28 |
 
 ### weight_decay
 
-- Trend: **flat**
-- Best value: 1e-05 (mean AUC: 0.7125)
-- Worst value: 0.0001 (mean AUC: 0.6925)
+- Trend: **increasing**
+- Best value: 1e-05 (mean AUC: 0.7096)
+- Worst value: 0.0 (mean AUC: 0.6886)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 0.0 | 0.7032 | 0.0142 | 8 |
-| 1e-05 | 0.7125 | 0.0130 | 30 |
-| 0.0001 | 0.6925 | 0.0203 | 6 |
-| 0.001 | 0.7028 | 0.0119 | 6 |
+| 0.0 | 0.6886 | 0.0116 | 4 |
+| 1e-05 | 0.7096 | 0.0114 | 13 |
+| 0.0001 | 0.6965 | 0.0149 | 11 |
+| 0.001 | 0.7048 | 0.0155 | 22 |
 
 ## Coverage Matrices
 
@@ -305,30 +316,41 @@ No probability collapse detected.
 
 | d_model | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- |
-| 64 | 21 | 1 | 1 | 5 | 2 |
-| 96 | 0 | 1 | 3 | 0 | 2 |
-| 128 | 4 | 0 | 0 | 1 | 0 |
-| 160 | 0 | 2 | 1 | 0 | 1 |
-| 192 | 3 | 0 | 0 | 1 | 1 |
+| 64 | 20 | 2 | 2 | 3 | 1 |
+| 96 | 1 | 0 | 2 | 0 | 2 |
+| 128 | 3 | 0 | 2 | 2 | 1 |
+| 160 | 0 | 1 | 1 | 0 | 1 |
+| 192 | 2 | 0 | 2 | 1 | 1 |
 
 ### d_model × n_heads
 
 | d_model | 4 | 8 |
 | --- | --- | --- |
-| 64 | 4 | 26 |
-| 96 | 2 | 4 |
-| 128 | 2 | 3 |
-| 160 | 1 | 3 |
-| 192 | 2 | 3 |
+| 64 | 3 | 25 |
+| 96 | 2 | 3 |
+| 128 | 3 | 5 |
+| 160 | 1 | 2 |
+| 192 | 2 | 4 |
 
 ### learning_rate × dropout
 
 | learning_rate | 0.1 | 0.3 | 0.5 | 0.7 |
 | --- | --- | --- | --- | --- |
-| 1e-05 | 3 | 0 | 1 | 1 |
-| 5e-05 | 2 | 0 | 1 | 2 |
-| 0.0001 | 1 | 3 | 4 | 22 |
-| 0.0005 | 0 | 2 | 1 | 7 |
+| 1e-05 | 1 | 0 | 2 | 1 |
+| 5e-05 | 1 | 7 | 0 | 3 |
+| 0.0001 | 1 | 2 | 2 | 0 |
+| 0.0005 | 2 | 2 | 2 | 24 |
+
+## Forced Extreme Trials
+
+| Trial | Extreme Type | AUC | d_model | n_layers | n_heads |
+|-------|--------------|-----|---------|----------|---------|
+| 0 | min_d_model | 0.7101 | 64 | 6 | 8 |
+| 1 | max_d_model | 0.6854 | 192 | 6 | 8 |
+| 2 | min_n_layers | 0.7052 | 128 | 4 | 8 |
+| 3 | max_n_layers | 0.6954 | 128 | 8 | 8 |
+| 4 | min_n_heads | 0.7043 | 128 | 6 | 4 |
+| 5 | max_n_heads | 0.7036 | 128 | 6 | 8 |
 
 ---
 
@@ -337,18 +359,18 @@ No probability collapse detected.
 ## Summary Statistics
 
 - Total trials: 50
-- Best AUC: 0.7147
-- Mean AUC: 0.7030
-- Std AUC: 0.0124
+- Best AUC: 0.7152
+- Mean AUC: 0.6974
+- Std AUC: 0.0187
 
 **Best Configuration:**
-  - d_model: 128
-  - n_layers: 6
-  - n_heads: 16
-  - d_ff_ratio: 4
+  - d_model: 320
+  - n_layers: 12
+  - n_heads: 8
+  - d_ff_ratio: 2
   - learning_rate: 1e-05
-  - dropout: 0.3
-  - weight_decay: 0.0001
+  - dropout: 0.5
+  - weight_decay: 1e-05
 
 ## Probability Collapse Analysis
 
@@ -358,92 +380,92 @@ No probability collapse detected.
 
 (Fraction of AUC variance explained by each parameter)
 
-  learning_rate   | ############################                       | 0.5705
-  d_model         | ########                                           | 0.1748
-  weight_decay    | ######                                             | 0.1313
-  n_heads         | #####                                              | 0.1095
-  n_layers        | #####                                              | 0.1029
-  dropout         | ##                                                 | 0.0599
-  d_ff_ratio      | #                                                  | 0.0367
+  learning_rate   | ######################                             | 0.4412
+  dropout         | ##################                                 | 0.3796
+  weight_decay    | #######                                            | 0.1586
+  n_heads         | #####                                              | 0.1019
+  n_layers        | ####                                               | 0.0831
+  d_model         | ##                                                 | 0.0441
+  d_ff_ratio      |                                                    | 0.0175
 
 ## Parameter Trends
 
 ### d_model
 
-- Trend: **decreasing**
-- Best value: 128 (mean AUC: 0.7061)
-- Worst value: 384 (mean AUC: 0.6863)
+- Trend: **flat**
+- Best value: 384 (mean AUC: 0.7031)
+- Worst value: 192 (mean AUC: 0.6934)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 128 | 0.7061 | 0.0105 | 20 |
-| 192 | 0.7052 | 0.0062 | 10 |
-| 256 | 0.7024 | 0.0154 | 14 |
-| 320 | 0.6939 | 0.0057 | 3 |
-| 384 | 0.6863 | 0.0172 | 3 |
+| 128 | 0.7023 | 0.0082 | 6 |
+| 192 | 0.6934 | 0.0206 | 5 |
+| 256 | 0.6947 | 0.0066 | 8 |
+| 320 | 0.6949 | 0.0251 | 20 |
+| 384 | 0.7031 | 0.0139 | 11 |
 
 ### n_layers
 
-- Trend: **flat**
-- Best value: 6 (mean AUC: 0.7055)
-- Worst value: 10 (mean AUC: 0.6944)
+- Trend: **decreasing**
+- Best value: 8 (mean AUC: 0.7036)
+- Worst value: 12 (mean AUC: 0.6917)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 6 | 0.7055 | 0.0134 | 31 |
-| 8 | 0.7029 | 0.0079 | 6 |
-| 10 | 0.6944 | 0.0117 | 8 |
-| 12 | 0.7014 | 0.0027 | 5 |
+| 6 | 0.7031 | 0.0149 | 19 |
+| 8 | 0.7036 | 0.0044 | 4 |
+| 10 | 0.6940 | 0.0130 | 9 |
+| 12 | 0.6917 | 0.0245 | 18 |
 
 ### n_heads
 
 - Trend: **increasing**
-- Best value: 16 (mean AUC: 0.7049)
-- Worst value: 8 (mean AUC: 0.6942)
+- Best value: 16 (mean AUC: 0.7034)
+- Worst value: 8 (mean AUC: 0.6914)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 8 | 0.6942 | 0.0136 | 9 |
-| 16 | 0.7049 | 0.0114 | 41 |
+| 8 | 0.6914 | 0.0223 | 25 |
+| 16 | 0.7034 | 0.0118 | 25 |
 
 ### learning_rate
 
 - Trend: **decreasing**
-- Best value: 1e-05 (mean AUC: 0.7098)
-- Worst value: 0.0001 (mean AUC: 0.688)
+- Best value: 1e-05 (mean AUC: 0.7092)
+- Worst value: 5e-05 (mean AUC: 0.6831)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 1e-05 | 0.7098 | 0.0048 | 32 |
-| 5e-05 | 0.6965 | 0.0127 | 5 |
-| 0.0001 | 0.6880 | 0.0151 | 7 |
-| 0.0005 | 0.6895 | 0.0091 | 6 |
+| 1e-05 | 0.7092 | 0.0053 | 26 |
+| 5e-05 | 0.6831 | 0.0233 | 12 |
+| 0.0001 | 0.6832 | 0.0226 | 6 |
+| 0.0005 | 0.6891 | 0.0054 | 6 |
 
 ### dropout
 
-- Trend: **flat**
-- Best value: 0.5 (mean AUC: 0.705)
-- Worst value: 0.1 (mean AUC: 0.6972)
+- Trend: **increasing**
+- Best value: 0.5 (mean AUC: 0.7057)
+- Worst value: 0.1 (mean AUC: 0.6708)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 0.1 | 0.6972 | 0.0154 | 9 |
-| 0.3 | 0.7047 | 0.0137 | 26 |
-| 0.5 | 0.7050 | 0.0041 | 10 |
-| 0.7 | 0.7003 | 0.0082 | 5 |
+| 0.1 | 0.6708 | 0.0278 | 6 |
+| 0.3 | 0.6909 | 0.0167 | 12 |
+| 0.5 | 0.7057 | 0.0115 | 26 |
+| 0.7 | 0.7010 | 0.0064 | 6 |
 
 ### weight_decay
 
-- Trend: **flat**
-- Best value: 0.0001 (mean AUC: 0.7067)
-- Worst value: 1e-05 (mean AUC: 0.6955)
+- Trend: **increasing**
+- Best value: 0.001 (mean AUC: 0.7069)
+- Worst value: 0.0 (mean AUC: 0.6866)
 
 | Value | Mean AUC | Std | Count |
 |-------|----------|-----|-------|
-| 0.0 | 0.6987 | 0.0130 | 10 |
-| 1e-05 | 0.6955 | 0.0174 | 5 |
-| 0.0001 | 0.7067 | 0.0112 | 29 |
-| 0.001 | 0.6982 | 0.0071 | 6 |
+| 0.0 | 0.6866 | 0.0197 | 6 |
+| 1e-05 | 0.6929 | 0.0201 | 7 |
+| 0.0001 | 0.6935 | 0.0217 | 19 |
+| 0.001 | 0.7069 | 0.0093 | 18 |
 
 ## Coverage Matrices
 
@@ -453,27 +475,38 @@ No probability collapse detected.
 
 | d_model | 6 | 8 | 10 | 12 |
 | --- | --- | --- | --- | --- |
-| 128 | 14 | 1 | 3 | 2 |
-| 192 | 4 | 5 | 1 | 0 |
-| 256 | 11 | 0 | 0 | 3 |
-| 320 | 1 | 0 | 2 | 0 |
-| 384 | 1 | 0 | 2 | 0 |
+| 128 | 1 | 1 | 1 | 3 |
+| 192 | 3 | 0 | 1 | 1 |
+| 256 | 3 | 1 | 2 | 2 |
+| 320 | 7 | 1 | 2 | 10 |
+| 384 | 5 | 1 | 3 | 2 |
 
 ### d_model × n_heads
 
 | d_model | 8 | 16 |
 | --- | --- | --- |
-| 128 | 4 | 16 |
-| 192 | 1 | 9 |
-| 256 | 2 | 12 |
-| 320 | 1 | 2 |
-| 384 | 1 | 2 |
+| 128 | 5 | 1 |
+| 192 | 3 | 2 |
+| 256 | 5 | 3 |
+| 320 | 10 | 10 |
+| 384 | 2 | 9 |
 
 ### learning_rate × dropout
 
 | learning_rate | 0.1 | 0.3 | 0.5 | 0.7 |
 | --- | --- | --- | --- | --- |
-| 1e-05 | 4 | 20 | 8 | 0 |
-| 5e-05 | 1 | 2 | 1 | 1 |
-| 0.0001 | 3 | 2 | 1 | 1 |
-| 0.0005 | 1 | 2 | 0 | 3 |
+| 1e-05 | 1 | 3 | 21 | 1 |
+| 5e-05 | 4 | 6 | 1 | 1 |
+| 0.0001 | 0 | 2 | 2 | 2 |
+| 0.0005 | 1 | 1 | 2 | 2 |
+
+## Forced Extreme Trials
+
+| Trial | Extreme Type | AUC | d_model | n_layers | n_heads |
+|-------|--------------|-----|---------|----------|---------|
+| 0 | min_d_model | 0.7151 | 128 | 10 | 8 |
+| 1 | max_d_model | 0.6832 | 384 | 10 | 8 |
+| 2 | min_n_layers | 0.6914 | 256 | 6 | 8 |
+| 3 | max_n_layers | 0.6923 | 256 | 12 | 8 |
+| 4 | min_n_heads | 0.6943 | 256 | 10 | 8 |
+| 5 | max_n_heads | 0.6959 | 256 | 10 | 16 |

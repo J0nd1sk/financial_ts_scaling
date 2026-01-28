@@ -4,119 +4,106 @@
 
 | ID | Name | Status | Last Update | Summary |
 |----|------|--------|-------------|---------|
-| ws1 | feature_generation | active | 2026-01-27 16:30 | tier_a500 Sub-Chunk 6a COMPLETE (24 features, 230 total) |
+| ws1 | feature_generation | active | 2026-01-27 21:00 | tier_a500 Sub-Chunks 6a+6b+7a COMPLETE (72 features, 278 total) |
 | ws2 | foundation | paused | 2026-01-26 12:00 | HPO script created for iTransformer/Informer, awaiting runs |
-| ws3 | phase6c_hpo_data | paused | 2026-01-26 15:45 | a200 combined dataset built & validated, HPO methodology complete |
+| ws3 | phase6c_hpo_analysis | **active** | 2026-01-27 19:15 | **HPO analysis COMPLETE** - a50/a100 metrics captured, trends identified |
 
 ## Shared State
 
 ### Branch & Git
 - **Branch**: `experiment/foundation-decoder-investigation`
-- **Last commit**: `4f9df5a` feat: Add tier_a200 build script
-- **To commit this session (ws1)**:
-  - `src/features/tier_a500.py` - NEW (24 features, Sub-Chunk 6a)
-  - `tests/features/test_tier_a500.py` - NEW (56 tests)
+- **Last commit**: `fb5eeab` feat: Add tier_a500 Sub-Chunk 7a (23 VOL features)
+- **Uncommitted**: 11 modified, 12 untracked (see ws3 files below)
 
 ### Test Status
-- Last `make test`: 2026-01-27 - **1062 passed**, 2 skipped
-- All tests pass (56 new tests for tier_a500)
+- Last `make test`: 2026-01-27 19:00 - **1178 passed**, 2 skipped
+- All tests pass
 
 ### Data Versions
 - **Raw**: SPY/DIA/QQQ/VIX OHLCV (v1)
 - **Processed**:
-  - a20: features + combined ✅
-  - a50: features + combined ✅
-  - a100: features + combined ✅ (naming inconsistent - no `_combined` suffix)
-  - a200: features ✅ + combined ✅
-  - a500: IN PROGRESS (Sub-Chunk 6a complete, 11 more chunks pending)
+  - a20: features + combined
+  - a50: features + combined (55 features)
+  - a100: features + combined (105 features)
+  - a200: features + combined (206 features)
+  - a500: IN PROGRESS (Sub-Chunks 6a+6b+7a complete, 278 features)
 
-### Latest Manifest Entries
-```
-SPY.features.a200: md5=01332ae16031805f0358ee7a0ca44039
-SPY.dataset.a200_combined: md5=78f0f408f0943c8ca6a11901da0ce7c5
-```
+---
 
 ## Cross-Workstream Coordination
 
 ### Blocking Dependencies
-- [ws3 a200 Data]: ✅ COMPLETE - `SPY_dataset_a200_combined.parquet` ready for experiments
-- [ws3 HPO Methodology]: ✅ COMPLETE - All 4 improvements implemented
-- [ws2 HPO Ready]: Script created, need to run 50-trial HPO for iTransformer and Informer
-- [ws1 tier_a500]: IN PROGRESS - 1/12 sub-chunks complete
+- [ws1 tier_a500]: IN PROGRESS - 3/12 sub-chunks complete
+- [ws3 HPO Analysis]: **COMPLETE** - Comprehensive analysis done, supplementary trials proposed
 
 ### File Ownership
-| Files | Owner |
-|-------|-------|
-| `src/features/tier_a500.py` | ws1 (NEW) |
-| `tests/features/test_tier_a500.py` | ws1 (NEW) |
-| `src/features/tier_a200.py` | ws1 (COMMITTED) |
-| `scripts/validate_parquet_file.py` | ws3 |
-| `experiments/architectures/hpo_neuralforecast.py` | ws2 |
+
+| Files | Owner | Status |
+|-------|-------|--------|
+| `src/features/tier_a500.py` | ws1 | COMMITTED |
+| `experiments/templates/hpo_template.py` | ws3 | **MODIFIED** (verbose=True fix) |
+| `docs/hpo_comprehensive_report.md` | ws3 | NEW |
+| `docs/supplementary_hpo_proposal.md` | ws3 | NEW |
+| `scripts/evaluate_top_hpo_models.py` | ws3 | NEW |
 
 ---
 
-## Session Summary (2026-01-27 - ws1)
+## Session Summary (2026-01-27 Evening - ws3)
 
 ### Work Completed
-1. **Created tier_a500 module skeleton**
-   - `src/features/tier_a500.py` - extends tier_a200
-   - CHUNK_6A_FEATURES (24 items), A500_ADDITION_LIST, FEATURE_LIST
 
-2. **Wrote 56 tests for Sub-Chunk 6a (TDD red phase)**
-   - Feature list structure tests
-   - Computation tests for all 24 features
-   - Integration tests
+1. **Fixed HPO Template** (`experiments/templates/hpo_template.py`)
+   - Changed `verbose=False` to `verbose=True` at line 327
+   - Future HPO runs will capture precision, recall, pred_range
 
-3. **Implemented Sub-Chunk 6a (TDD green phase)**
-   - 4 new SMA periods: sma_5, sma_14, sma_21, sma_63
-   - 5 new EMA periods: ema_5, ema_9, ema_50, ema_100, ema_200
-   - 6 MA slopes: sma_5_slope, sma_21_slope, sma_63_slope, ema_9_slope, ema_50_slope, ema_100_slope
-   - 5 price distances: price_pct_from_sma_5, price_pct_from_sma_21, price_pct_from_ema_9, price_pct_from_ema_50, price_pct_from_ema_100
-   - 4 MA proximities: sma_5_21_proximity, sma_21_50_proximity, sma_63_200_proximity, ema_9_50_proximity
+2. **Ran Top Model Evaluations**
+   - Re-trained 9 top models for a50 with `verbose=True`
+   - Re-trained 9 top models for a100 with `verbose=True`
+   - Captured real precision/recall/pred_range metrics
 
-4. **Fixed test fixture** - 400 days instead of 300 (sufficient warmup for 252-day indicators)
+3. **Created Comprehensive Report** (`docs/hpo_comprehensive_report.md`)
+   - Executive summary with solid tables
+   - Scaling law analysis (VIOLATED)
+   - Precision-recall tradeoff analysis
+   - Probability collapse detection (none found)
+   - Optimal hyperparameters summary
 
-**Current Feature Count**: 206 (a200) + 24 (Chunk 6a) = **230 features**
+4. **Analyzed 250 HPO Trials** - Identified trends:
+   - Dropout 0.5 optimal (56.7% of top 60)
+   - LR 1e-4 optimal (61.7% of top 60)
+   - d_model 128 optimal (63.3% of top 60)
+   - Bimodal depth: 2 layers OR 6-7 layers
 
----
+5. **Proposed Supplementary Trials** (`docs/supplementary_hpo_proposal.md`)
+   - 27 targeted trials exploring gaps in search space
+   - Phase 1: Fine-tune dropout/LR/WD
+   - Phase 2: Architecture variants
+   - Phase 3: Combined optimization
 
-## tier_a500 Progress
+### Key HPO Results
 
-| Sub-Chunk | Ranks | Features | Status |
-|-----------|-------|----------|--------|
-| **6a** | 207-230 | 24 | ✅ COMPLETE |
-| 6b | 231-255 | ~25 | PENDING |
-| 7a | 256-278 | ~23 | PENDING |
-| 7b | 279-300 | ~22 | PENDING |
-| 8a | 301-323 | ~23 | PENDING |
-| 8b | 324-345 | ~22 | PENDING |
-| 9a | 346-370 | ~25 | PENDING |
-| 9b | 371-395 | ~25 | PENDING |
-| 10a | 396-420 | ~25 | PENDING |
-| 10b | 421-445 | ~25 | PENDING |
-| 11a | 446-472 | ~27 | PENDING |
-| 11b | 473-500 | ~28 | PENDING |
+| Tier | Best AUC | Best Precision | Avg Recall |
+|------|----------|----------------|------------|
+| a50 | 0.7315 (20M) | 54.5% | 9.65% |
+| a100 | 0.7189 (20M) | 50.0% | 11.4% |
 
-**Target**: 500 features total (206 + 294 new)
+**Critical finding**: More features HURT - a50 beats a100 by 1.3% AUC consistently.
 
 ---
 
 ## User Priorities
 
-### ws1 (feature_generation) - Current Focus
-1. ✅ Sub-Chunk 6a complete (24 features)
-2. Continue with Sub-Chunk 6b (MA Durations/Crosses + OSC Extended)
-3. TDD cycle: tests first → implementation
+### ws3 (phase6c) - Next Steps
+1. **Decide**: Run 27 supplementary trials or accept current results?
+2. **If running**: ~15-30 min to implement and run
+3. **If not**: Proceed to Phase 6C conclusions
 
-### ws3 (phase6c) - Queued
-1. Continue HPO experiments on a100 data
-2. Rename a100 file after HPO complete
-3. Consider a200 experiments (data now ready)
+### ws1 (feature_generation) - Queued
+1. Continue with Sub-Chunk 7b (VLM Complete ~22 features)
 
 ### ws2 (foundation) - Queued
 1. Run iTransformer HPO (50 trials)
 2. Run Informer HPO (50 trials)
-3. Decision point: AUC >= 0.70 → horizon experiments
 
 ---
 
@@ -136,10 +123,13 @@ SPY.dataset.a200_combined: md5=78f0f408f0943c8ca6a11901da0ce7c5
 - Precision - never reduce fidelity
 - Consolidate rather than delete
 
-### Hyperparameters (HPO-Validated, Replacing Ablation)
-- **Dropout**: 0.1 (HPO found better than 0.5 for tier_a100)
-- **Learning Rate**: 1e-5 (slower is better)
-- **Weight Decay**: 0.001 (regularization helps)
+### Hyperparameters (HPO-Validated)
+Based on analysis of 250 trials:
+- **Dropout**: 0.5 (new finding from comprehensive analysis)
+- **Learning Rate**: 1e-4 (confirmed)
+- **Weight Decay**: 1e-4 to 1e-3 (higher than expected)
+- **d_model**: 128 for 20M budget
+- **n_layers**: 2 (shallow) or 6-7 (mid-deep) - bimodal
 - **Context**: 80d (unchanged)
 - **Normalization**: RevIN only (unchanged)
 - **Splitter**: SimpleSplitter (unchanged)
@@ -148,4 +138,8 @@ SPY.dataset.a200_combined: md5=78f0f408f0943c8ca6a11901da0ce7c5
 
 ## Key Insight
 
-**Probability collapse is the core issue** - models achieve decent AUC (ranking) but poor calibration (probability meaningfulness). Slowing down learning and adding regularization helps. This aligns with HPO finding lr=1e-5 and wd=0.001 optimal.
+**Scaling laws are VIOLATED for this task:**
+- Parameter scaling: 20M beats both 2M and 200M
+- Feature scaling: 55 features beats 105 features consistently
+- Regularization is critical: High dropout (0.5) dominates top performers
+- Recall is the bottleneck: ~10% means missing 90% of opportunities

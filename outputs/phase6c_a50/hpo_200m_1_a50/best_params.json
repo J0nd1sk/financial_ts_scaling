@@ -3,7 +3,7 @@
   "budget": "2M",
   "horizon": 1,
   "tier": "a100",
-  "n_trials": 18,
+  "n_trials": 50,
   "best_trial": 8,
   "best_value": 0.7294265287496198,
   "best_params": {
@@ -62,5 +62,5 @@
       0.001
     ]
   },
-  "timestamp": "2026-01-27T13:28:29.337720"
+  "timestamp": "2026-01-27T13:59:41.881748"
 }

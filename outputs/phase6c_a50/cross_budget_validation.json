@@ -1,5 +1,5 @@
 {
-  "tier": "a100",
+  "tier": "a50",
   "horizon": 1,
   "configs_found": [
     "2M",
@@ -80,5 +80,5 @@
       "dry_run": true
     }
   },
-  "timestamp": "2026-01-27T14:53:31.702081"
+  "timestamp": "2026-01-27T14:53:21.440997"
 }

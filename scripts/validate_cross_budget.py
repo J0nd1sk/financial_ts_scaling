@@ -50,26 +50,35 @@ BUDGET_CONFIGS = {
 }
 
 
-def load_best_params(budget: str, output_dir: str, horizon: int) -> dict | None:
+def load_best_params(budget: str, output_dir: str, horizon: int, tier: str) -> dict | None:
     """Load best parameters from HPO results.
 
     Args:
         budget: Budget level (2M, 20M, 200M)
         output_dir: Base output directory path
         horizon: Prediction horizon
+        tier: Feature tier (a20, a50, a100, a200)
 
     Returns:
         Dict with best_params and metadata, or None if not found
     """
     budget_lower = budget.lower()
-    hpo_dir = Path(output_dir) / f"hpo_{budget_lower}_h{horizon}"
-    params_file = hpo_dir / "best_params.json"
 
-    if not params_file.exists():
-        return None
+    # Try multiple directory patterns (different naming conventions used)
+    patterns = [
+        f"hpo_{budget_lower}_{horizon}_{tier}",    # Current format: hpo_2m_1_a50
+        f"hpo_{budget_lower}_h{horizon}",          # Legacy format: hpo_2m_h1
+        f"hpo_{budget_lower}_h{horizon}_{tier}",   # Hybrid format
+    ]
 
-    with open(params_file) as f:
-        return json.load(f)
+    for pattern in patterns:
+        hpo_dir = Path(output_dir) / pattern
+        params_file = hpo_dir / "best_params.json"
+        if params_file.exists():
+            with open(params_file) as f:
+                return json.load(f)
+
+    return None
 
 
 def train_with_config(
@@ -217,7 +226,7 @@ def run_cross_budget_validation(
 
     # Load best params for each budget
     for budget in budgets:
-        params = load_best_params(budget, output_dir, horizon)
+        params = load_best_params(budget, output_dir, horizon, tier)
         if params is not None:
             configs_found.append(budget)
             best_configs[budget] = params["best_params"]

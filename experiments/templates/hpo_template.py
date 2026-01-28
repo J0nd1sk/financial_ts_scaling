@@ -324,7 +324,7 @@ def create_objective(
         )
 
         try:
-            result = trainer.train(verbose=False)
+            result = trainer.train(verbose=True)
 
             # Extract ALL metrics
             val_auc = result.get("val_auc", 0.5)
