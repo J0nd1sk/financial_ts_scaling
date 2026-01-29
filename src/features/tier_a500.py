@@ -340,6 +340,40 @@ CHUNK_10A_FEATURES = [
     "fractal_dimension_20d",
 ]
 
+# Sub-Chunk 10b: ENT Extended (ranks 421-445) - 25 features
+CHUNK_10B_FEATURES = [
+    # Group 1: Approximate Entropy (4 features)
+    "approx_entropy_20d",
+    "approx_entropy_slope",
+    "approx_entropy_percentile_60d",
+    "approx_entropy_regime",
+    # Group 2: Spectral Entropy (5 features)
+    "spectral_entropy_20d",
+    "spectral_entropy_slope",
+    "spectral_entropy_percentile_60d",
+    "spectral_vs_volatility_ratio",
+    "spectral_entropy_regime",
+    # Group 3: Multi-Scale Entropy (5 features)
+    "entropy_scale_5d",
+    "entropy_scale_10d",
+    "entropy_scale_ratio_5_20",
+    "entropy_scale_ratio_10_20",
+    "entropy_scale_consistency",
+    # Group 4: Entropy-Volatility Divergence (6 features)
+    "entropy_vol_divergence",
+    "entropy_vol_correlation_20d",
+    "entropy_leading_vol",
+    "vol_leading_entropy",
+    "entropy_vol_regime_match",
+    "hidden_instability_score",
+    # Group 5: Entropy Regime Dynamics (5 features)
+    "entropy_regime_duration",
+    "entropy_regime_change_count_20d",
+    "perm_entropy_trend_5d",
+    "perm_entropy_acceleration_5d",
+    "entropy_stability_score",
+]
+
 # 294 new indicators added in tier a500 (ranks 207-500)
 # Built incrementally across sub-chunks 6a through 11b
 A500_ADDITION_LIST = (
@@ -352,6 +386,7 @@ A500_ADDITION_LIST = (
     + CHUNK_9A_FEATURES
     + CHUNK_9B_FEATURES
     + CHUNK_10A_FEATURES
+    + CHUNK_10B_FEATURES
     # ... remaining chunks
 )
 
@@ -4064,6 +4099,546 @@ def _compute_chunk_10a(
     return features
 
 
+# =============================================================================
+# Sub-Chunk 10b computation functions (ranks 421-445)
+# =============================================================================
+
+
+def _approx_entropy(series: np.ndarray, m: int = 2, r: float = 0.2) -> float:
+    """Compute approximate entropy of a time series.
+
+    Approximate entropy (ApEn) measures regularity/predictability.
+    Unlike sample entropy, ApEn counts self-matches which makes it more
+    sensitive to noise but also distinguishes it from SampEn.
+
+    Lower values = more regular/predictable, higher values = more complex.
+
+    Args:
+        series: 1D array of values
+        m: Embedding dimension (default 2)
+        r: Tolerance as fraction of std (default 0.2)
+
+    Returns:
+        Approximate entropy value (non-negative)
+    """
+    n = len(series)
+    if n < m + 1:
+        return np.nan
+
+    # Normalize tolerance by std
+    std = np.std(series)
+    if std == 0:
+        return 0.0
+    tolerance = r * std
+
+    def phi(dim: int) -> float:
+        """Compute phi for embedding dimension dim."""
+        # Create embedding vectors
+        embedded = np.array([series[i:i + dim] for i in range(n - dim + 1)])
+        num_vectors = len(embedded)
+
+        if num_vectors == 0:
+            return 0.0
+
+        # Count matches for each vector (including self-matches for ApEn)
+        counts = np.zeros(num_vectors)
+        for i in range(num_vectors):
+            for j in range(num_vectors):
+                if np.max(np.abs(embedded[i] - embedded[j])) <= tolerance:
+                    counts[i] += 1
+
+        # Compute C_i^m(r) = count / (N - m + 1)
+        c_i = counts / num_vectors
+
+        # Avoid log(0)
+        c_i = np.maximum(c_i, 1e-10)
+
+        return np.mean(np.log(c_i))
+
+    phi_m = phi(m)
+    phi_m1 = phi(m + 1)
+
+    # ApEn should be non-negative, but numerical precision can cause slight negatives
+    return max(0.0, phi_m - phi_m1)
+
+
+def _spectral_entropy(series: np.ndarray) -> float:
+    """Compute normalized spectral entropy of a time series.
+
+    Spectral entropy measures the uniformity of the power spectrum.
+    High value (close to 1) = white noise (flat spectrum)
+    Low value (close to 0) = periodic signal (peaked spectrum)
+
+    Args:
+        series: 1D array of values
+
+    Returns:
+        Normalized spectral entropy in [0, 1]
+    """
+    n = len(series)
+    if n < 4:
+        return np.nan
+
+    # Compute power spectrum via FFT
+    fft_vals = np.fft.fft(series)
+    power = np.abs(fft_vals) ** 2
+
+    # Use only positive frequencies (first half, excluding DC)
+    power = power[1:n // 2 + 1]
+
+    if len(power) == 0 or np.sum(power) == 0:
+        return 0.5
+
+    # Normalize to probability distribution
+    power_norm = power / np.sum(power)
+
+    # Avoid log(0)
+    power_norm = np.maximum(power_norm, 1e-10)
+
+    # Compute Shannon entropy
+    entropy = -np.sum(power_norm * np.log(power_norm))
+
+    # Normalize by max entropy (uniform distribution)
+    max_entropy = np.log(len(power_norm))
+    if max_entropy == 0:
+        return 0.5
+
+    return entropy / max_entropy
+
+
+def _compute_10b_approx_entropy_features(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute approximate entropy features (Group 1, 4 features).
+
+    Features:
+    - approx_entropy_20d: Rolling ApEn over 20-day window
+    - approx_entropy_slope: 5-day change in ApEn
+    - approx_entropy_percentile_60d: Historical percentile
+    - approx_entropy_regime: Low/Medium/High regime (-1/0/+1)
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with approx entropy features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Compute rolling approximate entropy (20-day window)
+    approx_ent = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        approx_ent.iloc[i] = _approx_entropy(window, m=2, r=0.2)
+
+    features["approx_entropy_20d"] = approx_ent
+
+    # Approximate entropy slope: 5-day change
+    approx_ent_slope = approx_ent - approx_ent.shift(5)
+    features["approx_entropy_slope"] = approx_ent_slope
+
+    # Percentile: rolling 60-day percentile
+    approx_ent_pctile = approx_ent.rolling(60).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5,
+        raw=False
+    )
+    features["approx_entropy_percentile_60d"] = approx_ent_pctile
+
+    # Regime: -1 (low, <33%), 0 (medium), +1 (high, >67%)
+    def percentile_to_regime(pct: float) -> int:
+        if pd.isna(pct):
+            return np.nan
+        if pct < 0.33:
+            return -1
+        elif pct > 0.67:
+            return 1
+        else:
+            return 0
+
+    approx_ent_regime = approx_ent_pctile.apply(percentile_to_regime)
+    features["approx_entropy_regime"] = approx_ent_regime
+
+    return features
+
+
+def _compute_10b_spectral_entropy_features(
+    close: pd.Series, high: pd.Series, low: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute spectral entropy features (Group 2, 5 features).
+
+    Features:
+    - spectral_entropy_20d: Rolling spectral entropy
+    - spectral_entropy_slope: 5-day change
+    - spectral_entropy_percentile_60d: Historical percentile
+    - spectral_vs_volatility_ratio: Chaos per volatility
+    - spectral_entropy_regime: Low/Medium/High regime (-1/0/+1)
+
+    Args:
+        close: Close price series
+        high: High price series
+        low: Low price series
+
+    Returns:
+        Dict with spectral entropy features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Compute rolling spectral entropy (20-day window)
+    spectral_ent = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        spectral_ent.iloc[i] = _spectral_entropy(window)
+
+    features["spectral_entropy_20d"] = spectral_ent
+
+    # Spectral entropy slope: 5-day change
+    spectral_ent_slope = spectral_ent - spectral_ent.shift(5)
+    features["spectral_entropy_slope"] = spectral_ent_slope
+
+    # Percentile: rolling 60-day percentile
+    spectral_ent_pctile = spectral_ent.rolling(60).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5,
+        raw=False
+    )
+    features["spectral_entropy_percentile_60d"] = spectral_ent_pctile
+
+    # Spectral entropy / ATR ratio (chaos per volatility)
+    atr = talib.ATR(high.values, low.values, close_arr, timeperiod=14)
+    atr_pct = atr / close_arr
+    atr_pct_normalized = pd.Series(atr_pct) / pd.Series(atr_pct).rolling(60).max().replace(0, np.nan)
+
+    spectral_vol_ratio = spectral_ent / atr_pct_normalized.replace(0, np.nan)
+    # Clip extreme values
+    spectral_vol_ratio = spectral_vol_ratio.clip(0, 10)
+    features["spectral_vs_volatility_ratio"] = spectral_vol_ratio
+
+    # Regime: -1 (low), 0 (medium), +1 (high)
+    def percentile_to_regime(pct: float) -> int:
+        if pd.isna(pct):
+            return np.nan
+        if pct < 0.33:
+            return -1
+        elif pct > 0.67:
+            return 1
+        else:
+            return 0
+
+    spectral_ent_regime = spectral_ent_pctile.apply(percentile_to_regime)
+    features["spectral_entropy_regime"] = spectral_ent_regime
+
+    return features
+
+
+def _compute_10b_multiscale_entropy_features(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute multi-scale entropy features (Group 3, 5 features).
+
+    Measures complexity at different temporal scales.
+
+    Features:
+    - entropy_scale_5d: Permutation entropy at 5-day window
+    - entropy_scale_10d: Permutation entropy at 10-day window
+    - entropy_scale_ratio_5_20: Ratio of 5d to 20d entropy
+    - entropy_scale_ratio_10_20: Ratio of 10d to 20d entropy
+    - entropy_scale_consistency: Std across scales (low = consistent)
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with multi-scale entropy features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Import permutation entropy from tier_a200
+    from src.features.tier_a200 import _permutation_entropy
+
+    # Compute permutation entropy at different scales
+    # 5-day window (shorter scale)
+    entropy_5d = pd.Series(np.nan, index=range(n))
+    for i in range(5, n):
+        window = close_arr[i - 5:i]
+        entropy_5d.iloc[i] = _permutation_entropy(window, order=3)  # Lower order for shorter window
+
+    # 10-day window
+    entropy_10d = pd.Series(np.nan, index=range(n))
+    for i in range(10, n):
+        window = close_arr[i - 10:i]
+        entropy_10d.iloc[i] = _permutation_entropy(window, order=3)
+
+    # 20-day window (reference from 10a, order 4)
+    entropy_20d = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        entropy_20d.iloc[i] = _permutation_entropy(window, order=4)
+
+    features["entropy_scale_5d"] = entropy_5d
+    features["entropy_scale_10d"] = entropy_10d
+
+    # Scale ratios
+    entropy_ratio_5_20 = entropy_5d / entropy_20d.replace(0, np.nan)
+    entropy_ratio_5_20 = entropy_ratio_5_20.clip(0.1, 10)
+    features["entropy_scale_ratio_5_20"] = entropy_ratio_5_20
+
+    entropy_ratio_10_20 = entropy_10d / entropy_20d.replace(0, np.nan)
+    entropy_ratio_10_20 = entropy_ratio_10_20.clip(0.1, 10)
+    features["entropy_scale_ratio_10_20"] = entropy_ratio_10_20
+
+    # Scale consistency: std across the three scales
+    def scale_consistency(row: pd.Series) -> float:
+        values = [row["entropy_scale_5d"], row["entropy_scale_10d"], row["entropy_20d"]]
+        values = [v for v in values if not pd.isna(v)]
+        if len(values) < 2:
+            return np.nan
+        return np.std(values)
+
+    # Create temp DataFrame for rolling calculation
+    temp_df = pd.DataFrame({
+        "entropy_scale_5d": entropy_5d,
+        "entropy_scale_10d": entropy_10d,
+        "entropy_20d": entropy_20d
+    })
+    entropy_consistency = temp_df.apply(scale_consistency, axis=1)
+    features["entropy_scale_consistency"] = entropy_consistency
+
+    return features
+
+
+def _compute_10b_entropy_vol_divergence_features(
+    close: pd.Series, high: pd.Series, low: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute entropy-volatility divergence features (Group 4, 6 features).
+
+    Key insight: high vol + low entropy = clean trend (follow)
+                 low vol + high entropy = choppy (fade)
+                 high entropy + low vol = hidden instability (danger)
+
+    Features:
+    - entropy_vol_divergence: When entropy and volatility disagree
+    - entropy_vol_correlation_20d: Rolling correlation
+    - entropy_leading_vol: Does entropy spike precede vol spike?
+    - vol_leading_entropy: Does vol spike precede entropy spike?
+    - entropy_vol_regime_match: Are both in same regime?
+    - hidden_instability_score: High entropy + low vol
+
+    Args:
+        close: Close price series
+        high: High price series
+        low: Low price series
+
+    Returns:
+        Dict with entropy-volatility divergence features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Import permutation entropy from tier_a200
+    from src.features.tier_a200 import _permutation_entropy
+
+    # Compute rolling permutation entropy (20-day window)
+    perm_entropy = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        perm_entropy.iloc[i] = _permutation_entropy(window, order=4)
+
+    # Compute volatility (ATR %)
+    atr = pd.Series(talib.ATR(high.values, low.values, close_arr, timeperiod=14))
+    atr_pct = atr / close
+
+    # Normalize both to percentiles for fair comparison
+    entropy_pctile = perm_entropy.rolling(60).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5,
+        raw=False
+    )
+    vol_pctile = atr_pct.rolling(60).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5,
+        raw=False
+    )
+
+    # Divergence: difference between entropy percentile and vol percentile
+    # Positive = entropy high relative to vol, Negative = vol high relative to entropy
+    entropy_vol_divergence = entropy_pctile - vol_pctile
+    features["entropy_vol_divergence"] = entropy_vol_divergence
+
+    # Rolling correlation between entropy and volatility
+    entropy_vol_corr = perm_entropy.rolling(20).corr(atr_pct)
+    features["entropy_vol_correlation_20d"] = entropy_vol_corr
+
+    # Leading indicators: does one spike precede the other?
+    # Use lagged cross-correlation
+    entropy_change = perm_entropy.diff(5)
+    vol_change = atr_pct.diff(5)
+
+    # Entropy leading vol: correlation of entropy change with future vol change
+    entropy_leading = entropy_change.rolling(20).corr(vol_change.shift(-5))
+    features["entropy_leading_vol"] = entropy_leading
+
+    # Vol leading entropy: correlation of vol change with future entropy change
+    vol_leading = vol_change.rolling(20).corr(entropy_change.shift(-5))
+    features["vol_leading_entropy"] = vol_leading
+
+    # Regime match: are both in same regime?
+    def get_regime(pct: float) -> int:
+        if pd.isna(pct):
+            return np.nan
+        if pct < 0.33:
+            return -1
+        elif pct > 0.67:
+            return 1
+        else:
+            return 0
+
+    entropy_regime = entropy_pctile.apply(get_regime)
+    vol_regime = vol_pctile.apply(get_regime)
+
+    # 1 if same regime, 0 if different
+    regime_match = (entropy_regime == vol_regime).astype(float)
+    regime_match[entropy_regime.isna() | vol_regime.isna()] = np.nan
+    features["entropy_vol_regime_match"] = regime_match
+
+    # Hidden instability: high entropy (complex/unpredictable) + low vol (calm)
+    # This combination often precedes market stress
+    hidden_instability = entropy_pctile * (1 - vol_pctile)
+    features["hidden_instability_score"] = hidden_instability
+
+    return features
+
+
+def _compute_10b_entropy_regime_dynamics_features(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute entropy regime dynamics features (Group 5, 5 features).
+
+    Duration and transitions in entropy regimes.
+
+    Features:
+    - entropy_regime_duration: Days in current regime
+    - entropy_regime_change_count_20d: Number of regime changes in 20 days
+    - perm_entropy_trend_5d: Is entropy trending up or down?
+    - perm_entropy_acceleration_5d: Is entropy trend accelerating?
+    - entropy_stability_score: Low = volatile entropy, High = stable
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with entropy regime dynamics features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Import permutation entropy from tier_a200
+    from src.features.tier_a200 import _permutation_entropy
+
+    # Compute rolling permutation entropy (20-day window)
+    perm_entropy = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        perm_entropy.iloc[i] = _permutation_entropy(window, order=4)
+
+    # Percentile for regime classification
+    entropy_pctile = perm_entropy.rolling(60).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5,
+        raw=False
+    )
+
+    # Regime: -1 (low), 0 (medium), +1 (high)
+    def get_regime(pct: float) -> int:
+        if pd.isna(pct):
+            return np.nan
+        if pct < 0.33:
+            return -1
+        elif pct > 0.67:
+            return 1
+        else:
+            return 0
+
+    entropy_regime = entropy_pctile.apply(get_regime)
+
+    # Duration: days in current regime
+    regime_duration = pd.Series(np.nan, index=range(n))
+    current_duration = 1
+    prev_regime = np.nan
+    for i in range(n):
+        current_regime = entropy_regime.iloc[i]
+        if pd.isna(current_regime):
+            regime_duration.iloc[i] = np.nan
+            current_duration = 1
+            prev_regime = np.nan
+        elif pd.isna(prev_regime) or current_regime != prev_regime:
+            # Regime changed
+            current_duration = 1
+            regime_duration.iloc[i] = current_duration
+            prev_regime = current_regime
+        else:
+            # Same regime
+            current_duration += 1
+            regime_duration.iloc[i] = current_duration
+
+    features["entropy_regime_duration"] = regime_duration
+
+    # Regime change count in 20-day window
+    regime_changes = (entropy_regime != entropy_regime.shift(1)).astype(float)
+    regime_changes[entropy_regime.isna() | entropy_regime.shift(1).isna()] = np.nan
+    regime_change_count = regime_changes.rolling(20).sum()
+    features["entropy_regime_change_count_20d"] = regime_change_count
+
+    # Entropy trend: 5-day slope of permutation entropy
+    entropy_trend = perm_entropy - perm_entropy.shift(5)
+    features["perm_entropy_trend_5d"] = entropy_trend
+
+    # Entropy acceleration: change in trend
+    entropy_accel = entropy_trend - entropy_trend.shift(5)
+    features["perm_entropy_acceleration_5d"] = entropy_accel
+
+    # Entropy stability score: inverse of entropy volatility
+    # High score = stable entropy, Low score = volatile entropy
+    entropy_vol = perm_entropy.rolling(20).std()
+    # Normalize by max for [0, 1] scale
+    entropy_vol_normalized = entropy_vol / entropy_vol.rolling(60).max().replace(0, np.nan)
+    entropy_stability = 1 - entropy_vol_normalized
+    entropy_stability = entropy_stability.clip(0, 1)
+    features["entropy_stability_score"] = entropy_stability
+
+    return features
+
+
+def _compute_chunk_10b(
+    high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute all Sub-Chunk 10b features (ENT Extended).
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with all 25 Chunk 10b features
+    """
+    features = {}
+
+    # Group 1: Approximate Entropy (4 features)
+    features.update(_compute_10b_approx_entropy_features(close))
+
+    # Group 2: Spectral Entropy (5 features)
+    features.update(_compute_10b_spectral_entropy_features(close, high, low))
+
+    # Group 3: Multi-Scale Entropy (5 features)
+    features.update(_compute_10b_multiscale_entropy_features(close))
+
+    # Group 4: Entropy-Volatility Divergence (6 features)
+    features.update(_compute_10b_entropy_vol_divergence_features(close, high, low))
+
+    # Group 5: Entropy Regime Dynamics (5 features)
+    features.update(_compute_10b_entropy_regime_dynamics_features(close))
+
+    return features
+
+
 def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.DataFrame:
     """Build feature DataFrame with all tier_a500 indicators.
 
@@ -4151,6 +4726,11 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
     # Sub-Chunk 10a: MTF Complete (ranks 396-420)
     # =========================================================================
     features.update(_compute_chunk_10a(df, high, low, close))
+
+    # =========================================================================
+    # Sub-Chunk 10b: ENT Extended (ranks 421-445)
+    # =========================================================================
+    features.update(_compute_chunk_10b(high, low, close))
 
     # Create feature DataFrame for new a500 features
     new_features_df = pd.DataFrame(features)

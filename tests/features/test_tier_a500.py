@@ -5158,10 +5158,11 @@ class TestChunk10aIntegration:
     def test_output_column_count_with_10a(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
     ) -> None:
-        """Output DataFrame should have Date + 420 features = 421 columns."""
+        """Output DataFrame should have Date + 445 features = 446 columns."""
         result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
-        # Date + a200 (206) + 6a (24) + 6b (25) + 7a (23) + 7b (22) + 8a (23) + 8b (22) + 9a (25) + 9b (25) + 10a (25)
-        expected_cols = 1 + 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25 + 25 + 25
+        # Date + a200 (206) + 6a (24) + 6b (25) + 7a (23) + 7b (22) + 8a (23) + 8b (22)
+        # + 9a (25) + 9b (25) + 10a (25) + 10b (25) = 446
+        expected_cols = 1 + 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25 + 25 + 25 + 25
         assert len(result.columns) == expected_cols, (
             f"Expected {expected_cols} columns, got {len(result.columns)}"
         )
@@ -5213,8 +5214,490 @@ class TestChunk10aIntegration:
                     )
 
     def test_feature_list_total_count(self) -> None:
-        """FEATURE_LIST should have 420 features after adding 10a."""
-        expected_count = 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25 + 25 + 25
+        """FEATURE_LIST should have 445 features after adding 10b."""
+        # 206 (a200) + 24 (6a) + 25 (6b) + 23 (7a) + 22 (7b) + 23 (8a) + 22 (8b)
+        # + 25 (9a) + 25 (9b) + 25 (10a) + 25 (10b) = 445
+        expected_count = 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25 + 25 + 25 + 25
         assert len(tier_a500.FEATURE_LIST) == expected_count, (
             f"Expected {expected_count} features, got {len(tier_a500.FEATURE_LIST)}"
         )
+
+
+# =============================================================================
+# Sub-Chunk 10b: ENT Extended (ranks 421-445) - 25 features
+# =============================================================================
+
+
+class TestChunk10bFeatureListStructure:
+    """Test CHUNK_10B_FEATURES list structure and properties."""
+
+    def test_chunk_10b_features_exists(self) -> None:
+        """CHUNK_10B_FEATURES constant exists."""
+        assert hasattr(tier_a500, "CHUNK_10B_FEATURES")
+
+    def test_chunk_10b_is_list(self) -> None:
+        """CHUNK_10B_FEATURES is a list."""
+        assert isinstance(tier_a500.CHUNK_10B_FEATURES, list)
+
+    def test_chunk_10b_count_is_25(self) -> None:
+        """CHUNK_10B_FEATURES contains exactly 25 features."""
+        assert len(tier_a500.CHUNK_10B_FEATURES) == 25, (
+            f"Expected 25 features, got {len(tier_a500.CHUNK_10B_FEATURES)}"
+        )
+
+    def test_chunk_10b_no_duplicates(self) -> None:
+        """CHUNK_10B_FEATURES has no duplicates."""
+        assert len(tier_a500.CHUNK_10B_FEATURES) == len(set(tier_a500.CHUNK_10B_FEATURES))
+
+    def test_chunk_10b_no_overlap_with_a200(self) -> None:
+        """CHUNK_10B_FEATURES has no overlap with tier_a200."""
+        from src.features import tier_a200
+        overlap = set(tier_a500.CHUNK_10B_FEATURES) & set(tier_a200.FEATURE_LIST)
+        assert len(overlap) == 0, f"Overlapping features with a200: {overlap}"
+
+    def test_chunk_10b_no_overlap_with_prior_chunks(self) -> None:
+        """CHUNK_10B_FEATURES has no overlap with chunks 6a-10a."""
+        prior_chunks = (
+            tier_a500.CHUNK_6A_FEATURES
+            + tier_a500.CHUNK_6B_FEATURES
+            + tier_a500.CHUNK_7A_FEATURES
+            + tier_a500.CHUNK_7B_FEATURES
+            + tier_a500.CHUNK_8A_FEATURES
+            + tier_a500.CHUNK_8B_FEATURES
+            + tier_a500.CHUNK_9A_FEATURES
+            + tier_a500.CHUNK_9B_FEATURES
+            + tier_a500.CHUNK_10A_FEATURES
+        )
+        overlap = set(tier_a500.CHUNK_10B_FEATURES) & set(prior_chunks)
+        assert len(overlap) == 0, f"Overlapping features with prior chunks: {overlap}"
+
+    def test_chunk_10b_all_strings(self) -> None:
+        """All CHUNK_10B_FEATURES elements are strings."""
+        for feature in tier_a500.CHUNK_10B_FEATURES:
+            assert isinstance(feature, str), f"Non-string feature: {feature}"
+
+    def test_chunk_10b_in_feature_list(self) -> None:
+        """All CHUNK_10B_FEATURES are in FEATURE_LIST."""
+        for feature in tier_a500.CHUNK_10B_FEATURES:
+            assert feature in tier_a500.FEATURE_LIST, (
+                f"Feature not in FEATURE_LIST: {feature}"
+            )
+
+    def test_chunk_10b_in_a500_addition_list(self) -> None:
+        """All CHUNK_10B_FEATURES are in A500_ADDITION_LIST."""
+        for feature in tier_a500.CHUNK_10B_FEATURES:
+            assert feature in tier_a500.A500_ADDITION_LIST, (
+                f"Feature not in A500_ADDITION_LIST: {feature}"
+            )
+
+    def test_chunk_10b_contiguous_in_feature_list(self) -> None:
+        """CHUNK_10B_FEATURES are contiguous in FEATURE_LIST at positions 420-445."""
+        # a200 has 206 features, prior chunks have 214 (24+25+23+22+23+22+25+25+25)
+        # So 10b starts at index 420 (0-indexed)
+        start_idx = 420
+        end_idx = start_idx + 25
+        feature_list_slice = tier_a500.FEATURE_LIST[start_idx:end_idx]
+        assert feature_list_slice == tier_a500.CHUNK_10B_FEATURES, (
+            f"CHUNK_10B_FEATURES not contiguous at positions {start_idx}-{end_idx}"
+        )
+
+
+class TestChunk10bApproxEntropyFeatures:
+    """Test approximate entropy features (Group 1)."""
+
+    def test_approx_entropy_20d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """approx_entropy_20d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "approx_entropy_20d" in result.columns
+
+    def test_approx_entropy_20d_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """approx_entropy_20d values are non-negative (entropy >= 0)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["approx_entropy_20d"].dropna()
+        assert (vals >= 0).all(), "approx_entropy_20d has negative values"
+
+    def test_approx_entropy_slope_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """approx_entropy_slope is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "approx_entropy_slope" in result.columns
+
+    def test_approx_entropy_slope_signed(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """approx_entropy_slope can be positive or negative."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["approx_entropy_slope"].dropna()
+        # Should have variation
+        assert vals.std() > 0, "approx_entropy_slope has no variation"
+
+    def test_approx_entropy_percentile_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """approx_entropy_percentile_60d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "approx_entropy_percentile_60d" in result.columns
+
+    def test_approx_entropy_percentile_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """approx_entropy_percentile_60d values are in [0, 1] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["approx_entropy_percentile_60d"].dropna()
+        assert (vals >= 0).all() and (vals <= 1).all(), "percentile outside [0, 1]"
+
+    def test_approx_entropy_regime_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """approx_entropy_regime is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "approx_entropy_regime" in result.columns
+
+    def test_approx_entropy_regime_values(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """approx_entropy_regime values are in {-1, 0, +1}."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["approx_entropy_regime"].dropna()
+        valid_values = {-1, 0, 1}
+        assert set(vals.unique()).issubset(valid_values), (
+            f"Invalid regime values: {set(vals.unique()) - valid_values}"
+        )
+
+
+class TestChunk10bSpectralEntropyFeatures:
+    """Test spectral entropy features (Group 2)."""
+
+    def test_spectral_entropy_20d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spectral_entropy_20d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "spectral_entropy_20d" in result.columns
+
+    def test_spectral_entropy_20d_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spectral_entropy_20d values are non-negative."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["spectral_entropy_20d"].dropna()
+        assert (vals >= 0).all(), "spectral_entropy_20d has negative values"
+
+    def test_spectral_entropy_20d_bounded(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spectral_entropy_20d values are bounded (normalized entropy)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["spectral_entropy_20d"].dropna()
+        # Normalized spectral entropy should be in [0, 1]
+        assert (vals <= 1.01).all(), "spectral_entropy_20d exceeds 1"
+
+    def test_spectral_entropy_slope_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spectral_entropy_slope is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "spectral_entropy_slope" in result.columns
+
+    def test_spectral_entropy_percentile_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spectral_entropy_percentile_60d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "spectral_entropy_percentile_60d" in result.columns
+
+    def test_spectral_vs_volatility_ratio_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spectral_vs_volatility_ratio is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "spectral_vs_volatility_ratio" in result.columns
+
+    def test_spectral_vs_volatility_ratio_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spectral_vs_volatility_ratio values are positive (ratio)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["spectral_vs_volatility_ratio"].dropna()
+        assert (vals >= 0).all(), "spectral_vs_volatility_ratio has negative values"
+
+    def test_spectral_entropy_regime_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spectral_entropy_regime is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "spectral_entropy_regime" in result.columns
+
+
+class TestChunk10bMultiScaleEntropyFeatures:
+    """Test multi-scale entropy features (Group 3)."""
+
+    def test_entropy_scale_5d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_scale_5d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_scale_5d" in result.columns
+
+    def test_entropy_scale_10d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_scale_10d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_scale_10d" in result.columns
+
+    def test_entropy_scale_ratio_5_20_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_scale_ratio_5_20 is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_scale_ratio_5_20" in result.columns
+
+    def test_entropy_scale_ratio_bounded(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_scale_ratio_5_20 values are bounded (ratio of similar quantities)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["entropy_scale_ratio_5_20"].dropna()
+        # Ratio should be reasonable (0.1 to 10x)
+        assert (vals > 0).all(), "entropy_scale_ratio has non-positive values"
+        assert (vals < 10).all(), "entropy_scale_ratio exceeds 10x"
+
+    def test_entropy_scale_ratio_10_20_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_scale_ratio_10_20 is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_scale_ratio_10_20" in result.columns
+
+    def test_entropy_scale_consistency_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_scale_consistency is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_scale_consistency" in result.columns
+
+    def test_entropy_scale_consistency_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_scale_consistency values are non-negative (std >= 0)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["entropy_scale_consistency"].dropna()
+        assert (vals >= 0).all(), "entropy_scale_consistency has negative values"
+
+
+class TestChunk10bEntropyVolDivergenceFeatures:
+    """Test entropy-volatility divergence features (Group 4)."""
+
+    def test_entropy_vol_divergence_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_vol_divergence is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_vol_divergence" in result.columns
+
+    def test_entropy_vol_divergence_signed(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_vol_divergence can be positive or negative."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["entropy_vol_divergence"].dropna()
+        # Should have variation
+        assert vals.std() > 0, "entropy_vol_divergence has no variation"
+
+    def test_entropy_vol_correlation_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_vol_correlation_20d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_vol_correlation_20d" in result.columns
+
+    def test_entropy_vol_correlation_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_vol_correlation_20d values are in [-1, 1] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["entropy_vol_correlation_20d"].dropna()
+        assert (vals >= -1.01).all() and (vals <= 1.01).all(), "correlation outside [-1, 1]"
+
+    def test_entropy_leading_vol_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_leading_vol is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_leading_vol" in result.columns
+
+    def test_vol_leading_entropy_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """vol_leading_entropy is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "vol_leading_entropy" in result.columns
+
+    def test_entropy_vol_regime_match_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_vol_regime_match is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_vol_regime_match" in result.columns
+
+    def test_entropy_vol_regime_match_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_vol_regime_match values are in {0, 1}."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["entropy_vol_regime_match"].dropna()
+        valid_values = {0, 1}
+        assert set(vals.unique()).issubset(valid_values), (
+            f"Invalid regime match values: {set(vals.unique()) - valid_values}"
+        )
+
+    def test_hidden_instability_score_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hidden_instability_score is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "hidden_instability_score" in result.columns
+
+    def test_hidden_instability_score_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hidden_instability_score values are non-negative."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["hidden_instability_score"].dropna()
+        assert (vals >= 0).all(), "hidden_instability_score has negative values"
+
+
+class TestChunk10bEntropyRegimeDynamicsFeatures:
+    """Test entropy regime dynamics features (Group 5)."""
+
+    def test_entropy_regime_duration_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_regime_duration is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_regime_duration" in result.columns
+
+    def test_entropy_regime_duration_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_regime_duration values are positive (>= 1 day)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["entropy_regime_duration"].dropna()
+        assert (vals >= 1).all(), "entropy_regime_duration < 1"
+
+    def test_entropy_regime_change_count_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_regime_change_count_20d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_regime_change_count_20d" in result.columns
+
+    def test_entropy_regime_change_count_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_regime_change_count_20d values are non-negative."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["entropy_regime_change_count_20d"].dropna()
+        assert (vals >= 0).all(), "entropy_regime_change_count_20d has negative values"
+
+    def test_perm_entropy_trend_5d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """perm_entropy_trend_5d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "perm_entropy_trend_5d" in result.columns
+
+    def test_perm_entropy_trend_5d_signed(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """perm_entropy_trend_5d can be positive or negative."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["perm_entropy_trend_5d"].dropna()
+        # Should have variation
+        assert vals.std() > 0, "perm_entropy_trend_5d has no variation"
+
+    def test_perm_entropy_acceleration_5d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """perm_entropy_acceleration_5d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "perm_entropy_acceleration_5d" in result.columns
+
+    def test_entropy_stability_score_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_stability_score is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_stability_score" in result.columns
+
+    def test_entropy_stability_score_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_stability_score values are non-negative (inverse of volatility)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["entropy_stability_score"].dropna()
+        assert (vals >= 0).all(), "entropy_stability_score has negative values"
+
+
+class TestChunk10bIntegration:
+    """Integration tests for Chunk 10b features."""
+
+    def test_chunk_10b_feature_count_is_25(self) -> None:
+        """CHUNK_10B_FEATURES should have exactly 25 features."""
+        assert len(tier_a500.CHUNK_10B_FEATURES) == 25
+
+    def test_chunk_10b_all_features_computed(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """All CHUNK_10B_FEATURES are computed in build_feature_dataframe."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        missing = []
+        for feature in tier_a500.CHUNK_10B_FEATURES:
+            if feature not in result.columns:
+                missing.append(feature)
+        assert len(missing) == 0, f"Missing features in output: {missing}"
+
+    def test_chunk_10b_no_all_nan_columns(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No Chunk 10b feature should be all NaN after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        all_nan_cols = []
+        for feature in tier_a500.CHUNK_10B_FEATURES:
+            if result[feature].isna().all():
+                all_nan_cols.append(feature)
+        assert len(all_nan_cols) == 0, f"All-NaN columns in 10b: {all_nan_cols}"
+
+    def test_10b_features_no_lookahead(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Chunk 10b features should not use future data (no lookahead bias).
+
+        Test by checking that early rows can be computed without later data.
+        """
+        # Build features on full data
+        full_result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        # Build features on truncated data (first 350 rows)
+        truncated_df = sample_daily_df.iloc[:350].copy()
+        truncated_vix = sample_vix_df.iloc[:350].copy()
+        truncated_result = tier_a500.build_feature_dataframe(truncated_df, truncated_vix)
+
+        if len(truncated_result) > 0 and len(full_result) > 0:
+            # Find overlapping dates
+            common_dates = set(full_result["Date"]) & set(truncated_result["Date"])
+            if len(common_dates) > 0:
+                # For each chunk 10b feature, verify values match for common dates
+                for feature in tier_a500.CHUNK_10B_FEATURES:
+                    full_vals = full_result[full_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    trunc_vals = truncated_result[truncated_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    # Use allclose for floating point comparison
+                    assert np.allclose(full_vals, trunc_vals, equal_nan=True), (
+                        f"Lookahead detected in {feature}"
+                    )
