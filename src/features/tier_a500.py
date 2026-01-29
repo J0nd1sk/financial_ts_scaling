@@ -305,6 +305,41 @@ CHUNK_9B_FEATURES = [
     "pattern_cluster_indicator",
 ]
 
+# Sub-Chunk 10a: MTF Complete (ranks 396-420) - 25 features
+CHUNK_10A_FEATURES = [
+    # Weekly MA Features (3 features)
+    "weekly_ma_slope",
+    "weekly_ma_slope_acceleration",
+    "price_pct_from_weekly_ma",
+    # Weekly RSI Features (2 features)
+    "weekly_rsi_slope",
+    "weekly_rsi_slope_acceleration",
+    # Weekly Bollinger Band Features (3 features)
+    "weekly_bb_position",
+    "weekly_bb_width",
+    "weekly_bb_width_slope",
+    # Daily-Weekly Alignment Features (3 features)
+    "trend_alignment_daily_weekly",
+    "rsi_alignment_daily_weekly",
+    "vol_alignment_daily_weekly",
+    # Extended Entropy Features (6 features)
+    "permutation_entropy_slope",
+    "permutation_entropy_acceleration",
+    "sample_entropy_20d",
+    "sample_entropy_slope",
+    "sample_entropy_acceleration",
+    "entropy_percentile_60d",
+    "entropy_vol_ratio",
+    "entropy_regime_score",
+    # Complexity Features (6 features)
+    "hurst_exponent_20d",
+    "hurst_exponent_slope",
+    "autocorr_lag1",
+    "autocorr_lag5",
+    "autocorr_partial_lag1",
+    "fractal_dimension_20d",
+]
+
 # 294 new indicators added in tier a500 (ranks 207-500)
 # Built incrementally across sub-chunks 6a through 11b
 A500_ADDITION_LIST = (
@@ -316,6 +351,7 @@ A500_ADDITION_LIST = (
     + CHUNK_8B_FEATURES
     + CHUNK_9A_FEATURES
     + CHUNK_9B_FEATURES
+    + CHUNK_10A_FEATURES
     # ... remaining chunks
 )
 
@@ -3383,6 +3419,651 @@ def _compute_chunk_9b(
     return features
 
 
+# =============================================================================
+# Sub-Chunk 10a computation functions (ranks 396-420)
+# =============================================================================
+
+WEEKLY_FREQ = "W-MON"
+
+
+def _resample_to_weekly_a500(df: pd.DataFrame) -> pd.DataFrame:
+    """Resample daily OHLCV data to weekly for MTF features.
+
+    Args:
+        df: DataFrame with Date, Open, High, Low, Close, Volume
+
+    Returns:
+        Weekly aggregated DataFrame
+    """
+    df_copy = df.copy()
+    df_copy["Date"] = pd.to_datetime(df_copy["Date"])
+    df_copy = df_copy.set_index("Date")
+
+    weekly = (
+        df_copy
+        .resample(WEEKLY_FREQ, label="left", closed="left")
+        .agg({
+            "Open": "first",
+            "High": "max",
+            "Low": "min",
+            "Close": "last",
+            "Volume": "sum",
+        })
+    )
+    weekly = weekly[weekly["Close"].notnull()]
+    return weekly
+
+
+def _compute_10a_weekly_ma_features(df: pd.DataFrame) -> Mapping[str, pd.Series]:
+    """Compute weekly MA features for MTF analysis.
+
+    Features:
+    - weekly_ma_slope: Rate of change in weekly SMA (5-week change / 5)
+    - weekly_ma_slope_acceleration: Change in weekly MA slope
+    - price_pct_from_weekly_ma: Daily close vs weekly MA (signed %)
+
+    Args:
+        df: Daily DataFrame with OHLCV
+
+    Returns:
+        Dict with weekly MA features (daily-aligned)
+    """
+    features = {}
+
+    # Resample to weekly
+    weekly = _resample_to_weekly_a500(df)
+    if len(weekly) < 20:
+        # Not enough weekly data
+        n = len(df)
+        features["weekly_ma_slope"] = pd.Series(np.nan, index=range(n))
+        features["weekly_ma_slope_acceleration"] = pd.Series(np.nan, index=range(n))
+        features["price_pct_from_weekly_ma"] = pd.Series(np.nan, index=range(n))
+        return features
+
+    # Compute 20-week SMA on weekly data
+    weekly_sma = talib.SMA(weekly["Close"].values, timeperiod=20)
+    weekly_sma_series = pd.Series(weekly_sma, index=weekly.index)
+
+    # Weekly MA slope: 5-week change as fraction
+    weekly_ma_slope = (weekly_sma_series - weekly_sma_series.shift(5)) / weekly_sma_series.shift(5)
+
+    # Weekly MA slope acceleration: change in slope
+    weekly_ma_slope_accel = weekly_ma_slope - weekly_ma_slope.shift(1)
+
+    # Shift by 1 week to avoid lookahead bias
+    weekly_sma_series = weekly_sma_series.shift(1)
+    weekly_ma_slope = weekly_ma_slope.shift(1)
+    weekly_ma_slope_accel = weekly_ma_slope_accel.shift(1)
+
+    # Align weekly features to daily index
+    df_copy = df.copy()
+    df_copy["Date"] = pd.to_datetime(df_copy["Date"])
+    daily_index = df_copy["Date"]
+
+    # Forward-fill weekly data to daily
+    weekly_sma_daily = weekly_sma_series.reindex(daily_index).ffill()
+    weekly_slope_daily = weekly_ma_slope.reindex(daily_index).ffill()
+    weekly_accel_daily = weekly_ma_slope_accel.reindex(daily_index).ffill()
+
+    # Reset index for output
+    features["weekly_ma_slope"] = weekly_slope_daily.reset_index(drop=True)
+    features["weekly_ma_slope_acceleration"] = weekly_accel_daily.reset_index(drop=True)
+
+    # Price % from weekly MA (daily close vs weekly MA)
+    close = df_copy["Close"].values
+    weekly_ma_values = weekly_sma_daily.values
+    price_pct_from_weekly_ma = (close - weekly_ma_values) / weekly_ma_values
+    features["price_pct_from_weekly_ma"] = pd.Series(price_pct_from_weekly_ma)
+
+    return features
+
+
+def _compute_10a_weekly_rsi_features(df: pd.DataFrame) -> Mapping[str, pd.Series]:
+    """Compute weekly RSI features for MTF analysis.
+
+    Features:
+    - weekly_rsi_slope: 5-week change in weekly RSI
+    - weekly_rsi_slope_acceleration: Change in weekly RSI slope
+
+    Args:
+        df: Daily DataFrame with OHLCV
+
+    Returns:
+        Dict with weekly RSI features (daily-aligned)
+    """
+    features = {}
+
+    # Resample to weekly
+    weekly = _resample_to_weekly_a500(df)
+    if len(weekly) < 20:
+        n = len(df)
+        features["weekly_rsi_slope"] = pd.Series(np.nan, index=range(n))
+        features["weekly_rsi_slope_acceleration"] = pd.Series(np.nan, index=range(n))
+        return features
+
+    # Compute weekly RSI
+    weekly_rsi = talib.RSI(weekly["Close"].values, timeperiod=14)
+    weekly_rsi_series = pd.Series(weekly_rsi, index=weekly.index)
+
+    # Weekly RSI slope: 5-week change
+    weekly_rsi_slope = weekly_rsi_series - weekly_rsi_series.shift(5)
+
+    # Weekly RSI slope acceleration: change in slope
+    weekly_rsi_slope_accel = weekly_rsi_slope - weekly_rsi_slope.shift(1)
+
+    # Shift by 1 week to avoid lookahead
+    weekly_rsi_slope = weekly_rsi_slope.shift(1)
+    weekly_rsi_slope_accel = weekly_rsi_slope_accel.shift(1)
+
+    # Align to daily index
+    df_copy = df.copy()
+    df_copy["Date"] = pd.to_datetime(df_copy["Date"])
+    daily_index = df_copy["Date"]
+
+    weekly_rsi_slope_daily = weekly_rsi_slope.reindex(daily_index).ffill()
+    weekly_rsi_accel_daily = weekly_rsi_slope_accel.reindex(daily_index).ffill()
+
+    features["weekly_rsi_slope"] = weekly_rsi_slope_daily.reset_index(drop=True)
+    features["weekly_rsi_slope_acceleration"] = weekly_rsi_accel_daily.reset_index(drop=True)
+
+    return features
+
+
+def _compute_10a_weekly_bb_features(df: pd.DataFrame) -> Mapping[str, pd.Series]:
+    """Compute weekly Bollinger Band features for MTF analysis.
+
+    Features:
+    - weekly_bb_position: Position in weekly BB (0 = lower, 1 = upper)
+    - weekly_bb_width: Weekly BB width as fraction of price
+    - weekly_bb_width_slope: Change in weekly BB width
+
+    Args:
+        df: Daily DataFrame with OHLCV
+
+    Returns:
+        Dict with weekly BB features (daily-aligned)
+    """
+    features = {}
+
+    # Resample to weekly
+    weekly = _resample_to_weekly_a500(df)
+    if len(weekly) < 20:
+        n = len(df)
+        features["weekly_bb_position"] = pd.Series(np.nan, index=range(n))
+        features["weekly_bb_width"] = pd.Series(np.nan, index=range(n))
+        features["weekly_bb_width_slope"] = pd.Series(np.nan, index=range(n))
+        return features
+
+    # Compute weekly Bollinger Bands
+    upper, middle, lower = talib.BBANDS(
+        weekly["Close"].values, timeperiod=20, nbdevup=2, nbdevdn=2
+    )
+    upper_series = pd.Series(upper, index=weekly.index)
+    middle_series = pd.Series(middle, index=weekly.index)
+    lower_series = pd.Series(lower, index=weekly.index)
+
+    # Weekly BB position: (close - lower) / (upper - lower)
+    weekly_close = weekly["Close"]
+    bb_range = upper_series - lower_series
+    bb_position = (weekly_close - lower_series) / bb_range.replace(0, np.nan)
+
+    # Weekly BB width as fraction of price
+    bb_width = bb_range / middle_series
+
+    # BB width slope: 5-week change
+    bb_width_slope = bb_width - bb_width.shift(5)
+
+    # Shift by 1 week to avoid lookahead
+    bb_position = bb_position.shift(1)
+    bb_width = bb_width.shift(1)
+    bb_width_slope = bb_width_slope.shift(1)
+
+    # Align to daily index
+    df_copy = df.copy()
+    df_copy["Date"] = pd.to_datetime(df_copy["Date"])
+    daily_index = df_copy["Date"]
+
+    bb_position_daily = bb_position.reindex(daily_index).ffill()
+    bb_width_daily = bb_width.reindex(daily_index).ffill()
+    bb_width_slope_daily = bb_width_slope.reindex(daily_index).ffill()
+
+    features["weekly_bb_position"] = bb_position_daily.reset_index(drop=True)
+    features["weekly_bb_width"] = bb_width_daily.reset_index(drop=True)
+    features["weekly_bb_width_slope"] = bb_width_slope_daily.reset_index(drop=True)
+
+    return features
+
+
+def _compute_10a_alignment_features(
+    df: pd.DataFrame, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute daily-weekly alignment features.
+
+    Features:
+    - trend_alignment_daily_weekly: +1 both up, -1 both down, 0 mixed
+    - rsi_alignment_daily_weekly: Daily RSI - Weekly RSI (divergence)
+    - vol_alignment_daily_weekly: Daily vol percentile - Weekly vol percentile
+
+    Args:
+        df: Daily DataFrame with OHLCV
+        close: Daily close prices
+
+    Returns:
+        Dict with alignment features
+    """
+    features = {}
+    n = len(close)
+
+    # Resample to weekly
+    weekly = _resample_to_weekly_a500(df)
+
+    if len(weekly) < 20:
+        features["trend_alignment_daily_weekly"] = pd.Series(np.nan, index=range(n))
+        features["rsi_alignment_daily_weekly"] = pd.Series(np.nan, index=range(n))
+        features["vol_alignment_daily_weekly"] = pd.Series(np.nan, index=range(n))
+        return features
+
+    # === Trend Alignment ===
+    # Daily trend: 20-day SMA slope
+    daily_sma_20 = talib.SMA(close.values, timeperiod=20)
+    daily_trend = np.sign(daily_sma_20 - np.roll(daily_sma_20, 5))
+    daily_trend[:5] = np.nan
+
+    # Weekly trend: 4-week SMA slope
+    weekly_sma_4 = talib.SMA(weekly["Close"].values, timeperiod=4)
+    weekly_trend = np.sign(weekly_sma_4 - np.roll(weekly_sma_4, 1))
+    weekly_trend[:1] = np.nan
+    weekly_trend_series = pd.Series(weekly_trend, index=weekly.index).shift(1)
+
+    # Align weekly trend to daily
+    df_copy = df.copy()
+    df_copy["Date"] = pd.to_datetime(df_copy["Date"])
+    daily_index = df_copy["Date"]
+    weekly_trend_daily = weekly_trend_series.reindex(daily_index).ffill().values
+
+    # Trend alignment: +1 if both up, -1 if both down, 0 if mixed
+    trend_alignment = np.where(
+        (daily_trend > 0) & (weekly_trend_daily > 0), 1,
+        np.where((daily_trend < 0) & (weekly_trend_daily < 0), -1, 0)
+    )
+    features["trend_alignment_daily_weekly"] = pd.Series(trend_alignment)
+
+    # === RSI Alignment ===
+    daily_rsi = talib.RSI(close.values, timeperiod=14)
+    weekly_rsi = talib.RSI(weekly["Close"].values, timeperiod=14)
+    weekly_rsi_series = pd.Series(weekly_rsi, index=weekly.index).shift(1)
+    weekly_rsi_daily = weekly_rsi_series.reindex(daily_index).ffill().values
+
+    rsi_alignment = daily_rsi - weekly_rsi_daily
+    features["rsi_alignment_daily_weekly"] = pd.Series(rsi_alignment)
+
+    # === Volatility Alignment ===
+    # Daily volatility: ATR% percentile over 60 days
+    daily_atr = talib.ATR(df_copy["High"].values, df_copy["Low"].values, close.values, timeperiod=14)
+    daily_atr_pct = daily_atr / close.values
+    daily_vol_pctile = pd.Series(daily_atr_pct).rolling(60).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5,
+        raw=False
+    ).values
+
+    # Weekly volatility: ATR% percentile over 12 weeks
+    weekly_atr = talib.ATR(weekly["High"].values, weekly["Low"].values, weekly["Close"].values, timeperiod=4)
+    weekly_atr_pct = weekly_atr / weekly["Close"].values
+    weekly_vol_pctile = pd.Series(weekly_atr_pct).rolling(12).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5,
+        raw=False
+    )
+    weekly_vol_pctile_series = pd.Series(weekly_vol_pctile.values, index=weekly.index).shift(1)
+    weekly_vol_daily = weekly_vol_pctile_series.reindex(daily_index).ffill().values
+
+    vol_alignment = daily_vol_pctile - weekly_vol_daily
+    features["vol_alignment_daily_weekly"] = pd.Series(vol_alignment)
+
+    return features
+
+
+def _sample_entropy(series: np.ndarray, m: int = 2, r: float = 0.2) -> float:
+    """Compute sample entropy of a time series.
+
+    Sample entropy measures complexity/irregularity without counting self-matches.
+    Lower values = more regular, higher values = more complex/random.
+
+    Args:
+        series: 1D array of values
+        m: Embedding dimension (default 2)
+        r: Tolerance as fraction of std (default 0.2)
+
+    Returns:
+        Sample entropy value (non-negative)
+    """
+    n = len(series)
+    if n < m + 1:
+        return np.nan
+
+    # Normalize tolerance by std
+    std = np.std(series)
+    if std == 0:
+        return 0.0
+    tolerance = r * std
+
+    # Count template matches for dimension m and m+1
+    def count_matches(dim: int) -> int:
+        count = 0
+        for i in range(n - dim):
+            template_i = series[i:i + dim]
+            for j in range(i + 1, n - dim):
+                template_j = series[j:j + dim]
+                if np.max(np.abs(template_i - template_j)) < tolerance:
+                    count += 1
+        return count
+
+    b = count_matches(m)
+    a = count_matches(m + 1)
+
+    if b == 0 or a == 0:
+        return 0.0
+
+    return -np.log(a / b)
+
+
+def _hurst_exponent_rs(series: np.ndarray) -> float:
+    """Compute Hurst exponent using R/S (Rescaled Range) method.
+
+    H < 0.5: Mean-reverting
+    H = 0.5: Random walk
+    H > 0.5: Trending
+
+    Args:
+        series: 1D array of values
+
+    Returns:
+        Hurst exponent in [0, 1]
+    """
+    n = len(series)
+    if n < 10:
+        return np.nan
+
+    # Use log-spaced subset sizes
+    max_k = n // 2
+    min_k = 10
+    if max_k <= min_k:
+        return 0.5
+
+    sizes = np.unique(np.logspace(np.log10(min_k), np.log10(max_k), 10).astype(int))
+    rs_values = []
+    valid_sizes = []
+
+    for size in sizes:
+        if size > n:
+            continue
+        # Divide series into subseries of this size
+        num_subseries = n // size
+        if num_subseries < 1:
+            continue
+
+        rs_list = []
+        for i in range(num_subseries):
+            subseries = series[i * size:(i + 1) * size]
+            mean_val = np.mean(subseries)
+            deviations = subseries - mean_val
+            cumsum = np.cumsum(deviations)
+            r = np.max(cumsum) - np.min(cumsum)
+            s = np.std(subseries, ddof=1)
+            if s > 0:
+                rs_list.append(r / s)
+
+        if len(rs_list) > 0:
+            rs_values.append(np.mean(rs_list))
+            valid_sizes.append(size)
+
+    if len(valid_sizes) < 2:
+        return 0.5
+
+    # Linear regression of log(R/S) vs log(n)
+    log_sizes = np.log(valid_sizes)
+    log_rs = np.log(rs_values)
+
+    # Simple linear regression
+    slope, _ = np.polyfit(log_sizes, log_rs, 1)
+
+    # Clip to valid range
+    return float(np.clip(slope, 0, 1))
+
+
+def _fractal_dimension_higuchi(series: np.ndarray, k_max: int = 10) -> float:
+    """Compute fractal dimension using Higuchi's method.
+
+    For 1D time series: FD in [1, 2]
+    FD = 1: Smooth line
+    FD = 2: Space-filling curve
+
+    Args:
+        series: 1D array of values
+        k_max: Maximum interval (default 10)
+
+    Returns:
+        Fractal dimension in [1, 2]
+    """
+    n = len(series)
+    if n < k_max * 2:
+        return np.nan
+
+    lk_values = []
+    k_values = []
+
+    for k in range(1, k_max + 1):
+        lm_sum = 0
+        for m in range(1, k + 1):
+            # Compute length for this (k, m) pair
+            indices = np.arange(m - 1, n, k)
+            if len(indices) < 2:
+                continue
+            subseries = series[indices]
+            length = np.sum(np.abs(np.diff(subseries))) * (n - 1) / (k * (len(indices) - 1) * k)
+            lm_sum += length
+        if lm_sum > 0:
+            lk = lm_sum / k
+            lk_values.append(lk)
+            k_values.append(k)
+
+    if len(k_values) < 2:
+        return 1.5
+
+    # Linear regression of log(L(k)) vs log(1/k)
+    log_k_inv = -np.log(k_values)
+    log_lk = np.log(lk_values)
+
+    slope, _ = np.polyfit(log_k_inv, log_lk, 1)
+
+    # Clip to valid range [1, 2]
+    return float(np.clip(slope, 1, 2))
+
+
+def _compute_10a_entropy_features(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute extended entropy features.
+
+    Features:
+    - permutation_entropy_slope: 5-day change in permutation entropy (order 4)
+    - permutation_entropy_acceleration: Change in entropy slope
+    - sample_entropy_20d: Sample entropy over 20-day window
+    - sample_entropy_slope: 5-day change in sample entropy
+    - sample_entropy_acceleration: Change in sample entropy slope
+    - entropy_percentile_60d: Historical percentile of permutation entropy
+    - entropy_vol_ratio: Entropy / normalized ATR%
+    - entropy_regime_score: Continuous -1 (low) to +1 (high) entropy regime
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with entropy features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Import permutation entropy from tier_a200
+    from src.features.tier_a200 import _permutation_entropy
+
+    # Compute rolling permutation entropy (order 4, 20-day window)
+    perm_entropy = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        perm_entropy.iloc[i] = _permutation_entropy(window, order=4)
+
+    # Permutation entropy slope: 5-day change
+    perm_entropy_slope = perm_entropy - perm_entropy.shift(5)
+    features["permutation_entropy_slope"] = perm_entropy_slope
+
+    # Permutation entropy acceleration: change in slope
+    perm_entropy_accel = perm_entropy_slope - perm_entropy_slope.shift(5)
+    features["permutation_entropy_acceleration"] = perm_entropy_accel
+
+    # Sample entropy (20-day rolling)
+    sample_ent = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        sample_ent.iloc[i] = _sample_entropy(window, m=2, r=0.2)
+
+    features["sample_entropy_20d"] = sample_ent
+
+    # Sample entropy slope: 5-day change
+    sample_ent_slope = sample_ent - sample_ent.shift(5)
+    features["sample_entropy_slope"] = sample_ent_slope
+
+    # Sample entropy acceleration
+    sample_ent_accel = sample_ent_slope - sample_ent_slope.shift(5)
+    features["sample_entropy_acceleration"] = sample_ent_accel
+
+    # Entropy percentile: rolling 60-day percentile of permutation entropy
+    entropy_pctile = perm_entropy.rolling(60).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5,
+        raw=False
+    )
+    features["entropy_percentile_60d"] = entropy_pctile
+
+    # Entropy / volatility ratio
+    # Use returns volatility as denominator
+    returns = pd.Series(close_arr).pct_change()
+    vol_20d = returns.rolling(20).std()
+    # Normalize vol to [0, 1] range for ratio
+    vol_normalized = vol_20d / vol_20d.rolling(60).max().replace(0, np.nan)
+    entropy_vol_ratio = perm_entropy / vol_normalized.replace(0, np.nan)
+    # Clip extreme ratios
+    entropy_vol_ratio = entropy_vol_ratio.clip(0, 10)
+    features["entropy_vol_ratio"] = entropy_vol_ratio
+
+    # Entropy regime score: -1 (low entropy) to +1 (high entropy)
+    # Based on percentile: (percentile - 0.5) * 2
+    entropy_regime = (entropy_pctile - 0.5) * 2
+    features["entropy_regime_score"] = entropy_regime
+
+    return features
+
+
+def _compute_10a_complexity_features(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute complexity features (Hurst, autocorrelation, fractal dimension).
+
+    Features:
+    - hurst_exponent_20d: Trending vs mean-reverting indicator
+    - hurst_exponent_slope: Change in Hurst exponent
+    - autocorr_lag1: Return autocorrelation at lag 1
+    - autocorr_lag5: Return autocorrelation at lag 5
+    - autocorr_partial_lag1: Partial autocorrelation at lag 1
+    - fractal_dimension_20d: Price path complexity
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with complexity features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Compute returns for autocorrelation
+    returns = pd.Series(close_arr).pct_change()
+
+    # Hurst exponent (20-day rolling)
+    hurst = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        hurst.iloc[i] = _hurst_exponent_rs(window)
+
+    features["hurst_exponent_20d"] = hurst
+
+    # Hurst exponent slope: 5-day change
+    hurst_slope = hurst - hurst.shift(5)
+    features["hurst_exponent_slope"] = hurst_slope
+
+    # Autocorrelation lag 1 (20-day rolling)
+    autocorr_lag1 = returns.rolling(20).apply(
+        lambda x: x.autocorr(lag=1) if len(x.dropna()) > 2 else np.nan,
+        raw=False
+    )
+    features["autocorr_lag1"] = autocorr_lag1
+
+    # Autocorrelation lag 5 (20-day rolling)
+    autocorr_lag5 = returns.rolling(20).apply(
+        lambda x: x.autocorr(lag=5) if len(x.dropna()) > 6 else np.nan,
+        raw=False
+    )
+    features["autocorr_lag5"] = autocorr_lag5
+
+    # Partial autocorrelation lag 1
+    # For simplicity, use autocorr_lag1 as approximation (exact PACF requires more complex computation)
+    # PACF(1) = ACF(1) for lag 1
+    features["autocorr_partial_lag1"] = autocorr_lag1.copy()
+
+    # Fractal dimension (20-day rolling)
+    fractal_dim = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        fractal_dim.iloc[i] = _fractal_dimension_higuchi(window, k_max=5)
+
+    features["fractal_dimension_20d"] = fractal_dim
+
+    return features
+
+
+def _compute_chunk_10a(
+    df: pd.DataFrame, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute all Sub-Chunk 10a features (MTF + Entropy + Complexity).
+
+    Args:
+        df: Full DataFrame with OHLCV
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with all 25 Chunk 10a features
+    """
+    features = {}
+
+    # Weekly MA Features (3 features)
+    features.update(_compute_10a_weekly_ma_features(df))
+
+    # Weekly RSI Features (2 features)
+    features.update(_compute_10a_weekly_rsi_features(df))
+
+    # Weekly BB Features (3 features)
+    features.update(_compute_10a_weekly_bb_features(df))
+
+    # Alignment Features (3 features)
+    features.update(_compute_10a_alignment_features(df, close))
+
+    # Entropy Features (8 features)
+    features.update(_compute_10a_entropy_features(close))
+
+    # Complexity Features (6 features)
+    features.update(_compute_10a_complexity_features(close))
+
+    return features
+
+
 def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.DataFrame:
     """Build feature DataFrame with all tier_a500 indicators.
 
@@ -3465,6 +4146,11 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
     # Sub-Chunk 9b: CDL Part 2 - Candlestick Patterns (ranks 371-395)
     # =========================================================================
     features.update(_compute_chunk_9b(open_price, high, low, close))
+
+    # =========================================================================
+    # Sub-Chunk 10a: MTF Complete (ranks 396-420)
+    # =========================================================================
+    features.update(_compute_chunk_10a(df, high, low, close))
 
     # Create feature DataFrame for new a500 features
     new_features_df = pd.DataFrame(features)

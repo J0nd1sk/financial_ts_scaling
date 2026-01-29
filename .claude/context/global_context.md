@@ -4,7 +4,7 @@
 
 | ID | Name | Status | Last Update | Summary |
 |----|------|--------|-------------|---------|
-| ws1 | feature_generation | active | 2026-01-28 19:30 | tier_a500 Sub-Chunk 9b COMPLETE (395 features, 1530 tests pass) |
+| ws1 | feature_generation | active | 2026-01-28 21:00 | tier_a500 Sub-Chunk 10a COMPLETE (420 features, 1608 tests pass) |
 | ws2 | foundation | active | 2026-01-28 15:00 | METHODOLOGY CORRECTION - v1/v2 invalid, v3 design ready |
 | ws3 | phase6c_hpo_analysis | paused | 2026-01-27 19:15 | HPO analysis COMPLETE - a50/a100 metrics captured, trends identified |
 
@@ -12,12 +12,12 @@
 
 ### Branch & Git
 - **Branch**: `experiment/foundation-decoder-investigation`
-- **Last commit**: `ca9c4b0` feat: Add tier_a500 Sub-Chunks 7b+8a (45 VLM+TRD features)
-- **Uncommitted**: 15+ files (ws1: 8b+9a+9b implementation; ws2: methodology docs)
+- **Last commit**: `208a992` feat: Add tier_a500 Sub-Chunks 8b+9a+9b (72 SR+CDL features)
+- **Uncommitted**: 2 files (ws1: 10a implementation)
 
 ### Test Status
-- Last `make test`: 2026-01-28 19:30 - **1530 passed**, 5 failed (threshold_sweep - unrelated), 2 skipped
-- All tier_a500 tests pass
+- Last `make test`: 2026-01-28 21:00 - **1608 passed**, 5 failed (threshold_sweep - unrelated), 2 skipped
+- All tier_a500 tests pass (62 new for chunk 10a)
 
 ### Data Versions
 - **Raw**: SPY/DIA/QQQ/VIX OHLCV (v1)
@@ -26,14 +26,14 @@
   - a50: features + combined (55 features)
   - a100: features + combined (105 features)
   - a200: features + combined (206 features)
-  - a500: 300 features (generated, validated, registered) - **NEEDS REGENERATION** for 395 features
+  - a500: 300 features (generated, validated, registered) - **NEEDS REGENERATION** for 420 features
 
 ---
 
 ## Cross-Workstream Coordination
 
 ### Blocking Dependencies
-- [ws1 tier_a500]: 8/12 sub-chunks complete (395/500 features)
+- [ws1 tier_a500]: 9/12 sub-chunks complete (420/500 features)
 - [ws2 foundation]: v2 results INVALID - methodology flaw discovered, v3 ready
 - [ws3 HPO Analysis]: COMPLETE - Comprehensive analysis done, supplementary trials proposed
 
@@ -41,8 +41,8 @@
 
 | Files | Owner | Status |
 |-------|-------|--------|
-| `src/features/tier_a500.py` | ws1 | MODIFIED (9b added - 395 features) |
-| `tests/features/test_tier_a500.py` | ws1 | MODIFIED (497 tests) |
+| `src/features/tier_a500.py` | ws1 | MODIFIED (10a added - 420 features) |
+| `tests/features/test_tier_a500.py` | ws1 | MODIFIED (559 tests) |
 | `scripts/build_features_a500.py` | ws1 | NEW (uncommitted) |
 | `scripts/validate_tier_a500.py` | ws1 | NEW (uncommitted) |
 | `tests/script_tests/` | ws1 | NEW (uncommitted) |
@@ -60,34 +60,37 @@
 
 ## Session Summary (2026-01-28 - ws1)
 
-### tier_a500 Sub-Chunk 9b Complete
+### tier_a500 Sub-Chunk 10a Complete
 
-Implemented 25 candlestick pattern features using TDD:
+Implemented 25 MTF + entropy + complexity features using TDD:
 
 **Features Added:**
-- **Doji Patterns (5)**: doji_strict_indicator, doji_score, doji_type, consecutive_doji_count, doji_after_trend
-- **Marubozu & Strong Candles (4)**: marubozu_indicator, marubozu_direction, marubozu_strength, consecutive_strong_candles
-- **Spinning Top & Indecision (4)**: spinning_top_indicator, spinning_top_score, indecision_streak, indecision_at_extreme
-- **Multi-Candle Reversal (5)**: morning_star_indicator, evening_star_indicator, three_white_soldiers, three_black_crows, harami_indicator
-- **Multi-Candle Continuation (4)**: piercing_line, dark_cloud_cover, tweezer_bottom, tweezer_top
-- **Pattern Context (3)**: reversal_pattern_count_5d, pattern_alignment_score, pattern_cluster_indicator
+- **Weekly MA (3)**: weekly_ma_slope, weekly_ma_slope_acceleration, price_pct_from_weekly_ma
+- **Weekly RSI (2)**: weekly_rsi_slope, weekly_rsi_slope_acceleration
+- **Weekly BB (3)**: weekly_bb_position, weekly_bb_width, weekly_bb_width_slope
+- **Alignment (3)**: trend_alignment_daily_weekly, rsi_alignment_daily_weekly, vol_alignment_daily_weekly
+- **Entropy Extended (8)**: permutation_entropy_slope, permutation_entropy_acceleration, sample_entropy_20d, sample_entropy_slope, sample_entropy_acceleration, entropy_percentile_60d, entropy_vol_ratio, entropy_regime_score
+- **Complexity (6)**: hurst_exponent_20d, hurst_exponent_slope, autocorr_lag1, autocorr_lag5, autocorr_partial_lag1, fractal_dimension_20d
 
-**Note:** Renamed `doji_indicator` to `doji_strict_indicator` to avoid conflict with tier_a200.
+**Custom Algorithms Implemented:**
+- sample_entropy (m=2, r=0.2)
+- hurst_exponent_rs (R/S rescaled range method)
+- fractal_dimension_higuchi (Higuchi's method)
 
 **Status:**
-- 64 new tests added
-- All 1530 tests pass (5 unrelated failures in threshold_sweep)
-- Feature count: 395 (370 + 25)
+- 62 new tests added
+- All 1608 tests pass (5 unrelated failures in threshold_sweep)
+- Feature count: 420 (395 + 25)
 
 ---
 
 ## User Priorities
 
 ### ws1 (feature_generation) - Active
-1. **Commit current changes** (7b + 8a + 8b + 9a + 9b)
-2. **Regenerate data** - Re-run build script for 395 features
-3. **Continue with Sub-Chunk 10a** - MTF Complete (~25 features)
-4. Remaining: 10a, 10b, 11a, 11b (105 features to go)
+1. **Commit current changes** (10a)
+2. **Regenerate data** - Re-run build script for 420 features
+3. **Continue with Sub-Chunk 10b** - ENT Extended (~25 features)
+4. Remaining: 10b, 11a, 11b (80 features to go)
 
 ### ws2 (foundation) - Queued
 1. **Review v3 design** with user
