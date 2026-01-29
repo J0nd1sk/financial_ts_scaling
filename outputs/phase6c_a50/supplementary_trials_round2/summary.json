@@ -1,0 +1,18 @@
+{
+  "tier": "a50",
+  "total": 13,
+  "completed": 13,
+  "failed": 0,
+  "best_trial": "H1",
+  "best_auc": 0.7298068147246729,
+  "best_params": {
+    "d_model": 128,
+    "n_layers": 6,
+    "n_heads": 8,
+    "d_ff_ratio": 4,
+    "dropout": 0.35,
+    "learning_rate": 7e-05,
+    "weight_decay": 0.0005
+  },
+  "timestamp": "2026-01-28T13:42:31.595936"
+}

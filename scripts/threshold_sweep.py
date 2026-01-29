@@ -1,374 +1,340 @@
 #!/usr/bin/env python3
-"""Threshold sweep for Phase 6A models.
+"""Threshold sweep analysis for top supplementary HPO models.
 
-Loads trained model checkpoints, runs inference on validation data,
-and computes precision/recall/F1 at multiple classification thresholds.
+Analyzes precision/recall trade-off at different probability thresholds.
 
 Usage:
-    # Sweep all 12 Phase 6A models
-    python scripts/threshold_sweep.py
-
-    # Sweep single model
-    python scripts/threshold_sweep.py --budget 2M --horizon 1
-
-    # Custom thresholds
-    python scripts/threshold_sweep.py --thresholds 0.3,0.4,0.5,0.6,0.7
+    ./venv/bin/python scripts/threshold_sweep.py
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 import sys
+import tempfile
+import time
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score
-from torch.utils.data import DataLoader, Subset
 
-# Add project root to path for imports
+# Project root for imports
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.data.dataset import FinancialDataset, SimpleSplitter
-from src.models.patchtst import PatchTST, PatchTSTConfig
-
-# =============================================================================
-# CONSTANTS
-# =============================================================================
-
-DEFAULT_THRESHOLDS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
-
-DATA_PATH = PROJECT_ROOT / "data" / "processed" / "v1" / "SPY_dataset_a20.parquet"
-CHECKPOINT_DIR = PROJECT_ROOT / "outputs" / "phase6a_final"
-OUTPUT_PATH = PROJECT_ROOT / "outputs" / "phase6a_final" / "threshold_sweep.csv"
-
-# Feature columns (5 OHLCV + 20 indicators = 25 total, matching training)
-FEATURE_COLUMNS = [
-    "Open", "High", "Low", "Close", "Volume",
-    "dema_9", "dema_10", "sma_12", "dema_20", "dema_25",
-    "sma_50", "dema_90", "sma_100", "sma_200",
-    "rsi_daily", "rsi_weekly", "stochrsi_daily", "stochrsi_weekly",
-    "macd_line", "obv", "adosc", "atr_14", "adx_14",
-    "bb_percent_b", "vwap_20",
-]
-
-# Training constants (must match Phase 6A scripts)
-CONTEXT_LENGTH = 80
-PATCH_LENGTH = 16
-STRIDE = 8
-THRESHOLD_TARGET = 0.01  # 1% threshold for target (matches "threshold_1pct" task)
+from src.data.dataset import SimpleSplitter
+from src.models.patchtst import PatchTSTConfig
+from src.config.experiment import ExperimentConfig
+from src.training.trainer import Trainer
 
 
-# =============================================================================
-# CORE FUNCTIONS
-# =============================================================================
+# Top models to analyze (from Round 1 and Round 2)
+TOP_MODELS = {
+    # Round 1 champions
+    "D2_recall": {"d_model": 128, "n_layers": 4, "n_heads": 8, "d_ff_ratio": 4,
+                  "dropout": 0.4, "learning_rate": 5e-5, "weight_decay": 1e-4},
+    "F1_precision": {"d_model": 128, "n_layers": 6, "n_heads": 8, "d_ff_ratio": 4,
+                     "dropout": 0.35, "learning_rate": 7e-5, "weight_decay": 3e-4},
+    "E4_balance": {"d_model": 160, "n_layers": 6, "n_heads": 8, "d_ff_ratio": 4,
+                   "dropout": 0.3, "learning_rate": 5e-5, "weight_decay": 1e-4},
+    # Round 2 champions
+    "G4_recall": {"d_model": 128, "n_layers": 4, "n_heads": 8, "d_ff_ratio": 4,
+                  "dropout": 0.40, "learning_rate": 5e-5, "weight_decay": 3e-4},
+    "G2_balance": {"d_model": 128, "n_layers": 4, "n_heads": 8, "d_ff_ratio": 4,
+                   "dropout": 0.45, "learning_rate": 5e-5, "weight_decay": 1e-4},
+    "H1_precision": {"d_model": 128, "n_layers": 6, "n_heads": 8, "d_ff_ratio": 4,
+                     "dropout": 0.35, "learning_rate": 7e-5, "weight_decay": 5e-4},
+}
+
+# Thresholds to sweep
+THRESHOLDS = [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50,
+              0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90]
 
 
-def compute_metrics_at_threshold(
-    predictions: np.ndarray,
-    labels: np.ndarray,
-    threshold: float,
-) -> dict[str, float]:
-    """Compute classification metrics at a specific threshold.
+def train_and_get_predictions(config: dict, tier: str = "a50") -> tuple[np.ndarray, np.ndarray]:
+    """Train a model and return validation probabilities and labels.
 
     Args:
-        predictions: Array of predicted probabilities (0-1).
-        labels: Array of binary labels (0 or 1).
-        threshold: Classification threshold.
+        config: Hyperparameter dictionary
+        tier: Feature tier
 
     Returns:
-        Dict with precision, recall, f1, n_positive_preds, n_samples.
+        Tuple of (probabilities, labels) arrays
     """
-    pred_binary = (predictions >= threshold).astype(int)
-    labels_int = labels.astype(int)
+    NUM_FEATURES = {"a50": 55, "a100": 105}
+    CONTEXT_LENGTH = 80
+    EPOCHS = 50
 
-    n_positive_preds = int(pred_binary.sum())
-    n_samples = len(predictions)
+    # Load data
+    data_path = PROJECT_ROOT / f"data/processed/v1/SPY_dataset_{tier}_combined.parquet"
+    df = pd.read_parquet(data_path)
+    high_prices = df["High"].values
+    num_features = NUM_FEATURES[tier]
 
-    return {
-        "precision": precision_score(labels_int, pred_binary, zero_division=0.0),
-        "recall": recall_score(labels_int, pred_binary, zero_division=0.0),
-        "f1": f1_score(labels_int, pred_binary, zero_division=0.0),
-        "n_positive_preds": n_positive_preds,
-        "n_samples": n_samples,
-    }
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
 
+    # Batch size based on d_model
+    d_model = config["d_model"]
+    batch_size = 32 if d_model >= 256 else (64 if d_model >= 128 else 128)
 
-def sweep_thresholds(
-    predictions: np.ndarray,
-    labels: np.ndarray,
-    thresholds: list[float],
-) -> pd.DataFrame:
-    """Compute metrics at multiple thresholds.
+    # Experiment config
+    exp_config = ExperimentConfig(
+        data_path=str(data_path.relative_to(PROJECT_ROOT)),
+        task="threshold_1pct",
+        timescale="daily",
+        context_length=CONTEXT_LENGTH,
+        horizon=1,
+        wandb_project=None,
+        mlflow_experiment=None,
+    )
 
-    Args:
-        predictions: Array of predicted probabilities (0-1).
-        labels: Array of binary labels (0 or 1).
-        thresholds: List of thresholds to evaluate.
-
-    Returns:
-        DataFrame with one row per threshold.
-    """
-    rows = []
-    for t in thresholds:
-        metrics = compute_metrics_at_threshold(predictions, labels, t)
-        metrics["threshold"] = t
-        rows.append(metrics)
-
-    return pd.DataFrame(rows)
-
-
-# =============================================================================
-# MODEL LOADING AND INFERENCE
-# =============================================================================
-
-
-def load_model_and_config(checkpoint_dir: Path) -> tuple[PatchTST, dict]:
-    """Load model from checkpoint directory.
-
-    Args:
-        checkpoint_dir: Directory containing best_checkpoint.pt and results.json.
-
-    Returns:
-        Tuple of (model, results_dict).
-    """
-    checkpoint_path = checkpoint_dir / "best_checkpoint.pt"
-    results_path = checkpoint_dir / "results.json"
-
-    if not checkpoint_path.exists():
-        raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
-    if not results_path.exists():
-        raise FileNotFoundError(f"Results not found: {results_path}")
-
-    # Load results for architecture info
-    with open(results_path) as f:
-        results = json.load(f)
-
-    arch = results["architecture"]
-    hyper = results["hyperparameters"]
-
-    # Create model config
-    config = PatchTSTConfig(
-        num_features=len(FEATURE_COLUMNS),
-        context_length=hyper["context_length"],
-        patch_length=PATCH_LENGTH,
-        stride=STRIDE,
-        d_model=arch["d_model"],
-        n_heads=arch["n_heads"],
-        n_layers=arch["n_layers"],
-        d_ff=arch["d_ff"],
-        dropout=0.0,  # No dropout during inference
+    # Model config
+    model_config = PatchTSTConfig(
+        num_features=num_features,
+        context_length=CONTEXT_LENGTH,
+        patch_length=16,
+        stride=8,
+        d_model=config["d_model"],
+        n_heads=config["n_heads"],
+        n_layers=config["n_layers"],
+        d_ff=config["d_model"] * config["d_ff_ratio"],
+        dropout=config["dropout"],
         head_dropout=0.0,
     )
 
-    # Check if model was trained with RevIN
-    use_revin = hyper.get("use_revin", False)
-
-    # Load model weights
-    model = PatchTST(config, use_revin=use_revin)
-    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.eval()
-
-    return model, results
-
-
-def get_validation_data(
-    df: pd.DataFrame,
-    horizon: int,
-) -> tuple[np.ndarray, np.ndarray, DataLoader]:
-    """Prepare validation data matching training splits.
-
-    Args:
-        df: Full dataset DataFrame.
-        horizon: Prediction horizon.
-
-    Returns:
-        Tuple of (high_prices, close_prices, val_dataloader).
-    """
-    # Use SimpleSplitter with same params as training
+    # Splitter
     splitter = SimpleSplitter(
         dates=df["Date"],
         context_length=CONTEXT_LENGTH,
-        horizon=horizon,
+        horizon=1,
         val_start="2023-01-01",
         test_start="2025-01-01",
     )
-    splits = splitter.split()
+    split_indices = splitter.split()
 
-    # Get prices for target calculation
-    high_prices = df["High"].values
-    close_prices = df["Close"].values
+    # Train
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        trainer = Trainer(
+            experiment_config=exp_config,
+            model_config=model_config,
+            batch_size=batch_size,
+            learning_rate=config["learning_rate"],
+            weight_decay=config["weight_decay"],
+            epochs=EPOCHS,
+            device=device,
+            checkpoint_dir=Path(tmp_dir),
+            split_indices=split_indices,
+            early_stopping_patience=10,
+            early_stopping_min_delta=0.001,
+            early_stopping_metric="val_auc",
+            use_revin=True,
+            high_prices=high_prices,
+        )
 
-    # Create full dataset
-    full_dataset = FinancialDataset(
-        features_df=df,
-        close_prices=close_prices,
-        high_prices=high_prices,
-        context_length=CONTEXT_LENGTH,
-        horizon=horizon,
-        threshold=THRESHOLD_TARGET,
-        feature_columns=FEATURE_COLUMNS,
-    )
+        # Train and get raw predictions
+        trainer.train(verbose=False)
 
-    # Create validation subset using val_indices
-    val_subset = Subset(full_dataset, splits.val_indices.tolist())
-    val_loader = DataLoader(val_subset, batch_size=64, shuffle=False)
+        # Get validation predictions
+        trainer.model.eval()
+        val_probs = []
+        val_labels = []
 
-    return high_prices, close_prices, val_loader
+        with torch.no_grad():
+            for batch_x, batch_y in trainer.val_dataloader:
+                batch_x = batch_x.to(device)
+                batch_y = batch_y.to(device)
 
+                logits = trainer.model(batch_x)
+                probs = torch.sigmoid(logits).cpu().numpy().flatten()
+                labels = batch_y.cpu().numpy().flatten()
 
-def run_inference(model: PatchTST, dataloader: DataLoader) -> tuple[np.ndarray, np.ndarray]:
-    """Run inference and collect predictions.
+                val_probs.extend(probs)
+                val_labels.extend(labels)
 
-    Args:
-        model: PatchTST model in eval mode.
-        dataloader: DataLoader for validation data.
-
-    Returns:
-        Tuple of (predictions, labels) as numpy arrays.
-    """
-    model.eval()
-    all_preds = []
-    all_labels = []
-
-    with torch.no_grad():
-        for batch_x, batch_y in dataloader:
-            preds = model(batch_x).cpu().numpy()
-            all_preds.extend(preds.flatten())
-            all_labels.extend(batch_y.numpy().flatten())
-
-    return np.array(all_preds), np.array(all_labels)
+        return np.array(val_probs), np.array(val_labels)
 
 
-# =============================================================================
-# MAIN
-# =============================================================================
-
-
-def sweep_single_model(
-    budget: str,
-    horizon: int,
-    df: pd.DataFrame,
-    thresholds: list[float],
-) -> pd.DataFrame:
-    """Run threshold sweep for a single model.
+def compute_metrics_at_threshold(probs: np.ndarray, labels: np.ndarray, threshold: float) -> dict:
+    """Compute precision, recall, F1 at a given threshold.
 
     Args:
-        budget: Parameter budget (2M, 20M, 200M).
-        horizon: Prediction horizon (1, 2, 3, 5).
-        df: Full dataset DataFrame.
-        thresholds: Thresholds to evaluate.
+        probs: Predicted probabilities
+        labels: True binary labels
+        threshold: Classification threshold
 
     Returns:
-        DataFrame with sweep results.
+        Dictionary with metrics
     """
-    experiment_name = f"phase6a_{budget.lower()}_h{horizon}"
-    checkpoint_dir = CHECKPOINT_DIR / experiment_name
+    preds = (probs >= threshold).astype(int)
 
-    print(f"\n{'='*60}")
-    print(f"Sweeping {budget}/H{horizon}")
-    print(f"{'='*60}")
+    tp = np.sum((preds == 1) & (labels == 1))
+    fp = np.sum((preds == 1) & (labels == 0))
+    fn = np.sum((preds == 0) & (labels == 1))
+    tn = np.sum((preds == 0) & (labels == 0))
 
-    # Load model
-    model, results = load_model_and_config(checkpoint_dir)
-    print(f"  Architecture: d={results['architecture']['d_model']}, "
-          f"L={results['architecture']['n_layers']}, "
-          f"h={results['architecture']['n_heads']}")
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    accuracy = (tp + tn) / len(labels)
 
-    # Get validation data
-    _, _, val_loader = get_validation_data(df, horizon)
-    print(f"  Validation samples: {len(val_loader.dataset)}")
+    return {
+        "threshold": threshold,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "accuracy": accuracy,
+        "tp": int(tp),
+        "fp": int(fp),
+        "fn": int(fn),
+        "tn": int(tn),
+        "n_predictions": int(tp + fp),
+    }
 
-    # Run inference
-    predictions, labels = run_inference(model, val_loader)
-    print(f"  Prediction range: [{predictions.min():.3f}, {predictions.max():.3f}]")
-    print(f"  Class balance: {labels.mean():.3f}")
 
-    # Compute AUC (threshold-independent)
-    try:
-        auc = roc_auc_score(labels, predictions)
-    except ValueError:
-        auc = None
-    print(f"  AUC: {auc:.4f}" if auc else "  AUC: N/A (single class)")
+def sweep_thresholds(probs: np.ndarray, labels: np.ndarray, thresholds: list[float]) -> list[dict]:
+    """Sweep all thresholds and compute metrics.
 
-    # Sweep thresholds
-    sweep_df = sweep_thresholds(predictions, labels, thresholds)
-    sweep_df["budget"] = budget
-    sweep_df["horizon"] = horizon
-    sweep_df["auc"] = auc
-    sweep_df["pred_min"] = predictions.min()
-    sweep_df["pred_max"] = predictions.max()
+    Args:
+        probs: Predicted probabilities
+        labels: True binary labels
+        thresholds: List of thresholds to try
 
-    # Print summary table
-    print(f"\n  {'Thresh':>6} {'Prec':>6} {'Recall':>6} {'F1':>6} {'N_pos':>6}")
-    print(f"  {'-'*36}")
-    for _, row in sweep_df.iterrows():
-        print(f"  {row['threshold']:>6.2f} {row['precision']:>6.3f} "
-              f"{row['recall']:>6.3f} {row['f1']:>6.3f} {row['n_positive_preds']:>6.0f}")
+    Returns:
+        List of metric dictionaries
+    """
+    return [compute_metrics_at_threshold(probs, labels, t) for t in thresholds]
 
-    return sweep_df
+
+def format_sweep_table(results: list[dict]) -> str:
+    """Format sweep results as markdown table."""
+    lines = [
+        "| Threshold | Precision | Recall | F1 | Accuracy | TPs | Predictions |",
+        "|-----------|-----------|--------|-----|----------|-----|-------------|",
+    ]
+
+    for r in results:
+        lines.append(
+            f"| {r['threshold']:.2f} | {r['precision']*100:5.1f}% | {r['recall']*100:5.1f}% | "
+            f"{r['f1']:.3f} | {r['accuracy']*100:5.1f}% | {r['tp']:3d} | {r['n_predictions']:3d} |"
+        )
+
+    return "\n".join(lines)
 
 
 def main():
-    """Main entry point."""
-    parser = argparse.ArgumentParser(description="Threshold sweep for Phase 6A models")
-    parser.add_argument("--budget", type=str, help="Single budget (2M, 20M, 200M)")
-    parser.add_argument("--horizon", type=int, help="Single horizon (1, 2, 3, 5)")
-    parser.add_argument("--thresholds", type=str, help="Comma-separated thresholds")
-    args = parser.parse_args()
+    print("=" * 70)
+    print("Threshold Sweep Analysis - Top Supplementary HPO Models")
+    print("=" * 70)
 
-    # Parse thresholds
-    if args.thresholds:
-        thresholds = [float(t) for t in args.thresholds.split(",")]
-    else:
-        thresholds = DEFAULT_THRESHOLDS
+    output_dir = PROJECT_ROOT / "outputs/phase6c_a50/threshold_sweep"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load data
-    print(f"Loading data from {DATA_PATH}")
-    if not DATA_PATH.exists():
-        print(f"ERROR: Data file not found: {DATA_PATH}")
-        sys.exit(1)
+    all_results = {}
 
-    df = pd.read_parquet(DATA_PATH)
-    print(f"  Loaded {len(df)} rows")
+    for name, config in TOP_MODELS.items():
+        print(f"\n{'='*70}")
+        print(f"Model: {name}")
+        print(f"Config: {config}")
+        print("=" * 70)
 
-    # Determine which models to sweep
-    if args.budget and args.horizon:
-        budgets = [args.budget]
-        horizons = [args.horizon]
-    else:
-        budgets = ["2M", "20M", "200M"]
-        horizons = [1, 2, 3, 5]
+        start = time.time()
+        print("Training model...")
+        probs, labels = train_and_get_predictions(config)
+        duration = time.time() - start
+        print(f"Training complete ({duration:.1f}s)")
 
-    # Collect results
-    all_results = []
+        print(f"Validation samples: {len(labels)}")
+        print(f"Positive rate: {labels.mean()*100:.1f}%")
+        print(f"Probability range: [{probs.min():.3f}, {probs.max():.3f}]")
 
-    for budget in budgets:
-        for horizon in horizons:
-            try:
-                sweep_df = sweep_single_model(budget, horizon, df, thresholds)
-                all_results.append(sweep_df)
-            except Exception as e:
-                print(f"  ERROR: {e}")
+        # Sweep thresholds
+        sweep_results = sweep_thresholds(probs, labels, THRESHOLDS)
+        all_results[name] = {
+            "config": config,
+            "sweep": sweep_results,
+            "prob_stats": {
+                "min": float(probs.min()),
+                "max": float(probs.max()),
+                "mean": float(probs.mean()),
+                "std": float(probs.std()),
+            }
+        }
 
-    # Combine and save
-    if all_results:
-        combined = pd.concat(all_results, ignore_index=True)
+        print("\n" + format_sweep_table(sweep_results))
 
-        # Reorder columns
-        cols = ["budget", "horizon", "threshold", "precision", "recall", "f1",
-                "n_positive_preds", "n_samples", "auc", "pred_min", "pred_max"]
-        combined = combined[cols]
+        # Find best F1
+        best_f1 = max(sweep_results, key=lambda x: x["f1"])
+        print(f"\nBest F1: {best_f1['f1']:.3f} at threshold {best_f1['threshold']:.2f}")
+        print(f"  -> Precision: {best_f1['precision']*100:.1f}%, Recall: {best_f1['recall']*100:.1f}%")
 
-        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-        combined.to_csv(OUTPUT_PATH, index=False)
-        print(f"\n{'='*60}")
-        print(f"Results saved to {OUTPUT_PATH}")
-        print(f"Total rows: {len(combined)}")
+        # Find operating points
+        for target_prec in [0.6, 0.7, 0.8]:
+            for r in sweep_results:
+                if r["precision"] >= target_prec and r["recall"] > 0:
+                    print(f"  {int(target_prec*100)}%+ precision at t={r['threshold']:.2f}: "
+                          f"P={r['precision']*100:.1f}%, R={r['recall']*100:.1f}%, {r['tp']} TPs")
+                    break
+
+    # Save results
+    with open(output_dir / "threshold_sweep_results.json", "w") as f:
+        json.dump(all_results, f, indent=2, default=str)
+
+    # Generate summary report
+    report_lines = [
+        "# Threshold Sweep Analysis Results",
+        f"\nGenerated: {pd.Timestamp.now().isoformat()}",
+        "\n## Summary",
+        f"\nModels analyzed: {len(TOP_MODELS)}",
+        f"Thresholds tested: {len(THRESHOLDS)} ({min(THRESHOLDS):.2f} - {max(THRESHOLDS):.2f})",
+        "\n## Best Operating Points by Model",
+        "\n| Model | Best F1 | Threshold | Precision | Recall | TPs |",
+        "|-------|---------|-----------|-----------|--------|-----|",
+    ]
+
+    for name, data in all_results.items():
+        best = max(data["sweep"], key=lambda x: x["f1"])
+        report_lines.append(
+            f"| {name} | {best['f1']:.3f} | {best['threshold']:.2f} | "
+            f"{best['precision']*100:.1f}% | {best['recall']*100:.1f}% | {best['tp']} |"
+        )
+
+    report_lines.extend([
+        "\n## High Precision Operating Points (>=60%)",
+        "\n| Model | Threshold | Precision | Recall | TPs |",
+        "|-------|-----------|-----------|--------|-----|",
+    ])
+
+    for name, data in all_results.items():
+        for r in data["sweep"]:
+            if r["precision"] >= 0.6 and r["recall"] > 0:
+                report_lines.append(
+                    f"| {name} | {r['threshold']:.2f} | {r['precision']*100:.1f}% | "
+                    f"{r['recall']*100:.1f}% | {r['tp']} |"
+                )
+                break
+
+    report_lines.extend([
+        "\n## Detailed Results by Model",
+    ])
+
+    for name, data in all_results.items():
+        report_lines.extend([
+            f"\n### {name}",
+            f"\nConfig: `{data['config']}`",
+            f"\nProbability range: [{data['prob_stats']['min']:.3f}, {data['prob_stats']['max']:.3f}]",
+            f"\n{format_sweep_table(data['sweep'])}",
+        ])
+
+    with open(output_dir / "threshold_sweep_report.md", "w") as f:
+        f.write("\n".join(report_lines))
+
+    print("\n" + "=" * 70)
+    print("Analysis Complete")
+    print("=" * 70)
+    print(f"Results saved to: {output_dir}")
+    print(f"  - threshold_sweep_results.json")
+    print(f"  - threshold_sweep_report.md")
 
 
 if __name__ == "__main__":

@@ -593,6 +593,42 @@ Post-training analysis examining precision/recall tradeoffs across probability t
 **Branch**: `experiment/foundation-decoder-investigation`
 **Plan**: `docs/foundation_decoder_investigation_plan.md`
 
+### 6.16 Alternative Architecture HPO v2 (Methodology Error Discovered 2026-01-28)
+
+**Context**: After running 50-trial HPO for both iTransformer and Informer with full hyperparameter exploration (dropout, LR, hidden_size, etc.), we discovered a fundamental methodology flaw.
+
+**The Problem**: v1 and v2 experiments were trained as **regressors** (MAE/MSE loss predicting returns) but evaluated as **classifiers** (binary AUC, precision, recall).
+
+| Experiment | Training Loss | Target | Evaluation |
+|------------|--------------|--------|------------|
+| PatchTST (correct) | BCE | Binary (0/1) | Classification |
+| iTransformer v2 | MAE | Returns (float) | Classification |
+| Informer v2 | MAE | Returns (float) | Classification |
+
+**v2 Results (Invalid due to methodology)**:
+
+| Model | AUC | Recall | Prediction Range | Issue |
+|-------|-----|--------|------------------|-------|
+| iTransformer | 0.621 | **0%** | [0.004, 0.004] | No class separation |
+| Informer | 0.669 | **0%** | ~constant | No class separation |
+
+**Root Cause**: MSE/MAE loss trains models to predict expected returns (~0.005). When evaluated with threshold=0.5, no predictions are positive because all outputs are << 0.5.
+
+**Why AUC was misleading**: AUC measures ranking ability, not calibration. A model can achieve moderate AUC if small return predictions correlate with outcomes, even if predictions never exceed 0.5.
+
+**Correct approach (v3 design)**:
+- Use `DistributionLoss(distribution='Bernoulli')` for NeuralForecast models
+- Train on binary targets (0/1)
+- Model outputs P(positive) in [0, 1]
+- Evaluate consistently as classification
+
+**Key Lesson**: Always match training objective to evaluation objective. This lesson is documented in:
+- `docs/methodology_lessons_v1_v2.md` (detailed analysis)
+- `docs/architecture_hpo_v3_design.md` (corrected design)
+- Decision log entry 2026-01-28
+
+**Status**: v2 results discarded. v3 design approved, pending implementation.
+
 ---
 
 ## 7. Deferred and Discarded Ideas

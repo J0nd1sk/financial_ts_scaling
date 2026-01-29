@@ -488,4 +488,58 @@ These Memory MCP entities contain detailed context:
 
 ---
 
+## 9. Alternative Architecture Investigation (2026-01-25 to 2026-01-28)
+
+### Motivation
+
+After achieving breakthrough results with PatchTST (20M @ AUC 0.7342), we investigated whether alternative transformer architectures could perform better. The question: is PatchTST's encoder-only, channel-independent design optimal, or could inverted attention (iTransformer) or encoder-decoder (Informer) architectures offer advantages?
+
+### What We Tried (v1 & v2)
+
+**Models tested:**
+- **iTransformer**: Inverts the attention mechanism to attend across variables rather than time
+- **Informer**: Encoder-decoder architecture with ProbSparse attention
+
+**v2 HPO Results** (50 trials each):
+- iTransformer: AUC 0.621, **0% recall**
+- Informer: AUC 0.669, **0% recall**
+
+### The Discovery (2026-01-28)
+
+We discovered a **fundamental methodology flaw**: the experiments were trained as regressors (MAE loss on returns) but evaluated as classifiers (binary AUC, precision, recall).
+
+**Why this caused failure:**
+1. MAE loss trains models to predict expected returns (~0.005)
+2. All predictions clustered in [0.004, 0.006] range
+3. When thresholded at 0.5 for classification, no predictions were positive
+4. Result: 0% recall, despite moderate AUC (which measures ranking, not calibration)
+
+**The correct approach:**
+- Use `DistributionLoss('Bernoulli')` for classification
+- Train on binary targets (0/1)
+- Model outputs probabilities in [0, 1]
+
+### Key Lesson
+
+**Always match training objective to evaluation objective.**
+
+This seems obvious in hindsight, but was easy to miss because:
+1. NeuralForecast defaults to regression (it's a forecasting library)
+2. AUC looked reasonable (0.62-0.67), masking the underlying problem
+3. We didn't inspect raw prediction values until investigating 0% recall
+
+### What This Means for the Project
+
+1. **v1/v2 results are invalid** - cannot draw conclusions about architecture performance
+2. **v3 design ready** - corrected experiments with Bernoulli loss documented
+3. **PatchTST remains champion** - only fairly-evaluated model so far
+4. **Foundation models assessment stands** - domain mismatch is the issue, not task alignment
+
+### Documents Created
+
+- `docs/methodology_lessons_v1_v2.md` - Detailed error analysis
+- `docs/architecture_hpo_v3_design.md` - Corrected experiment design
+
+---
+
 *This document will be updated as the project progresses. See `decision_log.md` for granular decision history.*

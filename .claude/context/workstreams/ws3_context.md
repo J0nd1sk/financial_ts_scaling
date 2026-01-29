@@ -1,5 +1,5 @@
 # Workstream 3 Context: Phase 6C HPO Analysis
-# Last Updated: 2026-01-27 19:15
+# Last Updated: 2026-01-28 15:30
 
 ## Identity
 - **ID**: ws3
@@ -7,9 +7,19 @@
 - **Focus**: HPO methodology improvement and tier HPO execution
 - **Status**: active
 
+## 🔴 CRITICAL: Metric Priority for Analysis
+| Priority | Metric | Notes |
+|----------|--------|-------|
+| **#1** | **PRECISION** | When model predicts "buy", how often correct? |
+| **#2** | **RECALL** | Of all opportunities, how many caught? |
+| Secondary | AUC-ROC | Ranking only, not primary |
+| **❌ NEVER** | F1, Accuracy | Hides tradeoffs, irrelevant for imbalanced data |
+
+**Show precision and recall SEPARATELY across threshold changes to reveal the tradeoff curve.**
+
 ## Current Task
-- **Working on**: Comprehensive HPO performance analysis + supplementary trials
-- **Status**: HPO runs COMPLETE, detailed metrics captured, supplementary trials proposed
+- **Working on**: Threshold sweep analysis → select top 10 models for full training
+- **Status**: Threshold sweep complete, need precision-focused reformatting
 
 ---
 
@@ -101,9 +111,10 @@
 
 ## Next Session Should
 
-1. **Decide**: Run supplementary trials or accept current results?
-2. **If running**: Implement `scripts/run_supplementary_hpo.py`
-3. **If not**: Proceed to Phase 6C conclusions
+1. ~~**Decide**: Run supplementary trials or accept current results?~~ DONE - 2 rounds completed
+2. **Reformat analysis** - Precision/recall focused (no F1, no accuracy)
+3. **Select top 10 model configs** - For full training on a50 and a100
+4. **Run full experiments** - With selected configs
 
 ---
 
@@ -124,6 +135,19 @@ make test
 ---
 
 ## Session History
+
+### 2026-01-28 15:30 (Metric Priority Correction)
+- User corrected metric focus: PRECISION #1, RECALL #2, NO F1/Accuracy
+- Updated CLAUDE.md, global_context.md, ws3_context.md with priority
+- Created Memory MCP entity: Metric_Priority_Classification
+- Need to reformat threshold sweep analysis with correct priorities
+- Next: Select top 10 configs for full training (a50 + a100)
+
+### 2026-01-28 ~14:05 (Terminal Crashed)
+- Ran supplementary HPO round 2 (13 trials)
+- Ran threshold sweep on 6 models
+- Generated report but INCORRECTLY focused on F1 scores
+- Terminal died before completing analysis
 
 ### 2026-01-27 19:15 (Comprehensive Analysis Complete)
 - Fixed HPO template (`verbose=True`) - future runs will capture all metrics

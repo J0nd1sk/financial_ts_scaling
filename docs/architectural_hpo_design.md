@@ -1,8 +1,11 @@
 # Architectural HPO Design
 
 **Created:** 2025-12-11
-**Status:** Approved, ready for implementation
+**Updated:** 2026-01-28
+**Status:** Approved, implemented (PatchTST)
 **Phase:** 6A (Parameter Scaling)
+
+> **Note on Alternative Architectures**: This document describes the HPO methodology for PatchTST, which uses BCE loss for binary classification. For NeuralForecast models (iTransformer, Informer), a different loss function is required. See `docs/architecture_hpo_v3_design.md` for the correct approach using `DistributionLoss('Bernoulli')`.
 
 ## Problem Statement
 

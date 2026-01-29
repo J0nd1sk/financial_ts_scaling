@@ -1305,6 +1305,45 @@ if x is None:
 - TDD implementation required to add HIGH-based target calculation
 - User prefers 0.5% threshold (achieves ~50/50 class balance with HIGH-based target)
 
+## 2026-01-28 Alternative Architecture Methodology Correction
+
+**Context**: After running 50-trial HPO for iTransformer and Informer (v2), discovered that both achieved 0% recall despite moderate AUC (0.621 and 0.669 respectively).
+
+**Problem Identified**:
+- v1/v2 trained as **regressors** (MAE loss on returns)
+- Evaluated as **classifiers** (binary AUC, precision, recall)
+- Model outputs clustered in [0.004, 0.006] range
+- When thresholded at 0.5, no predictions were positive
+
+**Decision**: Redesign experiments with proper classification training (v3 design).
+
+**Rationale**:
+1. Task mismatch caused 0% recall - invalid results
+2. AUC was misleading (measures ranking, not calibration)
+3. PatchTST worked because it used BCE loss on binary targets from the start
+4. NeuralForecast supports `DistributionLoss('Bernoulli')` for classification
+
+**Correct Approach (v3)**:
+- Loss: `DistributionLoss(distribution='Bernoulli')`
+- Target: Binary (0/1) threshold target
+- Output: Probabilities in [0, 1]
+- Evaluation: Standard classification metrics
+
+**Alternatives Considered**:
+- Rerun foundation models (Lag-Llama, TimesFM) with classification loss: Rejected - pre-trained models can't easily be retrained with BCE. Domain mismatch is the primary issue.
+- Accept v2 results as valid: Rejected - 0% recall means model is not learning class separation.
+
+**Implications**:
+- v1/v2 results discarded as scientifically invalid
+- v3 design documented in `docs/architecture_hpo_v3_design.md`
+- Lessons documented in `docs/methodology_lessons_v1_v2.md`
+- Foundation model findings stand (domain mismatch is the issue)
+- Focus v3 on iTransformer/Informer only
+
+**Workstream**: ws2 (foundation)
+
+**Memory Entity**: `Alternative_Architecture_Methodology_Lesson_20260128`
+
 ## 2026-01-23 Lag-Llama Integration Complete
 
 **Context**: Task 2 of Foundation Model Investigation - implementing LagLlamaWrapper for binary classification.

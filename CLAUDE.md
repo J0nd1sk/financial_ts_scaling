@@ -179,12 +179,25 @@ max(High[t+1], High[t+2], ..., High[t+H]) >= Close[t] * (1 + threshold)
 This means: did the price reach the threshold at ANY point within the horizon?
 
 ### Metrics (Required for All Experiments)
-Always track and report:
-- AUC-ROC (discrimination)
-- Accuracy (overall correctness)
+
+**🔴 CRITICAL: Metric Priority for Analysis**
+
+| Priority | Metric | Why |
+|----------|--------|-----|
+| **#1** | **PRECISION** | When model says "buy", how often is it right? False positives cost money. |
+| **#2** | **RECALL** | Of all real opportunities, how many did we catch? |
+| **#3** | Prediction range | Detect probability collapse (all predictions ~0.5) |
+| Secondary | AUC-ROC | Measures ranking, not calibration. Useful but not primary. |
+
+**❌ DO NOT focus on for analysis:**
+- **F1 score** - Combines precision/recall, hides the tradeoff curve we need to see
+- **Accuracy** - Irrelevant for imbalanced binary classification
+
+**Always track** (but prioritize analysis per above):
 - Precision (of positive predictions)
 - Recall (of actual positives) - **critical: 0% recall = useless model**
 - Prediction range [min, max] (detect probability collapse)
+- AUC-ROC (secondary - for ranking comparison only)
 
 ### Feature Engineering Principle (Phase 6C)
 

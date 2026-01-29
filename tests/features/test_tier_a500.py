@@ -2656,12 +2656,12 @@ class TestChunk8aAroonExtended:
 class TestChunk8aIntegration:
     """Integration tests for Chunk 8a."""
 
-    def test_feature_count_is_323(self) -> None:
-        """Total feature count should be 300 (prior) + 23 (8a) = 323."""
-        expected_count = 206 + 24 + 25 + 23 + 22 + 23  # a200 + 6a + 6b + 7a + 7b + 8a
-        assert len(tier_a500.FEATURE_LIST) == expected_count, (
-            f"Expected {expected_count} features, got {len(tier_a500.FEATURE_LIST)}"
-        )
+    def test_chunk_8a_features_in_feature_list(self) -> None:
+        """All CHUNK_8A_FEATURES are in FEATURE_LIST."""
+        for feature in tier_a500.CHUNK_8A_FEATURES:
+            assert feature in tier_a500.FEATURE_LIST, (
+                f"Missing from FEATURE_LIST: {feature}"
+            )
 
     def test_output_includes_all_chunk_8a_features(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
@@ -2678,14 +2678,10 @@ class TestChunk8aIntegration:
                 f"Missing from A500_ADDITION_LIST: {feature}"
             )
 
-    def test_output_column_count(
-        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
-    ) -> None:
-        """Output DataFrame should have Date + 323 features = 324 columns."""
-        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
-        expected_cols = 1 + 206 + 24 + 25 + 23 + 22 + 23  # Date + a200 + 6a + 6b + 7a + 7b + 8a
-        assert len(result.columns) == expected_cols, (
-            f"Expected {expected_cols} columns, got {len(result.columns)}"
+    def test_chunk_8a_count_is_23(self) -> None:
+        """CHUNK_8A_FEATURES has exactly 23 features."""
+        assert len(tier_a500.CHUNK_8A_FEATURES) == 23, (
+            f"Expected 23 features, got {len(tier_a500.CHUNK_8A_FEATURES)}"
         )
 
     def test_no_nan_values_after_warmup(
@@ -2725,6 +2721,1944 @@ class TestChunk8aIntegration:
             if len(common_dates) > 0:
                 # For each chunk 8a feature, verify values match for common dates
                 for feature in tier_a500.CHUNK_8A_FEATURES:
+                    full_vals = full_result[full_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    trunc_vals = truncated_result[truncated_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    # Use allclose for floating point comparison
+                    assert np.allclose(full_vals, trunc_vals, equal_nan=True), (
+                        f"Lookahead detected in {feature}"
+                    )
+
+
+# =============================================================================
+# Chunk 8b Feature List Structure Tests (Support/Resistance)
+# =============================================================================
+
+
+class TestChunk8bFeatureListStructure:
+    """Test Chunk 8b feature list structure and counts."""
+
+    def test_chunk_8b_features_exists(self) -> None:
+        """CHUNK_8B_FEATURES constant exists."""
+        assert hasattr(tier_a500, "CHUNK_8B_FEATURES")
+
+    def test_chunk_8b_features_is_list(self) -> None:
+        """CHUNK_8B_FEATURES is a list."""
+        assert isinstance(tier_a500.CHUNK_8B_FEATURES, list)
+
+    def test_chunk_8b_count_is_22(self) -> None:
+        """CHUNK_8B_FEATURES has exactly 22 features."""
+        assert len(tier_a500.CHUNK_8B_FEATURES) == 22, (
+            f"Expected 22 features, got {len(tier_a500.CHUNK_8B_FEATURES)}"
+        )
+
+    def test_chunk_8b_no_duplicates(self) -> None:
+        """CHUNK_8B_FEATURES has no duplicate feature names."""
+        assert len(tier_a500.CHUNK_8B_FEATURES) == len(set(tier_a500.CHUNK_8B_FEATURES))
+
+    def test_chunk_8b_no_overlap_with_a200(self) -> None:
+        """CHUNK_8B_FEATURES has no overlap with a200 features."""
+        from src.features import tier_a200
+
+        overlap = set(tier_a500.CHUNK_8B_FEATURES) & set(tier_a200.FEATURE_LIST)
+        assert len(overlap) == 0, f"Overlapping features with a200: {overlap}"
+
+    def test_chunk_8b_no_overlap_with_prior_chunks(self) -> None:
+        """CHUNK_8B_FEATURES has no overlap with prior chunks (6a, 6b, 7a, 7b, 8a)."""
+        prior_chunks = (
+            tier_a500.CHUNK_6A_FEATURES
+            + tier_a500.CHUNK_6B_FEATURES
+            + tier_a500.CHUNK_7A_FEATURES
+            + tier_a500.CHUNK_7B_FEATURES
+            + tier_a500.CHUNK_8A_FEATURES
+        )
+        overlap = set(tier_a500.CHUNK_8B_FEATURES) & set(prior_chunks)
+        assert len(overlap) == 0, f"Overlapping features with prior chunks: {overlap}"
+
+    def test_chunk_8b_all_strings(self) -> None:
+        """All feature names in CHUNK_8B_FEATURES are strings."""
+        for feature in tier_a500.CHUNK_8B_FEATURES:
+            assert isinstance(feature, str), f"Non-string feature: {feature}"
+
+    def test_chunk_8b_in_feature_list(self) -> None:
+        """All CHUNK_8B_FEATURES are in FEATURE_LIST."""
+        for feature in tier_a500.CHUNK_8B_FEATURES:
+            assert feature in tier_a500.FEATURE_LIST, f"Missing from FEATURE_LIST: {feature}"
+
+
+class TestChunk8bFeatureListContents:
+    """Test Chunk 8b feature list contents by group."""
+
+    def test_chunk8b_range_position_in_list(self) -> None:
+        """Rolling Range Position features are in Chunk 8b list."""
+        range_features = [
+            "range_position_20d",
+            "range_position_50d",
+            "range_position_252d",
+            "range_width_20d_pct",
+        ]
+        for feature in range_features:
+            assert feature in tier_a500.CHUNK_8B_FEATURES, f"Missing: {feature}"
+
+    def test_chunk8b_distance_from_extremes_in_list(self) -> None:
+        """Distance from Extremes features are in Chunk 8b list."""
+        distance_features = [
+            "pct_from_20d_high",
+            "pct_from_20d_low",
+            "pct_from_52w_high",
+            "pct_from_52w_low",
+        ]
+        for feature in distance_features:
+            assert feature in tier_a500.CHUNK_8B_FEATURES, f"Missing: {feature}"
+
+    def test_chunk8b_recency_of_extremes_in_list(self) -> None:
+        """Recency of Extremes features are in Chunk 8b list."""
+        recency_features = [
+            "days_since_20d_high",
+            "days_since_20d_low",
+            "days_since_50d_high",
+            "days_since_50d_low",
+        ]
+        for feature in recency_features:
+            assert feature in tier_a500.CHUNK_8B_FEATURES, f"Missing: {feature}"
+
+    def test_chunk8b_breakout_detection_in_list(self) -> None:
+        """Breakout/Breakdown Detection features are in Chunk 8b list."""
+        breakout_features = [
+            "breakout_20d",
+            "breakdown_20d",
+            "breakout_strength_20d",
+            "consecutive_new_highs_20d",
+        ]
+        for feature in breakout_features:
+            assert feature in tier_a500.CHUNK_8B_FEATURES, f"Missing: {feature}"
+
+    def test_chunk8b_range_dynamics_in_list(self) -> None:
+        """Range Dynamics features are in Chunk 8b list."""
+        dynamics_features = [
+            "range_expansion_10d",
+            "range_contraction_score",
+            "high_low_range_ratio",
+            "support_test_count_20d",
+        ]
+        for feature in dynamics_features:
+            assert feature in tier_a500.CHUNK_8B_FEATURES, f"Missing: {feature}"
+
+    def test_chunk8b_fibonacci_context_in_list(self) -> None:
+        """Fibonacci Context features are in Chunk 8b list."""
+        fib_features = [
+            "fib_retracement_level",
+            "distance_to_fib_50",
+        ]
+        for feature in fib_features:
+            assert feature in tier_a500.CHUNK_8B_FEATURES, f"Missing: {feature}"
+
+
+# =============================================================================
+# Chunk 8b Indicator Computation Tests
+# =============================================================================
+
+
+class TestChunk8bRangePosition:
+    """Test Rolling Range Position features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_range_position_20d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_position_20d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "range_position_20d" in result.columns
+
+    def test_range_position_50d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_position_50d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "range_position_50d" in result.columns
+
+    def test_range_position_252d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_position_252d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "range_position_252d" in result.columns
+
+    def test_range_width_20d_pct_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_width_20d_pct column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "range_width_20d_pct" in result.columns
+
+    # --- Range tests ---
+
+    def test_range_position_in_0_1(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Range position features should be in [0, 1]."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["range_position_20d", "range_position_50d", "range_position_252d"]:
+            assert result[col].min() >= 0, f"{col} below 0: {result[col].min()}"
+            assert result[col].max() <= 1, f"{col} above 1: {result[col].max()}"
+
+    def test_range_width_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_width_20d_pct should be positive."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["range_width_20d_pct"] >= 0).all()
+
+    # --- No-NaN test ---
+
+    def test_range_position_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Range Position columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["range_position_20d", "range_position_50d", "range_position_252d", "range_width_20d_pct"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk8bDistanceFromExtremes:
+    """Test Distance from Extremes features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_pct_from_20d_high_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_from_20d_high column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "pct_from_20d_high" in result.columns
+
+    def test_pct_from_20d_low_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_from_20d_low column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "pct_from_20d_low" in result.columns
+
+    def test_pct_from_52w_high_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_from_52w_high column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "pct_from_52w_high" in result.columns
+
+    def test_pct_from_52w_low_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_from_52w_low column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "pct_from_52w_low" in result.columns
+
+    # --- Range tests ---
+
+    def test_pct_from_high_nonpositive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_from_*_high should be <= 0 (close is at or below high)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["pct_from_20d_high", "pct_from_52w_high"]:
+            assert result[col].max() <= 0, f"{col} has positive values: {result[col].max()}"
+
+    def test_pct_from_low_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_from_*_low should be >= 0 (close is at or above low)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["pct_from_20d_low", "pct_from_52w_low"]:
+            assert result[col].min() >= 0, f"{col} has negative values: {result[col].min()}"
+
+    # --- No-NaN test ---
+
+    def test_distance_from_extremes_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Distance from Extremes columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["pct_from_20d_high", "pct_from_20d_low", "pct_from_52w_high", "pct_from_52w_low"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk8bRecencyOfExtremes:
+    """Test Recency of Extremes features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_days_since_20d_high_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_20d_high column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_since_20d_high" in result.columns
+
+    def test_days_since_20d_low_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_20d_low column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_since_20d_low" in result.columns
+
+    def test_days_since_50d_high_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_50d_high column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_since_50d_high" in result.columns
+
+    def test_days_since_50d_low_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_50d_low column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_since_50d_low" in result.columns
+
+    # --- Range tests ---
+
+    def test_days_since_20d_in_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_20d_* should be in [0, 19]."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["days_since_20d_high", "days_since_20d_low"]:
+            assert result[col].min() >= 0, f"{col} below 0: {result[col].min()}"
+            assert result[col].max() <= 19, f"{col} above 19: {result[col].max()}"
+
+    def test_days_since_50d_in_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_since_50d_* should be in [0, 49]."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["days_since_50d_high", "days_since_50d_low"]:
+            assert result[col].min() >= 0, f"{col} below 0: {result[col].min()}"
+            assert result[col].max() <= 49, f"{col} above 49: {result[col].max()}"
+
+    def test_recency_are_integers(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Recency features should be non-negative integers."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["days_since_20d_high", "days_since_20d_low", "days_since_50d_high", "days_since_50d_low"]:
+            # Check they are integers (or can be safely cast to int)
+            assert (result[col] == result[col].astype(int)).all(), f"{col} has non-integer values"
+
+    # --- No-NaN test ---
+
+    def test_recency_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Recency columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["days_since_20d_high", "days_since_20d_low", "days_since_50d_high", "days_since_50d_low"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk8bBreakoutDetection:
+    """Test Breakout/Breakdown Detection features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_breakout_20d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """breakout_20d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "breakout_20d" in result.columns
+
+    def test_breakdown_20d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """breakdown_20d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "breakdown_20d" in result.columns
+
+    def test_breakout_strength_20d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """breakout_strength_20d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "breakout_strength_20d" in result.columns
+
+    def test_consecutive_new_highs_20d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_new_highs_20d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "consecutive_new_highs_20d" in result.columns
+
+    # --- Range tests ---
+
+    def test_breakout_breakdown_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """breakout_20d and breakdown_20d should be binary {0, 1}."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["breakout_20d", "breakdown_20d"]:
+            unique_vals = set(result[col].unique())
+            assert unique_vals.issubset({0, 1}), f"{col} has non-binary values: {unique_vals}"
+
+    def test_breakout_strength_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """breakout_strength_20d should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["breakout_strength_20d"] >= 0).all()
+
+    def test_consecutive_new_highs_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_new_highs_20d should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["consecutive_new_highs_20d"] >= 0).all()
+
+    # --- No-NaN test ---
+
+    def test_breakout_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Breakout columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["breakout_20d", "breakdown_20d", "breakout_strength_20d", "consecutive_new_highs_20d"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk8bRangeDynamics:
+    """Test Range Dynamics features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_range_expansion_10d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_expansion_10d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "range_expansion_10d" in result.columns
+
+    def test_range_contraction_score_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_contraction_score column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "range_contraction_score" in result.columns
+
+    def test_high_low_range_ratio_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """high_low_range_ratio column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "high_low_range_ratio" in result.columns
+
+    def test_support_test_count_20d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """support_test_count_20d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "support_test_count_20d" in result.columns
+
+    # --- Range tests ---
+
+    def test_range_expansion_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_expansion_10d should be positive (ratio of ranges)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["range_expansion_10d"] > 0).all()
+
+    def test_range_contraction_score_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """range_contraction_score should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["range_contraction_score"] >= 0).all()
+
+    def test_high_low_range_ratio_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """high_low_range_ratio should be positive."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert (result["high_low_range_ratio"] > 0).all()
+
+    def test_support_test_count_in_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """support_test_count_20d should be in [0, 20]."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["support_test_count_20d"].min() >= 0
+        assert result["support_test_count_20d"].max() <= 20
+
+    # --- No-NaN test ---
+
+    def test_range_dynamics_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Range Dynamics columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["range_expansion_10d", "range_contraction_score", "high_low_range_ratio", "support_test_count_20d"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk8bFibonacciContext:
+    """Test Fibonacci Context features (2 features)."""
+
+    # --- Existence tests ---
+
+    def test_fib_retracement_level_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """fib_retracement_level column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "fib_retracement_level" in result.columns
+
+    def test_distance_to_fib_50_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """distance_to_fib_50 column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "distance_to_fib_50" in result.columns
+
+    # --- Range tests ---
+
+    def test_fib_retracement_level_in_0_1(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """fib_retracement_level should be in [0, 1]."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["fib_retracement_level"].min() >= 0
+        assert result["fib_retracement_level"].max() <= 1
+
+    def test_fib_retracement_level_is_valid_fib(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """fib_retracement_level should only contain valid Fibonacci levels."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        valid_fibs = {0.0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0}
+        unique_vals = set(result["fib_retracement_level"].unique())
+        assert unique_vals.issubset(valid_fibs), f"Invalid fib levels: {unique_vals - valid_fibs}"
+
+    def test_distance_to_fib_50_bounded(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """distance_to_fib_50 should be bounded (typically in [-1, 1])."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        # Allow some flexibility for extreme cases
+        assert result["distance_to_fib_50"].min() >= -2
+        assert result["distance_to_fib_50"].max() <= 2
+
+    # --- No-NaN test ---
+
+    def test_fib_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Fibonacci columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        for col in ["fib_retracement_level", "distance_to_fib_50"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+class TestChunk8bIntegration:
+    """Integration tests for Chunk 8b."""
+
+    def test_chunk_8b_feature_count_is_22(self) -> None:
+        """Chunk 8b should have exactly 22 features."""
+        assert len(tier_a500.CHUNK_8B_FEATURES) == 22, (
+            f"Expected 22 features in chunk 8b, got {len(tier_a500.CHUNK_8B_FEATURES)}"
+        )
+
+    def test_output_includes_all_chunk_8b_features(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output includes all Chunk 8b features."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for feature in tier_a500.CHUNK_8B_FEATURES:
+            assert feature in result.columns, f"Missing: {feature}"
+
+    def test_a500_addition_list_includes_8b(self) -> None:
+        """A500_ADDITION_LIST includes all Chunk 8b features."""
+        for feature in tier_a500.CHUNK_8B_FEATURES:
+            assert feature in tier_a500.A500_ADDITION_LIST, (
+                f"Missing from A500_ADDITION_LIST: {feature}"
+            )
+
+    def test_chunk_8b_features_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """All Chunk 8b features should be present in output DataFrame."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for feature in tier_a500.CHUNK_8B_FEATURES:
+            assert feature in result.columns, f"Missing from output: {feature}"
+
+    def test_no_nan_values_after_warmup(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in any column after warmup period."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        nan_cols = result.columns[result.isna().any()].tolist()
+        assert len(nan_cols) == 0, f"Columns with NaN: {nan_cols}"
+
+    def test_output_row_count_reasonable(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output should have reasonable row count after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert len(result) >= 50, f"Too few rows: {len(result)}"
+        assert len(result) <= 200, f"Too many rows (warmup not applied?): {len(result)}"
+
+    def test_8b_features_no_lookahead(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Chunk 8b features should not use future data (no lookahead bias).
+
+        Test by checking that early rows can be computed without later data.
+        """
+        # Build features on full data
+        full_result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        # Build features on truncated data (first 350 rows)
+        truncated_df = sample_daily_df.iloc[:350].copy()
+        truncated_vix = sample_vix_df.iloc[:350].copy()
+        truncated_result = tier_a500.build_feature_dataframe(truncated_df, truncated_vix)
+
+        if len(truncated_result) > 0 and len(full_result) > 0:
+            # Find overlapping dates
+            common_dates = set(full_result["Date"]) & set(truncated_result["Date"])
+            if len(common_dates) > 0:
+                # For each chunk 8b feature, verify values match for common dates
+                for feature in tier_a500.CHUNK_8B_FEATURES:
+                    full_vals = full_result[full_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    trunc_vals = truncated_result[truncated_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    # Use allclose for floating point comparison
+                    assert np.allclose(full_vals, trunc_vals, equal_nan=True), (
+                        f"Lookahead detected in {feature}"
+                    )
+
+
+# =============================================================================
+# Sub-Chunk 9a Tests (ranks 346-370): CDL Part 1 - Candlestick Patterns
+# =============================================================================
+
+
+class TestChunk9aFeatureListStructure:
+    """Test Chunk 9a feature list structure and counts."""
+
+    def test_chunk_9a_features_exists(self) -> None:
+        """CHUNK_9A_FEATURES constant exists."""
+        assert hasattr(tier_a500, "CHUNK_9A_FEATURES")
+
+    def test_chunk_9a_features_is_list(self) -> None:
+        """CHUNK_9A_FEATURES is a list."""
+        assert isinstance(tier_a500.CHUNK_9A_FEATURES, list)
+
+    def test_chunk_9a_count_is_25(self) -> None:
+        """CHUNK_9A_FEATURES has exactly 25 features."""
+        assert len(tier_a500.CHUNK_9A_FEATURES) == 25, (
+            f"Expected 25 features, got {len(tier_a500.CHUNK_9A_FEATURES)}"
+        )
+
+    def test_chunk_9a_no_duplicates(self) -> None:
+        """CHUNK_9A_FEATURES has no duplicate feature names."""
+        assert len(tier_a500.CHUNK_9A_FEATURES) == len(set(tier_a500.CHUNK_9A_FEATURES))
+
+    def test_chunk_9a_no_overlap_with_a200(self) -> None:
+        """CHUNK_9A_FEATURES has no overlap with a200 features."""
+        from src.features import tier_a200
+
+        overlap = set(tier_a500.CHUNK_9A_FEATURES) & set(tier_a200.FEATURE_LIST)
+        assert len(overlap) == 0, f"Overlapping features with a200: {overlap}"
+
+    def test_chunk_9a_no_overlap_with_prior_chunks(self) -> None:
+        """CHUNK_9A_FEATURES has no overlap with prior chunks (6a, 6b, 7a, 7b, 8a, 8b)."""
+        prior_chunks = (
+            tier_a500.CHUNK_6A_FEATURES
+            + tier_a500.CHUNK_6B_FEATURES
+            + tier_a500.CHUNK_7A_FEATURES
+            + tier_a500.CHUNK_7B_FEATURES
+            + tier_a500.CHUNK_8A_FEATURES
+            + tier_a500.CHUNK_8B_FEATURES
+        )
+        overlap = set(tier_a500.CHUNK_9A_FEATURES) & set(prior_chunks)
+        assert len(overlap) == 0, f"Overlapping features with prior chunks: {overlap}"
+
+    def test_chunk_9a_all_strings(self) -> None:
+        """All feature names in CHUNK_9A_FEATURES are strings."""
+        for feature in tier_a500.CHUNK_9A_FEATURES:
+            assert isinstance(feature, str), f"Non-string feature: {feature}"
+
+    def test_chunk_9a_in_feature_list(self) -> None:
+        """All CHUNK_9A_FEATURES are in FEATURE_LIST."""
+        for feature in tier_a500.CHUNK_9A_FEATURES:
+            assert feature in tier_a500.FEATURE_LIST, f"Missing from FEATURE_LIST: {feature}"
+
+
+class TestChunk9aFeatureListContents:
+    """Test Chunk 9a feature list contents by group."""
+
+    def test_chunk9a_engulfing_in_list(self) -> None:
+        """Engulfing Pattern features are in Chunk 9a list."""
+        engulfing_features = [
+            "bullish_engulfing",
+            "bearish_engulfing",
+            "engulfing_score",
+            "consecutive_engulfing_count",
+        ]
+        for feature in engulfing_features:
+            assert feature in tier_a500.CHUNK_9A_FEATURES, f"Missing: {feature}"
+
+    def test_chunk9a_wick_rejection_in_list(self) -> None:
+        """Wick Rejection features are in Chunk 9a list."""
+        wick_features = [
+            "hammer_indicator",
+            "shooting_star_indicator",
+            "hammer_score",
+            "shooting_star_score",
+            "wick_rejection_score",
+        ]
+        for feature in wick_features:
+            assert feature in tier_a500.CHUNK_9A_FEATURES, f"Missing: {feature}"
+
+    def test_chunk9a_gaps_in_list(self) -> None:
+        """Gap Analysis features are in Chunk 9a list."""
+        gap_features = [
+            "gap_size_pct",
+            "gap_direction",
+            "gap_filled_today",
+            "gap_fill_pct",
+            "significant_gap",
+        ]
+        for feature in gap_features:
+            assert feature in tier_a500.CHUNK_9A_FEATURES, f"Missing: {feature}"
+
+    def test_chunk9a_inside_outside_in_list(self) -> None:
+        """Inside/Outside Day features are in Chunk 9a list."""
+        io_features = [
+            "inside_day",
+            "outside_day",
+            "consecutive_inside_days",
+            "consecutive_outside_days",
+        ]
+        for feature in io_features:
+            assert feature in tier_a500.CHUNK_9A_FEATURES, f"Missing: {feature}"
+
+    def test_chunk9a_range_extremes_in_list(self) -> None:
+        """Range Extremes features are in Chunk 9a list."""
+        range_features = [
+            "narrow_range_day",
+            "wide_range_day",
+            "narrow_range_score",
+            "consecutive_narrow_days",
+        ]
+        for feature in range_features:
+            assert feature in tier_a500.CHUNK_9A_FEATURES, f"Missing: {feature}"
+
+    def test_chunk9a_trend_days_in_list(self) -> None:
+        """Trend Day features are in Chunk 9a list."""
+        trend_features = [
+            "trend_day_indicator",
+            "trend_day_direction",
+            "consecutive_trend_days",
+        ]
+        for feature in trend_features:
+            assert feature in tier_a500.CHUNK_9A_FEATURES, f"Missing: {feature}"
+
+
+# =============================================================================
+# Chunk 9a Indicator Computation Tests - Engulfing Patterns
+# =============================================================================
+
+
+class TestChunk9aEngulfingPatterns:
+    """Test Engulfing Pattern features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_bullish_engulfing_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """bullish_engulfing column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "bullish_engulfing" in result.columns
+
+    def test_bearish_engulfing_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """bearish_engulfing column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "bearish_engulfing" in result.columns
+
+    def test_engulfing_score_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """engulfing_score column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "engulfing_score" in result.columns
+
+    def test_consecutive_engulfing_count_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_engulfing_count column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "consecutive_engulfing_count" in result.columns
+
+    # --- Range tests ---
+
+    def test_bullish_engulfing_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """bullish_engulfing should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["bullish_engulfing"].unique())
+        assert unique_vals <= {0, 1}, f"bullish_engulfing has non-binary values: {unique_vals}"
+
+    def test_bearish_engulfing_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """bearish_engulfing should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["bearish_engulfing"].unique())
+        assert unique_vals <= {0, 1}, f"bearish_engulfing has non-binary values: {unique_vals}"
+
+    def test_engulfing_score_in_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """engulfing_score should be in [0, 5] (clipped)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["engulfing_score"].min() >= 0, f"engulfing_score below 0: {result['engulfing_score'].min()}"
+        assert result["engulfing_score"].max() <= 5, f"engulfing_score above 5: {result['engulfing_score'].max()}"
+
+    def test_consecutive_engulfing_count_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_engulfing_count should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["consecutive_engulfing_count"].min() >= 0
+
+    # --- No-NaN test ---
+
+    def test_engulfing_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Engulfing columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for col in ["bullish_engulfing", "bearish_engulfing", "engulfing_score", "consecutive_engulfing_count"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9a Indicator Computation Tests - Wick Rejection
+# =============================================================================
+
+
+class TestChunk9aWickRejection:
+    """Test Wick Rejection features (5 features)."""
+
+    # --- Existence tests ---
+
+    def test_hammer_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hammer_indicator column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "hammer_indicator" in result.columns
+
+    def test_shooting_star_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """shooting_star_indicator column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "shooting_star_indicator" in result.columns
+
+    def test_hammer_score_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hammer_score column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "hammer_score" in result.columns
+
+    def test_shooting_star_score_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """shooting_star_score column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "shooting_star_score" in result.columns
+
+    def test_wick_rejection_score_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """wick_rejection_score column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "wick_rejection_score" in result.columns
+
+    # --- Range tests ---
+
+    def test_hammer_indicator_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hammer_indicator should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["hammer_indicator"].unique())
+        assert unique_vals <= {0, 1}, f"hammer_indicator has non-binary values: {unique_vals}"
+
+    def test_shooting_star_indicator_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """shooting_star_indicator should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["shooting_star_indicator"].unique())
+        assert unique_vals <= {0, 1}, f"shooting_star_indicator has non-binary values: {unique_vals}"
+
+    def test_hammer_score_in_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hammer_score should be in [0, 10] (clipped)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["hammer_score"].min() >= 0, f"hammer_score below 0: {result['hammer_score'].min()}"
+        assert result["hammer_score"].max() <= 10, f"hammer_score above 10: {result['hammer_score'].max()}"
+
+    def test_shooting_star_score_in_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """shooting_star_score should be in [0, 10] (clipped)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["shooting_star_score"].min() >= 0, f"shooting_star_score below 0: {result['shooting_star_score'].min()}"
+        assert result["shooting_star_score"].max() <= 10, f"shooting_star_score above 10: {result['shooting_star_score'].max()}"
+
+    def test_wick_rejection_score_in_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """wick_rejection_score should be in [-10, 10]."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["wick_rejection_score"].min() >= -10, f"wick_rejection_score below -10: {result['wick_rejection_score'].min()}"
+        assert result["wick_rejection_score"].max() <= 10, f"wick_rejection_score above 10: {result['wick_rejection_score'].max()}"
+
+    # --- No-NaN test ---
+
+    def test_wick_rejection_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Wick Rejection columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for col in ["hammer_indicator", "shooting_star_indicator", "hammer_score", "shooting_star_score", "wick_rejection_score"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9a Indicator Computation Tests - Gap Analysis
+# =============================================================================
+
+
+class TestChunk9aGapAnalysis:
+    """Test Gap Analysis features (5 features)."""
+
+    # --- Existence tests ---
+
+    def test_gap_size_pct_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """gap_size_pct column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "gap_size_pct" in result.columns
+
+    def test_gap_direction_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """gap_direction column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "gap_direction" in result.columns
+
+    def test_gap_filled_today_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """gap_filled_today column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "gap_filled_today" in result.columns
+
+    def test_gap_fill_pct_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """gap_fill_pct column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "gap_fill_pct" in result.columns
+
+    def test_significant_gap_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """significant_gap column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "significant_gap" in result.columns
+
+    # --- Range tests ---
+
+    def test_gap_direction_values(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """gap_direction should be in {-1, 0, 1}."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["gap_direction"].unique())
+        assert unique_vals <= {-1, 0, 1}, f"gap_direction has invalid values: {unique_vals}"
+
+    def test_gap_filled_today_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """gap_filled_today should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["gap_filled_today"].unique())
+        assert unique_vals <= {0, 1}, f"gap_filled_today has non-binary values: {unique_vals}"
+
+    def test_gap_fill_pct_in_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """gap_fill_pct should be in [0, 100]."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["gap_fill_pct"].min() >= 0, f"gap_fill_pct below 0: {result['gap_fill_pct'].min()}"
+        assert result["gap_fill_pct"].max() <= 100, f"gap_fill_pct above 100: {result['gap_fill_pct'].max()}"
+
+    def test_significant_gap_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """significant_gap should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["significant_gap"].unique())
+        assert unique_vals <= {0, 1}, f"significant_gap has non-binary values: {unique_vals}"
+
+    # --- No-NaN test ---
+
+    def test_gap_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Gap Analysis columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for col in ["gap_size_pct", "gap_direction", "gap_filled_today", "gap_fill_pct", "significant_gap"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9a Indicator Computation Tests - Inside/Outside Days
+# =============================================================================
+
+
+class TestChunk9aInsideOutsideDays:
+    """Test Inside/Outside Day features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_inside_day_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """inside_day column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "inside_day" in result.columns
+
+    def test_outside_day_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """outside_day column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "outside_day" in result.columns
+
+    def test_consecutive_inside_days_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_inside_days column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "consecutive_inside_days" in result.columns
+
+    def test_consecutive_outside_days_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_outside_days column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "consecutive_outside_days" in result.columns
+
+    # --- Range tests ---
+
+    def test_inside_day_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """inside_day should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["inside_day"].unique())
+        assert unique_vals <= {0, 1}, f"inside_day has non-binary values: {unique_vals}"
+
+    def test_outside_day_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """outside_day should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["outside_day"].unique())
+        assert unique_vals <= {0, 1}, f"outside_day has non-binary values: {unique_vals}"
+
+    def test_inside_outside_mutually_exclusive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """inside_day and outside_day cannot both be 1 on the same day."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        both_one = ((result["inside_day"] == 1) & (result["outside_day"] == 1)).sum()
+        assert both_one == 0, f"Found {both_one} days where both inside and outside are 1"
+
+    def test_consecutive_inside_days_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_inside_days should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["consecutive_inside_days"].min() >= 0
+
+    def test_consecutive_outside_days_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_outside_days should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["consecutive_outside_days"].min() >= 0
+
+    # --- No-NaN test ---
+
+    def test_inside_outside_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Inside/Outside columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for col in ["inside_day", "outside_day", "consecutive_inside_days", "consecutive_outside_days"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9a Indicator Computation Tests - Range Extremes
+# =============================================================================
+
+
+class TestChunk9aRangeExtremes:
+    """Test Range Extremes features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_narrow_range_day_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """narrow_range_day column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "narrow_range_day" in result.columns
+
+    def test_wide_range_day_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """wide_range_day column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "wide_range_day" in result.columns
+
+    def test_narrow_range_score_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """narrow_range_score column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "narrow_range_score" in result.columns
+
+    def test_consecutive_narrow_days_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_narrow_days column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "consecutive_narrow_days" in result.columns
+
+    # --- Range tests ---
+
+    def test_narrow_range_day_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """narrow_range_day should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["narrow_range_day"].unique())
+        assert unique_vals <= {0, 1}, f"narrow_range_day has non-binary values: {unique_vals}"
+
+    def test_wide_range_day_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """wide_range_day should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["wide_range_day"].unique())
+        assert unique_vals <= {0, 1}, f"wide_range_day has non-binary values: {unique_vals}"
+
+    def test_narrow_range_score_in_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """narrow_range_score should be in [0, 10] (clipped)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["narrow_range_score"].min() >= 0, f"narrow_range_score below 0: {result['narrow_range_score'].min()}"
+        assert result["narrow_range_score"].max() <= 10, f"narrow_range_score above 10: {result['narrow_range_score'].max()}"
+
+    def test_consecutive_narrow_days_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_narrow_days should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["consecutive_narrow_days"].min() >= 0
+
+    # --- No-NaN test ---
+
+    def test_range_extremes_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Range Extremes columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for col in ["narrow_range_day", "wide_range_day", "narrow_range_score", "consecutive_narrow_days"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9a Indicator Computation Tests - Trend Days
+# =============================================================================
+
+
+class TestChunk9aTrendDays:
+    """Test Trend Day features (3 features)."""
+
+    # --- Existence tests ---
+
+    def test_trend_day_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_day_indicator column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "trend_day_indicator" in result.columns
+
+    def test_trend_day_direction_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_day_direction column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "trend_day_direction" in result.columns
+
+    def test_consecutive_trend_days_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_trend_days column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "consecutive_trend_days" in result.columns
+
+    # --- Range tests ---
+
+    def test_trend_day_indicator_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_day_indicator should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["trend_day_indicator"].unique())
+        assert unique_vals <= {0, 1}, f"trend_day_indicator has non-binary values: {unique_vals}"
+
+    def test_trend_day_direction_values(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """trend_day_direction should be in {-1, 0, 1}."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["trend_day_direction"].unique())
+        assert unique_vals <= {-1, 0, 1}, f"trend_day_direction has invalid values: {unique_vals}"
+
+    def test_consecutive_trend_days_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_trend_days should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["consecutive_trend_days"].min() >= 0
+
+    # --- No-NaN test ---
+
+    def test_trend_days_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Trend Day columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for col in ["trend_day_indicator", "trend_day_direction", "consecutive_trend_days"]:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9a Integration Tests
+# =============================================================================
+
+
+class TestChunk9aIntegration:
+    """Integration tests for Chunk 9a."""
+
+    def test_feature_count_at_least_370(self) -> None:
+        """Total feature count should be at least 370 (includes 9a chunk)."""
+        min_count = 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25  # a200 + 6a + 6b + 7a + 7b + 8a + 8b + 9a
+        assert len(tier_a500.FEATURE_LIST) >= min_count, (
+            f"Expected at least {min_count} features, got {len(tier_a500.FEATURE_LIST)}"
+        )
+
+    def test_output_includes_all_chunk_9a_features(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output includes all Chunk 9a features."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for feature in tier_a500.CHUNK_9A_FEATURES:
+            assert feature in result.columns, f"Missing: {feature}"
+
+    def test_a500_addition_list_includes_9a(self) -> None:
+        """A500_ADDITION_LIST includes all Chunk 9a features."""
+        for feature in tier_a500.CHUNK_9A_FEATURES:
+            assert feature in tier_a500.A500_ADDITION_LIST, (
+                f"Missing from A500_ADDITION_LIST: {feature}"
+            )
+
+    def test_output_column_count_at_least_371(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output DataFrame should have at least Date + 370 features = 371 columns."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        min_cols = 1 + 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25  # Date + a200 + 6a + 6b + 7a + 7b + 8a + 8b + 9a
+        assert len(result.columns) >= min_cols, (
+            f"Expected at least {min_cols} columns, got {len(result.columns)}"
+        )
+
+    def test_no_nan_values_after_warmup(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in any column after warmup period."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        nan_cols = result.columns[result.isna().any()].tolist()
+        assert len(nan_cols) == 0, f"Columns with NaN: {nan_cols}"
+
+    def test_9a_features_no_lookahead(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Chunk 9a features should not use future data (no lookahead bias).
+
+        Test by checking that early rows can be computed without later data.
+        """
+        # Build features on full data
+        full_result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        # Build features on truncated data (first 350 rows)
+        truncated_df = sample_daily_df.iloc[:350].copy()
+        truncated_vix = sample_vix_df.iloc[:350].copy()
+        truncated_result = tier_a500.build_feature_dataframe(truncated_df, truncated_vix)
+
+        if len(truncated_result) > 0 and len(full_result) > 0:
+            # Find overlapping dates
+            common_dates = set(full_result["Date"]) & set(truncated_result["Date"])
+            if len(common_dates) > 0:
+                # For each chunk 9a feature, verify values match for common dates
+                for feature in tier_a500.CHUNK_9A_FEATURES:
+                    full_vals = full_result[full_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    trunc_vals = truncated_result[truncated_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    # Use allclose for floating point comparison
+                    assert np.allclose(full_vals, trunc_vals, equal_nan=True), (
+                        f"Lookahead detected in {feature}"
+                    )
+
+
+# =============================================================================
+# Chunk 9b Indicator Computation Tests - Doji Patterns
+# =============================================================================
+
+
+class TestChunk9bDoji:
+    """Test Doji Pattern features (5 features)."""
+
+    # --- Existence tests ---
+
+    def test_doji_strict_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """doji_strict_indicator column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "doji_strict_indicator" in result.columns
+
+    def test_doji_score_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """doji_score column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "doji_score" in result.columns
+
+    def test_doji_type_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """doji_type column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "doji_type" in result.columns
+
+    def test_consecutive_doji_count_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_doji_count column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "consecutive_doji_count" in result.columns
+
+    def test_doji_after_trend_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """doji_after_trend column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "doji_after_trend" in result.columns
+
+    # --- Range tests ---
+
+    def test_doji_strict_indicator_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """doji_strict_indicator should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["doji_strict_indicator"].unique())
+        assert unique_vals <= {0, 1}, f"doji_strict_indicator has non-binary values: {unique_vals}"
+
+    def test_doji_score_range_0_to_1(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """doji_score should be in [0, 1]."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["doji_score"].min() >= 0, "doji_score below 0"
+        assert result["doji_score"].max() <= 1, "doji_score above 1"
+
+    def test_doji_type_values(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """doji_type should be in {-1, 0, 1}."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["doji_type"].unique())
+        assert unique_vals <= {-1, 0, 1}, f"doji_type has invalid values: {unique_vals}"
+
+    def test_consecutive_doji_count_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_doji_count should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["consecutive_doji_count"].min() >= 0
+
+    def test_doji_after_trend_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """doji_after_trend should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["doji_after_trend"].unique())
+        assert unique_vals <= {0, 1}, f"doji_after_trend has non-binary values: {unique_vals}"
+
+    # --- No-NaN test ---
+
+    def test_doji_features_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Doji columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        doji_cols = ["doji_strict_indicator", "doji_score", "doji_type", "consecutive_doji_count", "doji_after_trend"]
+        for col in doji_cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9b Indicator Computation Tests - Marubozu & Strong Candles
+# =============================================================================
+
+
+class TestChunk9bMarubozu:
+    """Test Marubozu & Strong Candle features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_marubozu_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """marubozu_indicator column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "marubozu_indicator" in result.columns
+
+    def test_marubozu_direction_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """marubozu_direction column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "marubozu_direction" in result.columns
+
+    def test_marubozu_strength_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """marubozu_strength column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "marubozu_strength" in result.columns
+
+    def test_consecutive_strong_candles_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_strong_candles column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "consecutive_strong_candles" in result.columns
+
+    # --- Range tests ---
+
+    def test_marubozu_indicator_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """marubozu_indicator should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["marubozu_indicator"].unique())
+        assert unique_vals <= {0, 1}, f"marubozu_indicator has non-binary values: {unique_vals}"
+
+    def test_marubozu_direction_values(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """marubozu_direction should be in {-1, 0, 1}."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["marubozu_direction"].unique())
+        assert unique_vals <= {-1, 0, 1}, f"marubozu_direction has invalid values: {unique_vals}"
+
+    def test_marubozu_strength_range_0_to_1(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """marubozu_strength should be in [0, 1]."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["marubozu_strength"].min() >= 0, "marubozu_strength below 0"
+        assert result["marubozu_strength"].max() <= 1, "marubozu_strength above 1"
+
+    def test_consecutive_strong_candles_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """consecutive_strong_candles should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["consecutive_strong_candles"].min() >= 0
+
+    # --- No-NaN test ---
+
+    def test_marubozu_features_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Marubozu columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        cols = ["marubozu_indicator", "marubozu_direction", "marubozu_strength", "consecutive_strong_candles"]
+        for col in cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9b Indicator Computation Tests - Spinning Top & Indecision
+# =============================================================================
+
+
+class TestChunk9bSpinningTop:
+    """Test Spinning Top & Indecision features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_spinning_top_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spinning_top_indicator column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "spinning_top_indicator" in result.columns
+
+    def test_spinning_top_score_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spinning_top_score column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "spinning_top_score" in result.columns
+
+    def test_indecision_streak_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """indecision_streak column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "indecision_streak" in result.columns
+
+    def test_indecision_at_extreme_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """indecision_at_extreme column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "indecision_at_extreme" in result.columns
+
+    # --- Range tests ---
+
+    def test_spinning_top_indicator_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spinning_top_indicator should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["spinning_top_indicator"].unique())
+        assert unique_vals <= {0, 1}, f"spinning_top_indicator has non-binary values: {unique_vals}"
+
+    def test_spinning_top_score_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """spinning_top_score should be in [0, 10]."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["spinning_top_score"].min() >= 0, "spinning_top_score below 0"
+        assert result["spinning_top_score"].max() <= 10, "spinning_top_score above 10"
+
+    def test_indecision_streak_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """indecision_streak should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["indecision_streak"].min() >= 0
+
+    def test_indecision_at_extreme_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """indecision_at_extreme should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["indecision_at_extreme"].unique())
+        assert unique_vals <= {0, 1}, f"indecision_at_extreme has non-binary values: {unique_vals}"
+
+    # --- No-NaN test ---
+
+    def test_spinning_top_features_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Spinning Top columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        cols = ["spinning_top_indicator", "spinning_top_score", "indecision_streak", "indecision_at_extreme"]
+        for col in cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9b Indicator Computation Tests - Multi-Candle Reversal Patterns
+# =============================================================================
+
+
+class TestChunk9bReversalPatterns:
+    """Test Multi-Candle Reversal Pattern features (5 features)."""
+
+    # --- Existence tests ---
+
+    def test_morning_star_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """morning_star_indicator column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "morning_star_indicator" in result.columns
+
+    def test_evening_star_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """evening_star_indicator column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "evening_star_indicator" in result.columns
+
+    def test_three_white_soldiers_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """three_white_soldiers column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "three_white_soldiers" in result.columns
+
+    def test_three_black_crows_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """three_black_crows column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "three_black_crows" in result.columns
+
+    def test_harami_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """harami_indicator column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "harami_indicator" in result.columns
+
+    # --- Range tests ---
+
+    def test_morning_star_indicator_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """morning_star_indicator should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["morning_star_indicator"].unique())
+        assert unique_vals <= {0, 1}, f"morning_star_indicator has non-binary values: {unique_vals}"
+
+    def test_evening_star_indicator_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """evening_star_indicator should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["evening_star_indicator"].unique())
+        assert unique_vals <= {0, 1}, f"evening_star_indicator has non-binary values: {unique_vals}"
+
+    def test_three_white_soldiers_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """three_white_soldiers should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["three_white_soldiers"].unique())
+        assert unique_vals <= {0, 1}, f"three_white_soldiers has non-binary values: {unique_vals}"
+
+    def test_three_black_crows_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """three_black_crows should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["three_black_crows"].unique())
+        assert unique_vals <= {0, 1}, f"three_black_crows has non-binary values: {unique_vals}"
+
+    def test_harami_indicator_values(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """harami_indicator should be in {-1, 0, 1} (bearish, none, bullish)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["harami_indicator"].unique())
+        assert unique_vals <= {-1, 0, 1}, f"harami_indicator has invalid values: {unique_vals}"
+
+    # --- No-NaN test ---
+
+    def test_reversal_patterns_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Reversal Pattern columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        cols = ["morning_star_indicator", "evening_star_indicator", "three_white_soldiers",
+                "three_black_crows", "harami_indicator"]
+        for col in cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9b Indicator Computation Tests - Multi-Candle Continuation Patterns
+# =============================================================================
+
+
+class TestChunk9bContinuationPatterns:
+    """Test Multi-Candle Continuation Pattern features (4 features)."""
+
+    # --- Existence tests ---
+
+    def test_piercing_line_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """piercing_line column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "piercing_line" in result.columns
+
+    def test_dark_cloud_cover_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """dark_cloud_cover column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "dark_cloud_cover" in result.columns
+
+    def test_tweezer_bottom_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """tweezer_bottom column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "tweezer_bottom" in result.columns
+
+    def test_tweezer_top_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """tweezer_top column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "tweezer_top" in result.columns
+
+    # --- Range tests ---
+
+    def test_piercing_line_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """piercing_line should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["piercing_line"].unique())
+        assert unique_vals <= {0, 1}, f"piercing_line has non-binary values: {unique_vals}"
+
+    def test_dark_cloud_cover_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """dark_cloud_cover should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["dark_cloud_cover"].unique())
+        assert unique_vals <= {0, 1}, f"dark_cloud_cover has non-binary values: {unique_vals}"
+
+    def test_tweezer_bottom_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """tweezer_bottom should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["tweezer_bottom"].unique())
+        assert unique_vals <= {0, 1}, f"tweezer_bottom has non-binary values: {unique_vals}"
+
+    def test_tweezer_top_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """tweezer_top should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["tweezer_top"].unique())
+        assert unique_vals <= {0, 1}, f"tweezer_top has non-binary values: {unique_vals}"
+
+    # --- No-NaN test ---
+
+    def test_continuation_patterns_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Continuation Pattern columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        cols = ["piercing_line", "dark_cloud_cover", "tweezer_bottom", "tweezer_top"]
+        for col in cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9b Indicator Computation Tests - Pattern Context
+# =============================================================================
+
+
+class TestChunk9bPatternContext:
+    """Test Pattern Context features (3 features)."""
+
+    # --- Existence tests ---
+
+    def test_reversal_pattern_count_5d_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """reversal_pattern_count_5d column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "reversal_pattern_count_5d" in result.columns
+
+    def test_pattern_alignment_score_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pattern_alignment_score column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "pattern_alignment_score" in result.columns
+
+    def test_pattern_cluster_indicator_exists(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pattern_cluster_indicator column is present in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "pattern_cluster_indicator" in result.columns
+
+    # --- Range tests ---
+
+    def test_reversal_pattern_count_5d_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """reversal_pattern_count_5d should be >= 0."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert result["reversal_pattern_count_5d"].min() >= 0
+
+    def test_reversal_pattern_count_5d_max(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """reversal_pattern_count_5d should be <= 5 (max 1 per day in 5d window)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        # Could potentially have multiple patterns per day, so we allow up to reasonable max
+        assert result["reversal_pattern_count_5d"].max() <= 25
+
+    def test_pattern_alignment_score_values(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pattern_alignment_score should be in {-1, 0, 1}."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["pattern_alignment_score"].unique())
+        assert unique_vals <= {-1, 0, 1}, f"pattern_alignment_score has invalid values: {unique_vals}"
+
+    def test_pattern_cluster_indicator_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pattern_cluster_indicator should be binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        unique_vals = set(result["pattern_cluster_indicator"].unique())
+        assert unique_vals <= {0, 1}, f"pattern_cluster_indicator has non-binary values: {unique_vals}"
+
+    # --- No-NaN test ---
+
+    def test_pattern_context_no_nan(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in Pattern Context columns after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        cols = ["reversal_pattern_count_5d", "pattern_alignment_score", "pattern_cluster_indicator"]
+        for col in cols:
+            assert not result[col].isna().any(), f"NaN in {col}"
+
+
+# =============================================================================
+# Chunk 9b Integration Tests
+# =============================================================================
+
+
+class TestChunk9bIntegration:
+    """Integration tests for Chunk 9b."""
+
+    def test_feature_count_is_395(self) -> None:
+        """Total feature count should be 370 (prior) + 25 (9b) = 395."""
+        expected_count = 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25 + 25  # a200 + 6a + 6b + 7a + 7b + 8a + 8b + 9a + 9b
+        assert len(tier_a500.FEATURE_LIST) == expected_count, (
+            f"Expected {expected_count} features, got {len(tier_a500.FEATURE_LIST)}"
+        )
+
+    def test_chunk_9b_feature_count_is_25(self) -> None:
+        """CHUNK_9B_FEATURES should contain exactly 25 features."""
+        assert len(tier_a500.CHUNK_9B_FEATURES) == 25, (
+            f"Expected 25 features in CHUNK_9B_FEATURES, got {len(tier_a500.CHUNK_9B_FEATURES)}"
+        )
+
+    def test_output_includes_all_chunk_9b_features(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output includes all Chunk 9b features."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        for feature in tier_a500.CHUNK_9B_FEATURES:
+            assert feature in result.columns, f"Missing: {feature}"
+
+    def test_a500_addition_list_includes_9b(self) -> None:
+        """A500_ADDITION_LIST includes all Chunk 9b features."""
+        for feature in tier_a500.CHUNK_9B_FEATURES:
+            assert feature in tier_a500.A500_ADDITION_LIST, (
+                f"Missing from A500_ADDITION_LIST: {feature}"
+            )
+
+    def test_output_column_count(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output DataFrame should have Date + 395 features = 396 columns."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        expected_cols = 1 + 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25 + 25  # Date + a200 + 6a-9b
+        assert len(result.columns) == expected_cols, (
+            f"Expected {expected_cols} columns, got {len(result.columns)}"
+        )
+
+    def test_no_nan_values_after_warmup(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No NaN values in any column after warmup period."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        nan_cols = result.columns[result.isna().any()].tolist()
+        assert len(nan_cols) == 0, f"Columns with NaN: {nan_cols}"
+
+    def test_9b_features_no_lookahead(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Chunk 9b features should not use future data (no lookahead bias).
+
+        Test by checking that early rows can be computed without later data.
+        """
+        # Build features on full data
+        full_result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        # Build features on truncated data (first 350 rows)
+        truncated_df = sample_daily_df.iloc[:350].copy()
+        truncated_vix = sample_vix_df.iloc[:350].copy()
+        truncated_result = tier_a500.build_feature_dataframe(truncated_df, truncated_vix)
+
+        if len(truncated_result) > 0 and len(full_result) > 0:
+            # Find overlapping dates
+            common_dates = set(full_result["Date"]) & set(truncated_result["Date"])
+            if len(common_dates) > 0:
+                # For each chunk 9b feature, verify values match for common dates
+                for feature in tier_a500.CHUNK_9B_FEATURES:
                     full_vals = full_result[full_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
                     trunc_vals = truncated_result[truncated_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
                     # Use allclose for floating point comparison

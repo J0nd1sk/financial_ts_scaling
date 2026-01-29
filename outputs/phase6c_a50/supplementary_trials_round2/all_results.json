@@ -1,0 +1,522 @@
+[
+  {
+    "config_name": "G1",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 160,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 34.33374094963074,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7086248859142075,
+    "val_accuracy": 0.8104265402843602,
+    "val_precision": 0.4,
+    "val_recall": 0.10526315789473684,
+    "val_pred_range": [
+      0.006687669549137354,
+      0.8086889386177063
+    ],
+    "val_confusion": {
+      "tp": 8,
+      "tn": 334,
+      "fp": 12,
+      "fn": 68
+    },
+    "train_auc": null,
+    "train_precision": 0.6372549019607843,
+    "train_recall": 0.2926280247608329,
+    "train_pred_range": [
+      0.006094976328313351,
+      0.9114359021186829
+    ],
+    "timestamp": "2026-01-28T13:34:41.804575"
+  },
+  {
+    "config_name": "G2",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 128,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.45,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 55.02513575553894,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7275631274718589,
+    "val_accuracy": 0.8056872037914692,
+    "val_precision": 0.4318181818181818,
+    "val_recall": 0.25,
+    "val_pred_range": [
+      0.00871638860553503,
+      0.829447329044342
+    ],
+    "val_confusion": {
+      "tp": 19,
+      "tn": 321,
+      "fp": 25,
+      "fn": 57
+    },
+    "train_auc": null,
+    "train_precision": 0.588,
+    "train_recall": 0.413618458075408,
+    "train_pred_range": [
+      0.006001973524689674,
+      0.9591729044914246
+    ],
+    "timestamp": "2026-01-28T13:35:36.848245"
+  },
+  {
+    "config_name": "G3",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 128,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 7e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 35.97822380065918,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7242166108913903,
+    "val_accuracy": 0.8151658767772512,
+    "val_precision": 0.4583333333333333,
+    "val_recall": 0.14473684210526316,
+    "val_pred_range": [
+      0.006673042196780443,
+      0.8041753768920898
+    ],
+    "val_confusion": {
+      "tp": 11,
+      "tn": 333,
+      "fp": 13,
+      "fn": 65
+    },
+    "train_auc": null,
+    "train_precision": 0.6703601108033241,
+    "train_recall": 0.2723691615081598,
+    "train_pred_range": [
+      0.0044029210694134235,
+      0.9196734428405762
+    ],
+    "timestamp": "2026-01-28T13:36:12.845794"
+  },
+  {
+    "config_name": "G4",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 128,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0003
+    },
+    "duration_sec": 52.2496771812439,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7291603285670825,
+    "val_accuracy": 0.7985781990521327,
+    "val_precision": 0.40816326530612246,
+    "val_recall": 0.2631578947368421,
+    "val_pred_range": [
+      0.011061946861445904,
+      0.8559795618057251
+    ],
+    "val_confusion": {
+      "tp": 20,
+      "tn": 317,
+      "fp": 29,
+      "fn": 56
+    },
+    "train_auc": null,
+    "train_precision": 0.5898791540785498,
+    "train_recall": 0.4395047833427124,
+    "train_pred_range": [
+      0.006583440583199263,
+      0.9597479701042175
+    ],
+    "timestamp": "2026-01-28T13:37:05.115794"
+  },
+  {
+    "config_name": "G5",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 128,
+      "n_layers": 3,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 29.67566180229187,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7273729844843322,
+    "val_accuracy": 0.8151658767772512,
+    "val_precision": 0.4375,
+    "val_recall": 0.09210526315789473,
+    "val_pred_range": [
+      0.007403914351016283,
+      0.7234249711036682
+    ],
+    "val_confusion": {
+      "tp": 7,
+      "tn": 337,
+      "fp": 9,
+      "fn": 69
+    },
+    "train_auc": null,
+    "train_precision": 0.6745562130177515,
+    "train_recall": 0.19245920090039392,
+    "train_pred_range": [
+      0.004837161861360073,
+      0.8748465776443481
+    ],
+    "timestamp": "2026-01-28T13:37:34.814142"
+  },
+  {
+    "config_name": "H1",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 7e-05,
+      "weight_decay": 0.0005
+    },
+    "duration_sec": 31.912197828292847,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7298068147246729,
+    "val_accuracy": 0.8222748815165877,
+    "val_precision": 0.5384615384615384,
+    "val_recall": 0.09210526315789473,
+    "val_pred_range": [
+      0.011867079883813858,
+      0.7367193698883057
+    ],
+    "val_confusion": {
+      "tp": 7,
+      "tn": 340,
+      "fp": 6,
+      "fn": 69
+    },
+    "train_auc": null,
+    "train_precision": 0.694560669456067,
+    "train_recall": 0.18683173888576252,
+    "train_pred_range": [
+      0.007894832640886307,
+      0.8598090410232544
+    ],
+    "timestamp": "2026-01-28T13:38:06.747329"
+  },
+  {
+    "config_name": "H2",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 128,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 7e-05,
+      "weight_decay": 0.0003
+    },
+    "duration_sec": 34.112722873687744,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7174094919379372,
+    "val_accuracy": 0.8127962085308057,
+    "val_precision": 0.44,
+    "val_recall": 0.14473684210526316,
+    "val_pred_range": [
+      0.007869201712310314,
+      0.8165578246116638
+    ],
+    "val_confusion": {
+      "tp": 11,
+      "tn": 332,
+      "fp": 14,
+      "fn": 65
+    },
+    "train_auc": null,
+    "train_precision": 0.6588845654993515,
+    "train_recall": 0.2858750703432752,
+    "train_pred_range": [
+      0.008658863604068756,
+      0.8812951445579529
+    ],
+    "timestamp": "2026-01-28T13:38:40.880526"
+  },
+  {
+    "config_name": "H3",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 160,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 7e-05,
+      "weight_decay": 0.0003
+    },
+    "duration_sec": 32.788060903549194,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7188545786431396,
+    "val_accuracy": 0.8222748815165877,
+    "val_precision": 0.5454545454545454,
+    "val_recall": 0.07894736842105263,
+    "val_pred_range": [
+      0.008960559964179993,
+      0.7236331105232239
+    ],
+    "val_confusion": {
+      "tp": 6,
+      "tn": 341,
+      "fp": 5,
+      "fn": 70
+    },
+    "train_auc": null,
+    "train_precision": 0.7146974063400576,
+    "train_recall": 0.13956105796285875,
+    "train_pred_range": [
+      0.006200477946549654,
+      0.8402132987976074
+    ],
+    "timestamp": "2026-01-28T13:39:13.690261"
+  },
+  {
+    "config_name": "H4",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 128,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 7e-05,
+      "weight_decay": 0.0003
+    },
+    "duration_sec": 40.87755227088928,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7230757529662306,
+    "val_accuracy": 0.8009478672985783,
+    "val_precision": 0.3,
+    "val_recall": 0.07894736842105263,
+    "val_pred_range": [
+      0.0074366494081914425,
+      0.7980545163154602
+    ],
+    "val_confusion": {
+      "tp": 6,
+      "tn": 332,
+      "fp": 14,
+      "fn": 70
+    },
+    "train_auc": null,
+    "train_precision": 0.667458432304038,
+    "train_recall": 0.31626336522228476,
+    "train_pred_range": [
+      0.004286815412342548,
+      0.9465138912200928
+    ],
+    "timestamp": "2026-01-28T13:39:54.588208"
+  },
+  {
+    "config_name": "I1",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 160,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 43.85788679122925,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7121235168846972,
+    "val_accuracy": 0.8175355450236966,
+    "val_precision": 0.47619047619047616,
+    "val_recall": 0.13157894736842105,
+    "val_pred_range": [
+      0.00464775413274765,
+      0.815040647983551
+    ],
+    "val_confusion": {
+      "tp": 10,
+      "tn": 335,
+      "fp": 11,
+      "fn": 66
+    },
+    "train_auc": null,
+    "train_precision": 0.6992481203007519,
+    "train_recall": 0.20934158694428812,
+    "train_pred_range": [
+      0.003931580577045679,
+      0.8705497980117798
+    ],
+    "timestamp": "2026-01-28T13:40:38.474415"
+  },
+  {
+    "config_name": "I2",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 192,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.3,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 40.56561517715454,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7175235777304534,
+    "val_accuracy": 0.8104265402843602,
+    "val_precision": 0.42857142857142855,
+    "val_recall": 0.15789473684210525,
+    "val_pred_range": [
+      0.008818469941616058,
+      0.9072372913360596
+    ],
+    "val_confusion": {
+      "tp": 12,
+      "tn": 330,
+      "fp": 16,
+      "fn": 64
+    },
+    "train_auc": null,
+    "train_precision": 0.6438188494492044,
+    "train_recall": 0.2960045019696117,
+    "train_pred_range": [
+      0.005032366141676903,
+      0.9091657996177673
+    ],
+    "timestamp": "2026-01-28T13:41:19.063802"
+  },
+  {
+    "config_name": "I3",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 160,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 33.386401891708374,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7082826285366597,
+    "val_accuracy": 0.8056872037914692,
+    "val_precision": 0.39285714285714285,
+    "val_recall": 0.14473684210526316,
+    "val_pred_range": [
+      0.007166420575231314,
+      0.8345364928245544
+    ],
+    "val_confusion": {
+      "tp": 11,
+      "tn": 329,
+      "fp": 17,
+      "fn": 65
+    },
+    "train_auc": null,
+    "train_precision": 0.631236442516269,
+    "train_recall": 0.3275182892515476,
+    "train_pred_range": [
+      0.006099078804254532,
+      0.9187365770339966
+    ],
+    "timestamp": "2026-01-28T13:41:52.473247"
+  },
+  {
+    "config_name": "I4",
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "params": {
+      "d_model": 160,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 39.096275091171265,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7211743230909643,
+    "val_accuracy": 0.8199052132701422,
+    "val_precision": 0.5,
+    "val_recall": 0.15789473684210525,
+    "val_pred_range": [
+      0.012256413698196411,
+      0.8315970301628113
+    ],
+    "val_confusion": {
+      "tp": 12,
+      "tn": 334,
+      "fp": 12,
+      "fn": 64
+    },
+    "train_auc": null,
+    "train_precision": 0.6196172248803827,
+    "train_recall": 0.2915025323579066,
+    "train_pred_range": [
+      0.010379434563219547,
+      0.8836264610290527
+    ],
+    "timestamp": "2026-01-28T13:42:31.594828"
+  }
+]

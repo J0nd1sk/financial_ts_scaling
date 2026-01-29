@@ -40,7 +40,7 @@ from optuna.samplers import TPESampler
 try:
     from neuralforecast import NeuralForecast
     from neuralforecast.models import iTransformer, Informer
-    from neuralforecast.losses.pytorch import MSE
+    from neuralforecast.losses.pytorch import DistributionLoss
     NEURALFORECAST_AVAILABLE = True
 except ImportError as e:
     NEURALFORECAST_AVAILABLE = False
@@ -129,7 +129,7 @@ def prepare_hpo_data():
     df_nf = pd.DataFrame({
         "unique_id": "SPY",
         "ds": df["Date"],
-        "y": df["return"],
+        "y": df["threshold_target"],
     })
 
     # Store metadata for evaluation
@@ -216,7 +216,7 @@ def create_objective(model_type: str, data: dict, verbose: bool = False):
             "max_steps": max_steps,
             "batch_size": batch_size,
             "dropout": dropout,
-            "loss": MSE(),
+            "loss": DistributionLoss(distribution='Bernoulli'),
             "random_seed": FIXED_PARAMS["random_seed"],
             **extra_fixed,
         }

@@ -171,6 +171,38 @@ CHUNK_7B_FEATURES = [
     "volume_trend_strength",
 ]
 
+# Sub-Chunk 8b: SR Complete (ranks 324-345) - 22 features
+CHUNK_8B_FEATURES = [
+    # Rolling Range Position (4 features)
+    "range_position_20d",
+    "range_position_50d",
+    "range_position_252d",
+    "range_width_20d_pct",
+    # Distance from Extremes (4 features)
+    "pct_from_20d_high",
+    "pct_from_20d_low",
+    "pct_from_52w_high",
+    "pct_from_52w_low",
+    # Recency of Extremes (4 features)
+    "days_since_20d_high",
+    "days_since_20d_low",
+    "days_since_50d_high",
+    "days_since_50d_low",
+    # Breakout/Breakdown Detection (4 features)
+    "breakout_20d",
+    "breakdown_20d",
+    "breakout_strength_20d",
+    "consecutive_new_highs_20d",
+    # Range Dynamics (4 features)
+    "range_expansion_10d",
+    "range_contraction_score",
+    "high_low_range_ratio",
+    "support_test_count_20d",
+    # Fibonacci Context (2 features)
+    "fib_retracement_level",
+    "distance_to_fib_50",
+]
+
 # Sub-Chunk 8a: TRD Complete (ranks 301-323) - 23 features
 CHUNK_8A_FEATURES = [
     # ADX Extended (5 features)
@@ -203,6 +235,76 @@ CHUNK_8A_FEATURES = [
     "aroon_trend_strength",
 ]
 
+# Sub-Chunk 9a: CDL Part 1 - Candlestick Patterns (ranks 346-370) - 25 features
+CHUNK_9A_FEATURES = [
+    # Group A: Engulfing Patterns (4 features)
+    "bullish_engulfing",
+    "bearish_engulfing",
+    "engulfing_score",
+    "consecutive_engulfing_count",
+    # Group B: Wick Rejection (5 features)
+    "hammer_indicator",
+    "shooting_star_indicator",
+    "hammer_score",
+    "shooting_star_score",
+    "wick_rejection_score",
+    # Group C: Gap Analysis (5 features)
+    "gap_size_pct",
+    "gap_direction",
+    "gap_filled_today",
+    "gap_fill_pct",
+    "significant_gap",
+    # Group D: Inside/Outside Days (4 features)
+    "inside_day",
+    "outside_day",
+    "consecutive_inside_days",
+    "consecutive_outside_days",
+    # Group E: Range Extremes (4 features)
+    "narrow_range_day",
+    "wide_range_day",
+    "narrow_range_score",
+    "consecutive_narrow_days",
+    # Group F: Trend Days (3 features)
+    "trend_day_indicator",
+    "trend_day_direction",
+    "consecutive_trend_days",
+]
+
+# Sub-Chunk 9b: CDL Part 2 - Candlestick Patterns (ranks 371-395) - 25 features
+CHUNK_9B_FEATURES = [
+    # Group A: Doji Patterns (5 features)
+    "doji_strict_indicator",
+    "doji_score",
+    "doji_type",
+    "consecutive_doji_count",
+    "doji_after_trend",
+    # Group B: Marubozu & Strong Candles (4 features)
+    "marubozu_indicator",
+    "marubozu_direction",
+    "marubozu_strength",
+    "consecutive_strong_candles",
+    # Group C: Spinning Top & Indecision (4 features)
+    "spinning_top_indicator",
+    "spinning_top_score",
+    "indecision_streak",
+    "indecision_at_extreme",
+    # Group D: Multi-Candle Patterns - Reversal (5 features)
+    "morning_star_indicator",
+    "evening_star_indicator",
+    "three_white_soldiers",
+    "three_black_crows",
+    "harami_indicator",
+    # Group E: Multi-Candle Patterns - Continuation (4 features)
+    "piercing_line",
+    "dark_cloud_cover",
+    "tweezer_bottom",
+    "tweezer_top",
+    # Group F: Pattern Context (3 features)
+    "reversal_pattern_count_5d",
+    "pattern_alignment_score",
+    "pattern_cluster_indicator",
+]
+
 # 294 new indicators added in tier a500 (ranks 207-500)
 # Built incrementally across sub-chunks 6a through 11b
 A500_ADDITION_LIST = (
@@ -211,6 +313,9 @@ A500_ADDITION_LIST = (
     + CHUNK_7A_FEATURES
     + CHUNK_7B_FEATURES
     + CHUNK_8A_FEATURES
+    + CHUNK_8B_FEATURES
+    + CHUNK_9A_FEATURES
+    + CHUNK_9B_FEATURES
     # ... remaining chunks
 )
 
@@ -1932,6 +2037,1352 @@ def _compute_chunk_8a(
     return features
 
 
+# =============================================================================
+# Sub-Chunk 8b computation functions (ranks 324-345)
+# =============================================================================
+
+
+def _compute_8b_range_position(
+    high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Rolling Range Position features.
+
+    Features:
+    - range_position_20d: (Close - Low20) / (High20 - Low20), clipped to [0, 1]
+    - range_position_50d: (Close - Low50) / (High50 - Low50), clipped to [0, 1]
+    - range_position_252d: (Close - Low252) / (High252 - Low252), clipped to [0, 1]
+    - range_width_20d_pct: (High20 - Low20) / Close * 100
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 4 Range Position features
+    """
+    features = {}
+
+    for period, label in [(20, "20d"), (50, "50d"), (252, "252d")]:
+        rolling_high = high.rolling(window=period, min_periods=period).max()
+        rolling_low = low.rolling(window=period, min_periods=period).min()
+
+        range_size = rolling_high - rolling_low
+        # Handle zero range (flat price) by setting to NaN then filling
+        range_size_safe = range_size.replace(0, np.nan)
+        position = (close - rolling_low) / range_size_safe
+        # Clip to [0, 1] to handle edge cases and fill NaN from zero range
+        position = position.clip(lower=0, upper=1).fillna(0.5)  # 0.5 = middle if range is 0
+        features[f"range_position_{label}"] = position
+
+    # Range width as % of close (only for 20d)
+    rolling_high_20 = high.rolling(window=20, min_periods=20).max()
+    rolling_low_20 = low.rolling(window=20, min_periods=20).min()
+    range_width = (rolling_high_20 - rolling_low_20) / close * 100
+    features["range_width_20d_pct"] = range_width
+
+    return features
+
+
+def _compute_8b_distance_from_extremes(
+    high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Distance from Extremes features.
+
+    Features:
+    - pct_from_20d_high: (Close - High20) / High20 * 100 (always <= 0)
+    - pct_from_20d_low: (Close - Low20) / Low20 * 100 (always >= 0)
+    - pct_from_52w_high: (Close - High252) / High252 * 100 (always <= 0)
+    - pct_from_52w_low: (Close - Low252) / Low252 * 100 (always >= 0)
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 4 Distance from Extremes features
+    """
+    features = {}
+
+    # 20-day extremes
+    high_20 = high.rolling(window=20, min_periods=20).max()
+    low_20 = low.rolling(window=20, min_periods=20).min()
+    features["pct_from_20d_high"] = (close - high_20) / high_20 * 100
+    features["pct_from_20d_low"] = (close - low_20) / low_20 * 100
+
+    # 52-week (252 trading days) extremes
+    high_252 = high.rolling(window=252, min_periods=252).max()
+    low_252 = low.rolling(window=252, min_periods=252).min()
+    features["pct_from_52w_high"] = (close - high_252) / high_252 * 100
+    features["pct_from_52w_low"] = (close - low_252) / low_252 * 100
+
+    return features
+
+
+def _compute_8b_recency_of_extremes(
+    high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Recency of Extremes features.
+
+    Features:
+    - days_since_20d_high: Days since close == 20d rolling high [0, 19]
+    - days_since_20d_low: Days since close == 20d rolling low [0, 19]
+    - days_since_50d_high: Days since close == 50d rolling high [0, 49]
+    - days_since_50d_low: Days since close == 50d rolling low [0, 49]
+
+    Note: Uses close price comparison with tolerance for floating point.
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 4 Recency of Extremes features
+    """
+    features = {}
+
+    for period, max_days in [(20, 19), (50, 49)]:
+        rolling_high = high.rolling(window=period, min_periods=period).max()
+        rolling_low = low.rolling(window=period, min_periods=period).min()
+
+        # Days since high: check if current high equals rolling high
+        # Use idxmax to find the index of max within window
+        days_since_high = pd.Series(0, index=close.index, dtype=int)
+        days_since_low = pd.Series(0, index=close.index, dtype=int)
+
+        for i in range(len(close)):
+            if i < period - 1:
+                days_since_high.iloc[i] = 0
+                days_since_low.iloc[i] = 0
+                continue
+
+            # Look back within window to find most recent high/low
+            window_high = high.iloc[max(0, i - period + 1):i + 1]
+            window_low = low.iloc[max(0, i - period + 1):i + 1]
+
+            # Find index of max/min (most recent if tie)
+            high_idx = window_high[::-1].idxmax()  # Reverse to get most recent tie
+            low_idx = window_low[::-1].idxmin()
+
+            # Calculate days since
+            days_since_high.iloc[i] = i - close.index.get_loc(high_idx)
+            days_since_low.iloc[i] = i - close.index.get_loc(low_idx)
+
+        # Clip to max range
+        days_since_high = days_since_high.clip(upper=max_days)
+        days_since_low = days_since_low.clip(upper=max_days)
+
+        label = "20d" if period == 20 else "50d"
+        features[f"days_since_{label}_high"] = days_since_high
+        features[f"days_since_{label}_low"] = days_since_low
+
+    return features
+
+
+def _compute_8b_breakout_detection(
+    high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Breakout/Breakdown Detection features.
+
+    Features:
+    - breakout_20d: 1 if Close > previous 20d high, else 0
+    - breakdown_20d: 1 if Close < previous 20d low, else 0
+    - breakout_strength_20d: (Close - prev_high) / ATR when breaking out, else 0
+    - consecutive_new_highs_20d: Consecutive days at new 20d high
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 4 Breakout Detection features
+    """
+    features = {}
+
+    # Previous day's 20-day high/low (exclude today)
+    prev_high_20 = high.rolling(window=20, min_periods=20).max().shift(1)
+    prev_low_20 = low.rolling(window=20, min_periods=20).min().shift(1)
+
+    # Breakout/breakdown binary
+    breakout = (close > prev_high_20).astype(int)
+    breakdown = (close < prev_low_20).astype(int)
+    features["breakout_20d"] = breakout
+    features["breakdown_20d"] = breakdown
+
+    # Breakout strength: (Close - prev_high) / ATR (only on breakout days)
+    # Compute ATR_14 for normalization
+    high_arr = high.values
+    low_arr = low.values
+    close_arr = close.values
+    atr_14 = pd.Series(talib.ATR(high_arr, low_arr, close_arr, timeperiod=14), index=close.index)
+
+    breakout_amount = close - prev_high_20
+    breakout_strength = (breakout_amount / atr_14).clip(lower=0)
+    # Set to 0 when not breaking out
+    breakout_strength = breakout_strength.where(breakout == 1, 0)
+    features["breakout_strength_20d"] = breakout_strength
+
+    # Consecutive new highs (close > prev 20d high for multiple days)
+    consecutive_highs = pd.Series(0, index=close.index, dtype=int)
+    count = 0
+    for i in range(len(close)):
+        if pd.isna(prev_high_20.iloc[i]):
+            consecutive_highs.iloc[i] = 0
+            count = 0
+        elif close.iloc[i] > prev_high_20.iloc[i]:
+            count += 1
+            consecutive_highs.iloc[i] = count
+        else:
+            count = 0
+            consecutive_highs.iloc[i] = 0
+    features["consecutive_new_highs_20d"] = consecutive_highs
+
+    return features
+
+
+def _compute_8b_range_dynamics(
+    high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Range Dynamics features.
+
+    Features:
+    - range_expansion_10d: (10d range today) / (10d range 10 days ago)
+    - range_contraction_score: Consecutive days of narrowing 10d range
+    - high_low_range_ratio: (20d range) / (50d range)
+    - support_test_count_20d: Days price touched Low20 within tolerance in 20d window
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 4 Range Dynamics features
+    """
+    features = {}
+
+    # 10-day range
+    range_10d = high.rolling(window=10, min_periods=10).max() - low.rolling(window=10, min_periods=10).min()
+    range_10d_prev = range_10d.shift(10)
+
+    # Range expansion: current range / range 10 days ago
+    # Handle zero/NaN in denominator
+    expansion = range_10d / range_10d_prev.replace(0, np.nan)
+    expansion = expansion.fillna(1.0)  # If prev range is 0, assume expansion of 1
+    features["range_expansion_10d"] = expansion
+
+    # Range contraction score: consecutive days of narrowing range
+    range_narrowing = range_10d < range_10d.shift(1)
+    contraction_score = pd.Series(0, index=close.index, dtype=int)
+    count = 0
+    for i in range(len(close)):
+        if pd.isna(range_narrowing.iloc[i]):
+            contraction_score.iloc[i] = 0
+            count = 0
+        elif range_narrowing.iloc[i]:
+            count += 1
+            contraction_score.iloc[i] = count
+        else:
+            count = 0
+            contraction_score.iloc[i] = 0
+    features["range_contraction_score"] = contraction_score
+
+    # High-low range ratio: 20d range / 50d range
+    range_20d = high.rolling(window=20, min_periods=20).max() - low.rolling(window=20, min_periods=20).min()
+    range_50d = high.rolling(window=50, min_periods=50).max() - low.rolling(window=50, min_periods=50).min()
+    ratio = range_20d / range_50d.replace(0, np.nan)
+    ratio = ratio.fillna(1.0)
+    features["high_low_range_ratio"] = ratio
+
+    # Support test count: days within tolerance of 20d low in 20d window
+    # Tolerance: within 0.5% of Low20
+    low_20 = low.rolling(window=20, min_periods=20).min()
+    tolerance = low_20 * 0.005  # 0.5%
+    near_support = (close - low_20).abs() <= tolerance
+
+    # Rolling count of support tests in 20-day window
+    support_test_count = near_support.astype(int).rolling(window=20, min_periods=20).sum()
+    features["support_test_count_20d"] = support_test_count
+
+    return features
+
+
+def _compute_8b_fibonacci_context(
+    high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Fibonacci Context features.
+
+    Features:
+    - fib_retracement_level: Nearest fib level (0, 0.236, 0.382, 0.5, 0.618, 0.786, 1)
+    - distance_to_fib_50: (Close - fib_50) / range, where fib_50 = Low20 + 0.5 * range
+
+    Fibonacci levels computed from 20-day range.
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 2 Fibonacci Context features
+    """
+    features = {}
+
+    # 20-day range for Fibonacci levels
+    high_20 = high.rolling(window=20, min_periods=20).max()
+    low_20 = low.rolling(window=20, min_periods=20).min()
+    range_20 = high_20 - low_20
+
+    # Fibonacci levels (standard retracement levels)
+    fib_levels = [0.0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0]
+
+    # Calculate price position as retracement level: (Close - Low) / Range
+    position = (close - low_20) / range_20.replace(0, np.nan)
+    position = position.fillna(0.5)  # If range is 0, assume middle
+
+    # Find nearest Fibonacci level
+    def nearest_fib(pos):
+        if pd.isna(pos):
+            return 0.5
+        return min(fib_levels, key=lambda x: abs(x - pos))
+
+    fib_level = position.apply(nearest_fib)
+    features["fib_retracement_level"] = fib_level
+
+    # Distance to Fibonacci 50% level
+    # fib_50 = Low20 + 0.5 * range
+    fib_50 = low_20 + 0.5 * range_20
+    # Normalize by range
+    distance = (close - fib_50) / range_20.replace(0, np.nan)
+    distance = distance.fillna(0.0)  # If range is 0, distance is 0
+    features["distance_to_fib_50"] = distance
+
+    return features
+
+
+def _compute_chunk_8b(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+) -> Mapping[str, pd.Series]:
+    """Compute all Sub-Chunk 8b features.
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with all 22 Chunk 8b features
+    """
+    features = {}
+
+    # Range Position (4 features)
+    features.update(_compute_8b_range_position(high, low, close))
+
+    # Distance from Extremes (4 features)
+    features.update(_compute_8b_distance_from_extremes(high, low, close))
+
+    # Recency of Extremes (4 features)
+    features.update(_compute_8b_recency_of_extremes(high, low, close))
+
+    # Breakout/Breakdown Detection (4 features)
+    features.update(_compute_8b_breakout_detection(high, low, close))
+
+    # Range Dynamics (4 features)
+    features.update(_compute_8b_range_dynamics(high, low, close))
+
+    # Fibonacci Context (2 features)
+    features.update(_compute_8b_fibonacci_context(high, low, close))
+
+    return features
+
+
+# =============================================================================
+# Sub-Chunk 9a computation functions (ranks 346-370)
+# CDL Part 1 - Candlestick Patterns
+# =============================================================================
+
+
+def _compute_9a_engulfing(
+    open_price: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Engulfing Pattern features.
+
+    Features:
+    - bullish_engulfing: 1 if today's body engulfs yesterday's AND today up AND yesterday down
+    - bearish_engulfing: 1 if today's body engulfs yesterday's AND today down AND yesterday up
+    - engulfing_score: today_body / yesterday_body, clipped [0, 5]
+    - consecutive_engulfing_count: Running count of consecutive engulfing days
+
+    Args:
+        open_price: Open price series
+        close: Close price series
+
+    Returns:
+        Dict with 4 Engulfing Pattern features
+    """
+    features = {}
+
+    # Body calculations (absolute value for size comparison)
+    body = close - open_price
+    body_size = np.abs(body)
+    prev_body = body.shift(1)
+    prev_body_size = body_size.shift(1)
+
+    # Today's body bounds (min/max of open and close)
+    body_low = np.minimum(open_price, close)
+    body_high = np.maximum(open_price, close)
+    prev_body_low = body_low.shift(1)
+    prev_body_high = body_high.shift(1)
+
+    # Engulfing: today's body completely contains yesterday's body
+    today_engulfs = (body_low <= prev_body_low) & (body_high >= prev_body_high)
+
+    # Direction checks
+    today_up = body > 0
+    today_down = body < 0
+    yesterday_up = prev_body > 0
+    yesterday_down = prev_body < 0
+
+    # Bullish engulfing: today up, yesterday down, today engulfs
+    bullish = (today_engulfs & today_up & yesterday_down).astype(int)
+    features["bullish_engulfing"] = bullish
+
+    # Bearish engulfing: today down, yesterday up, today engulfs
+    bearish = (today_engulfs & today_down & yesterday_up).astype(int)
+    features["bearish_engulfing"] = bearish
+
+    # Engulfing score: today body / yesterday body (clipped 0-5)
+    # Use small epsilon to avoid division by zero
+    eps = 1e-8
+    score = body_size / (prev_body_size + eps)
+    score = score.clip(0, 5)
+    features["engulfing_score"] = score.fillna(0)
+
+    # Consecutive engulfing count
+    any_engulfing = (bullish == 1) | (bearish == 1)
+    consecutive = pd.Series(0, index=close.index, dtype=int)
+    count = 0
+    for i in range(len(close)):
+        if any_engulfing.iloc[i]:
+            count += 1
+            consecutive.iloc[i] = count
+        else:
+            count = 0
+            consecutive.iloc[i] = 0
+    features["consecutive_engulfing_count"] = consecutive
+
+    return features
+
+
+def _compute_9a_wick_rejection(
+    open_price: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Wick Rejection features.
+
+    Features:
+    - hammer_indicator: 1 if lower_wick >= 2×body AND upper_wick <= 0.3×body
+    - shooting_star_indicator: 1 if upper_wick >= 2×body AND lower_wick <= 0.3×body
+    - hammer_score: lower_wick / (body + ε), clipped [0, 10]
+    - shooting_star_score: upper_wick / (body + ε), clipped [0, 10]
+    - wick_rejection_score: max(hammer, shooting_star) × direction_sign
+
+    Args:
+        open_price: Open price series
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 5 Wick Rejection features
+    """
+    features = {}
+    eps = 1e-8
+
+    # Body and wick calculations
+    body_low = np.minimum(open_price, close)
+    body_high = np.maximum(open_price, close)
+    body_size = body_high - body_low
+
+    upper_wick = high - body_high
+    lower_wick = body_low - low
+
+    # Hammer: long lower wick, short upper wick
+    hammer_cond = (lower_wick >= 2 * body_size) & (upper_wick <= 0.3 * body_size)
+    features["hammer_indicator"] = hammer_cond.astype(int)
+
+    # Shooting star: long upper wick, short lower wick
+    shooting_star_cond = (upper_wick >= 2 * body_size) & (lower_wick <= 0.3 * body_size)
+    features["shooting_star_indicator"] = shooting_star_cond.astype(int)
+
+    # Hammer score: lower_wick / body (clipped 0-10)
+    hammer_score = lower_wick / (body_size + eps)
+    hammer_score = hammer_score.clip(0, 10)
+    features["hammer_score"] = hammer_score.fillna(0)
+
+    # Shooting star score: upper_wick / body (clipped 0-10)
+    shooting_star_score = upper_wick / (body_size + eps)
+    shooting_star_score = shooting_star_score.clip(0, 10)
+    features["shooting_star_score"] = shooting_star_score.fillna(0)
+
+    # Wick rejection score: max(hammer, shooting_star) × direction
+    # Positive for hammer (bullish rejection), negative for shooting star (bearish rejection)
+    max_wick_score = np.maximum(hammer_score, shooting_star_score)
+    # Direction: +1 if hammer dominates, -1 if shooting star dominates
+    direction = np.where(
+        hammer_score > shooting_star_score,
+        1,
+        np.where(shooting_star_score > hammer_score, -1, 0)
+    )
+    wick_rejection = max_wick_score * direction
+    features["wick_rejection_score"] = pd.Series(wick_rejection, index=close.index).fillna(0)
+
+    return features
+
+
+def _compute_9a_gaps(
+    open_price: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Gap Analysis features.
+
+    Features:
+    - gap_size_pct: (Open - prev_Close) / prev_Close × 100 (signed)
+    - gap_direction: +1 if gap > 0.1%, -1 if < -0.1%, else 0
+    - gap_filled_today: 1 if gap was partially/fully filled during day
+    - gap_fill_pct: % of gap filled today (0-100)
+    - significant_gap: 1 if abs(gap_size_pct) > 0.5%
+
+    Args:
+        open_price: Open price series
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 5 Gap Analysis features
+    """
+    features = {}
+    eps = 1e-8
+
+    prev_close = close.shift(1)
+
+    # Gap size as percentage
+    gap_size = (open_price - prev_close) / (prev_close + eps) * 100
+    features["gap_size_pct"] = gap_size.fillna(0)
+
+    # Gap direction: +1 if > 0.1%, -1 if < -0.1%, else 0
+    gap_direction = pd.Series(0, index=close.index, dtype=int)
+    gap_direction = gap_direction.where(gap_size <= 0.1, 1)
+    gap_direction = gap_direction.where(gap_size >= -0.1, -1)
+    features["gap_direction"] = gap_direction.fillna(0).astype(int)
+
+    # Gap filled today: did price reach prev_close during the day?
+    # For gap up (open > prev_close): filled if low <= prev_close
+    # For gap down (open < prev_close): filled if high >= prev_close
+    gap_up = open_price > prev_close
+    gap_down = open_price < prev_close
+    filled = (gap_up & (low <= prev_close)) | (gap_down & (high >= prev_close))
+    features["gap_filled_today"] = filled.fillna(False).astype(int)
+
+    # Gap fill percentage (0-100)
+    # For gap up: how much of the gap from prev_close to open was retraced
+    # For gap down: similar but in opposite direction
+    gap_amount = open_price - prev_close
+    fill_amount = pd.Series(0.0, index=close.index)
+
+    # Gap up: fill amount = open - low (how far price came down toward prev_close)
+    # But capped at the gap size
+    fill_amount = fill_amount.where(
+        ~gap_up,
+        np.minimum(open_price - low, gap_amount)
+    )
+    # Gap down: fill amount = high - open (how far price came up toward prev_close)
+    # But capped at abs(gap)
+    fill_amount = fill_amount.where(
+        ~gap_down,
+        np.minimum(high - open_price, np.abs(gap_amount))
+    )
+
+    # Convert to percentage (0-100)
+    gap_fill_pct = np.abs(fill_amount) / (np.abs(gap_amount) + eps) * 100
+    gap_fill_pct = gap_fill_pct.clip(0, 100)
+    features["gap_fill_pct"] = gap_fill_pct.fillna(0)
+
+    # Significant gap: abs(gap_size_pct) > 0.5%
+    significant = (np.abs(gap_size) > 0.5).astype(int)
+    features["significant_gap"] = significant.fillna(0).astype(int)
+
+    return features
+
+
+def _compute_9a_inside_outside(
+    high: pd.Series, low: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Inside/Outside Day features.
+
+    Features:
+    - inside_day: 1 if H <= prev_H AND L >= prev_L
+    - outside_day: 1 if H > prev_H AND L < prev_L
+    - consecutive_inside_days: Running count of consecutive inside days
+    - consecutive_outside_days: Running count of consecutive outside days
+
+    Args:
+        high: High price series
+        low: Low price series
+
+    Returns:
+        Dict with 4 Inside/Outside features
+    """
+    features = {}
+
+    prev_high = high.shift(1)
+    prev_low = low.shift(1)
+
+    # Inside day: today's range is within yesterday's range
+    inside = (high <= prev_high) & (low >= prev_low)
+    features["inside_day"] = inside.fillna(False).astype(int)
+
+    # Outside day: today's range engulfs yesterday's range
+    outside = (high > prev_high) & (low < prev_low)
+    features["outside_day"] = outside.fillna(False).astype(int)
+
+    # Consecutive inside days
+    consecutive_inside = pd.Series(0, index=high.index, dtype=int)
+    count = 0
+    for i in range(len(high)):
+        if inside.iloc[i] if not pd.isna(inside.iloc[i]) else False:
+            count += 1
+            consecutive_inside.iloc[i] = count
+        else:
+            count = 0
+            consecutive_inside.iloc[i] = 0
+    features["consecutive_inside_days"] = consecutive_inside
+
+    # Consecutive outside days
+    consecutive_outside = pd.Series(0, index=high.index, dtype=int)
+    count = 0
+    for i in range(len(high)):
+        if outside.iloc[i] if not pd.isna(outside.iloc[i]) else False:
+            count += 1
+            consecutive_outside.iloc[i] = count
+        else:
+            count = 0
+            consecutive_outside.iloc[i] = 0
+    features["consecutive_outside_days"] = consecutive_outside
+
+    return features
+
+
+def _compute_9a_range_extremes(
+    high: pd.Series, low: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Range Extremes features.
+
+    Features:
+    - narrow_range_day: 1 if range < 0.5 × 10d avg range
+    - wide_range_day: 1 if range > 2.0 × 10d avg range
+    - narrow_range_score: 10d_avg_range / (today_range + ε), clipped [0, 10]
+    - consecutive_narrow_days: Running count of consecutive narrow range days
+
+    Args:
+        high: High price series
+        low: Low price series
+
+    Returns:
+        Dict with 4 Range Extremes features
+    """
+    features = {}
+    eps = 1e-8
+
+    # Today's range
+    today_range = high - low
+
+    # 10-day average range
+    avg_range_10d = today_range.rolling(window=10, min_periods=10).mean()
+
+    # Narrow range day: range < 0.5 × avg
+    narrow = today_range < (0.5 * avg_range_10d)
+    features["narrow_range_day"] = narrow.fillna(False).astype(int)
+
+    # Wide range day: range > 2.0 × avg
+    wide = today_range > (2.0 * avg_range_10d)
+    features["wide_range_day"] = wide.fillna(False).astype(int)
+
+    # Narrow range score: avg_range / today_range (higher = narrower)
+    narrow_score = avg_range_10d / (today_range + eps)
+    narrow_score = narrow_score.clip(0, 10)
+    features["narrow_range_score"] = narrow_score.fillna(0)
+
+    # Consecutive narrow range days
+    consecutive_narrow = pd.Series(0, index=high.index, dtype=int)
+    count = 0
+    for i in range(len(high)):
+        if narrow.iloc[i] if not pd.isna(narrow.iloc[i]) else False:
+            count += 1
+            consecutive_narrow.iloc[i] = count
+        else:
+            count = 0
+            consecutive_narrow.iloc[i] = 0
+    features["consecutive_narrow_days"] = consecutive_narrow
+
+    return features
+
+
+def _compute_9a_trend_days(
+    open_price: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Trend Day features.
+
+    Features:
+    - trend_day_indicator: 1 if body_to_range > 0.7 AND body > 0.5% of open
+    - trend_day_direction: +1 up, -1 down, 0 otherwise
+    - consecutive_trend_days: Running count in same direction
+
+    Args:
+        open_price: Open price series
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 3 Trend Day features
+    """
+    features = {}
+    eps = 1e-8
+
+    # Body and range calculations
+    body = close - open_price
+    body_size = np.abs(body)
+    day_range = high - low
+
+    # Body to range ratio
+    body_to_range = body_size / (day_range + eps)
+
+    # Body as percentage of open
+    body_pct = body_size / (open_price + eps) * 100
+
+    # Trend day: body_to_range > 0.7 AND body > 0.5% of open
+    trend_day = (body_to_range > 0.7) & (body_pct > 0.5)
+    features["trend_day_indicator"] = trend_day.fillna(False).astype(int)
+
+    # Trend day direction: +1 if up trend day, -1 if down trend day, 0 otherwise
+    direction = pd.Series(0, index=close.index, dtype=int)
+    direction = direction.where(~(trend_day & (body > 0)), 1)
+    direction = direction.where(~(trend_day & (body < 0)), -1)
+    features["trend_day_direction"] = direction.fillna(0).astype(int)
+
+    # Consecutive trend days in same direction
+    consecutive = pd.Series(0, index=close.index, dtype=int)
+    count = 0
+    prev_direction = 0
+    for i in range(len(close)):
+        curr_dir = direction.iloc[i]
+        if curr_dir != 0 and curr_dir == prev_direction:
+            count += 1
+            consecutive.iloc[i] = count
+        elif curr_dir != 0:
+            # New trend day in different direction
+            count = 1
+            consecutive.iloc[i] = count
+            prev_direction = curr_dir
+        else:
+            count = 0
+            consecutive.iloc[i] = 0
+            prev_direction = 0
+    features["consecutive_trend_days"] = consecutive
+
+    return features
+
+
+def _compute_chunk_9a(
+    open_price: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute all Sub-Chunk 9a features.
+
+    Args:
+        open_price: Open price series
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with all 25 Chunk 9a features
+    """
+    features = {}
+
+    # Engulfing Patterns (4 features)
+    features.update(_compute_9a_engulfing(open_price, close))
+
+    # Wick Rejection (5 features)
+    features.update(_compute_9a_wick_rejection(open_price, high, low, close))
+
+    # Gap Analysis (5 features)
+    features.update(_compute_9a_gaps(open_price, high, low, close))
+
+    # Inside/Outside Days (4 features)
+    features.update(_compute_9a_inside_outside(high, low))
+
+    # Range Extremes (4 features)
+    features.update(_compute_9a_range_extremes(high, low))
+
+    # Trend Days (3 features)
+    features.update(_compute_9a_trend_days(open_price, high, low, close))
+
+    return features
+
+
+# =============================================================================
+# Sub-Chunk 9b computation functions (ranks 371-395)
+# =============================================================================
+
+
+def _compute_9b_doji(
+    open_price: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Doji pattern features.
+
+    Features:
+    - doji_strict_indicator: 1 if body/range < 0.1 (small body relative to range)
+    - doji_score: 1 - (body/range), higher = more doji-like [0,1]
+    - doji_type: +1 dragonfly (long lower wick), -1 gravestone (long upper), 0 neutral
+    - consecutive_doji_count: Running count of consecutive doji days
+    - doji_after_trend: 1 if doji follows 3+ trend days in same direction
+
+    Args:
+        open_price: Open price series
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 5 Doji features
+    """
+    features = {}
+    eps = 1e-8
+
+    # Body and range calculations
+    body = close - open_price
+    body_size = np.abs(body)
+    day_range = high - low
+
+    # Body to range ratio
+    body_ratio = body_size / (day_range + eps)
+
+    # Doji indicator: body/range < 0.1
+    is_doji = (body_ratio < 0.1).fillna(False)
+    features["doji_strict_indicator"] = is_doji.astype(int)
+
+    # Doji score: 1 - body_ratio, clipped to [0, 1]
+    doji_score = (1 - body_ratio).clip(0, 1)
+    features["doji_score"] = doji_score.fillna(0.0)
+
+    # Doji type: dragonfly (+1), gravestone (-1), neutral (0)
+    upper_wick = high - np.maximum(open_price, close)
+    lower_wick = np.minimum(open_price, close) - low
+
+    # For doji type, compare wick lengths
+    # Dragonfly: long lower wick (lower > 2x upper)
+    # Gravestone: long upper wick (upper > 2x lower)
+    doji_type = pd.Series(0, index=close.index, dtype=int)
+    dragonfly = is_doji & (lower_wick > 2 * upper_wick + eps)
+    gravestone = is_doji & (upper_wick > 2 * lower_wick + eps)
+    doji_type = doji_type.where(~dragonfly, 1)
+    doji_type = doji_type.where(~gravestone, -1)
+    features["doji_type"] = doji_type.fillna(0).astype(int)
+
+    # Consecutive doji count
+    consecutive = pd.Series(0, index=close.index, dtype=int)
+    count = 0
+    for i in range(len(close)):
+        if is_doji.iloc[i]:
+            count += 1
+            consecutive.iloc[i] = count
+        else:
+            count = 0
+            consecutive.iloc[i] = 0
+    features["consecutive_doji_count"] = consecutive
+
+    # Doji after trend: check if 3+ consecutive days in same direction before doji
+    # Direction based on close-to-close
+    daily_direction = (close > close.shift(1)).astype(int) - (close < close.shift(1)).astype(int)
+
+    # Count consecutive same direction days
+    trend_count = pd.Series(0, index=close.index, dtype=int)
+    prev_trend_count = pd.Series(0, index=close.index, dtype=int)
+    curr_count = 0
+    curr_dir = 0
+    for i in range(len(close)):
+        if i == 0:
+            prev_trend_count.iloc[i] = 0
+            curr_count = 0
+            curr_dir = 0
+        else:
+            prev_trend_count.iloc[i] = curr_count
+            dir_today = daily_direction.iloc[i]
+            if dir_today != 0 and dir_today == curr_dir:
+                curr_count += 1
+            elif dir_today != 0:
+                curr_count = 1
+                curr_dir = dir_today
+            else:
+                curr_count = 0
+                curr_dir = 0
+        trend_count.iloc[i] = curr_count
+
+    # Doji after trend: doji AND previous trend_count >= 3
+    doji_after_trend = is_doji & (prev_trend_count >= 3)
+    features["doji_after_trend"] = doji_after_trend.fillna(False).astype(int)
+
+    return features
+
+
+def _compute_9b_marubozu(
+    open_price: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Marubozu & Strong Candle features.
+
+    Features:
+    - marubozu_indicator: 1 if (upper_wick + lower_wick) / range < 0.1
+    - marubozu_direction: +1 bullish (close>open), -1 bearish, 0 if not marubozu
+    - marubozu_strength: body / range (0.9+ for marubozu)
+    - consecutive_strong_candles: Running count of body/range > 0.7 in same direction
+
+    Args:
+        open_price: Open price series
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 4 Marubozu features
+    """
+    features = {}
+    eps = 1e-8
+
+    # Body and range calculations
+    body = close - open_price
+    body_size = np.abs(body)
+    day_range = high - low
+
+    # Wick calculations
+    upper_wick = high - np.maximum(open_price, close)
+    lower_wick = np.minimum(open_price, close) - low
+    total_wick = upper_wick + lower_wick
+
+    # Wick to range ratio
+    wick_ratio = total_wick / (day_range + eps)
+
+    # Marubozu indicator: total wick < 10% of range
+    is_marubozu = (wick_ratio < 0.1).fillna(False)
+    features["marubozu_indicator"] = is_marubozu.astype(int)
+
+    # Marubozu direction
+    marubozu_direction = pd.Series(0, index=close.index, dtype=int)
+    bullish_marubozu = is_marubozu & (body > 0)
+    bearish_marubozu = is_marubozu & (body < 0)
+    marubozu_direction = marubozu_direction.where(~bullish_marubozu, 1)
+    marubozu_direction = marubozu_direction.where(~bearish_marubozu, -1)
+    features["marubozu_direction"] = marubozu_direction.fillna(0).astype(int)
+
+    # Marubozu strength: body / range, clipped to [0, 1]
+    marubozu_strength = (body_size / (day_range + eps)).clip(0, 1)
+    features["marubozu_strength"] = marubozu_strength.fillna(0.0)
+
+    # Consecutive strong candles (body/range > 0.7 in same direction)
+    body_ratio = body_size / (day_range + eps)
+    is_strong = body_ratio > 0.7
+    direction = np.sign(body).fillna(0).astype(int)
+
+    consecutive = pd.Series(0, index=close.index, dtype=int)
+    count = 0
+    prev_dir = 0
+    for i in range(len(close)):
+        curr_strong = is_strong.iloc[i]
+        curr_dir = direction.iloc[i]
+        if curr_strong and curr_dir != 0 and curr_dir == prev_dir:
+            count += 1
+            consecutive.iloc[i] = count
+        elif curr_strong and curr_dir != 0:
+            count = 1
+            consecutive.iloc[i] = count
+            prev_dir = curr_dir
+        else:
+            count = 0
+            consecutive.iloc[i] = 0
+            prev_dir = 0
+    features["consecutive_strong_candles"] = consecutive
+
+    return features
+
+
+def _compute_9b_spinning_top(
+    open_price: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Spinning Top & Indecision features.
+
+    Features:
+    - spinning_top_indicator: 1 if body/range < 0.3 AND both wicks > body
+    - spinning_top_score: (upper_wick + lower_wick) / (body + eps), capped [0, 10]
+    - indecision_streak: Running count of spinning_top OR doji days
+    - indecision_at_extreme: 1 if spinning_top AND near 20d high/low (within 2%)
+
+    Args:
+        open_price: Open price series
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 4 Spinning Top features
+    """
+    features = {}
+    eps = 1e-8
+
+    # Body and range calculations
+    body = close - open_price
+    body_size = np.abs(body)
+    day_range = high - low
+
+    # Wick calculations
+    upper_wick = high - np.maximum(open_price, close)
+    lower_wick = np.minimum(open_price, close) - low
+
+    # Body to range ratio
+    body_ratio = body_size / (day_range + eps)
+
+    # Spinning top: small body (< 0.3) AND both wicks > body
+    is_spinning_top = (body_ratio < 0.3) & (upper_wick > body_size) & (lower_wick > body_size)
+    is_spinning_top = is_spinning_top.fillna(False)
+    features["spinning_top_indicator"] = is_spinning_top.astype(int)
+
+    # Spinning top score: total wicks / body, capped at 10
+    spinning_score = (upper_wick + lower_wick) / (body_size + eps)
+    spinning_score = spinning_score.clip(0, 10)
+    features["spinning_top_score"] = spinning_score.fillna(0.0)
+
+    # Doji indicator (needed for indecision streak)
+    is_doji = (body_ratio < 0.1).fillna(False)
+
+    # Indecision streak: consecutive spinning top or doji
+    is_indecision = is_spinning_top | is_doji
+    consecutive = pd.Series(0, index=close.index, dtype=int)
+    count = 0
+    for i in range(len(close)):
+        if is_indecision.iloc[i]:
+            count += 1
+            consecutive.iloc[i] = count
+        else:
+            count = 0
+            consecutive.iloc[i] = 0
+    features["indecision_streak"] = consecutive
+
+    # Indecision at extreme: spinning top near 20d high or low (within 2%)
+    high_20d = high.rolling(window=20, min_periods=1).max()
+    low_20d = low.rolling(window=20, min_periods=1).min()
+
+    near_high = (high >= high_20d * 0.98)
+    near_low = (low <= low_20d * 1.02)
+
+    at_extreme = is_spinning_top & (near_high | near_low)
+    features["indecision_at_extreme"] = at_extreme.fillna(False).astype(int)
+
+    return features
+
+
+def _compute_9b_reversal_patterns(
+    open_price: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Multi-Candle Reversal Pattern features.
+
+    Features:
+    - morning_star_indicator: 1 if: down candle, small body, up candle close > mid of first
+    - evening_star_indicator: 1 if: up candle, small body, down candle close < mid of first
+    - three_white_soldiers: 1 if 3 consecutive up days, each closing near high
+    - three_black_crows: 1 if 3 consecutive down days, each closing near low
+    - harami_indicator: +1 bullish (down→up contained), -1 bearish (up→down contained), 0 none
+
+    Args:
+        open_price: Open price series
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 5 Reversal Pattern features
+    """
+    features = {}
+    eps = 1e-8
+
+    # Body calculations
+    body = close - open_price
+    body_size = np.abs(body)
+    day_range = high - low
+
+    # Body ratio
+    body_ratio = body_size / (day_range + eps)
+
+    # Morning Star: [down candle] [small body] [up candle closes above mid of day 1]
+    # Day -2: bearish (close < open)
+    # Day -1: small body (body_ratio < 0.3)
+    # Day 0: bullish AND close > midpoint of day -2
+    day_m2_bearish = close.shift(2) < open_price.shift(2)
+    day_m1_small = body_ratio.shift(1) < 0.3
+    day_0_bullish = close > open_price
+    day_m2_mid = (open_price.shift(2) + close.shift(2)) / 2
+    day_0_above_mid = close > day_m2_mid
+
+    morning_star = day_m2_bearish & day_m1_small & day_0_bullish & day_0_above_mid
+    features["morning_star_indicator"] = morning_star.fillna(False).astype(int)
+
+    # Evening Star: [up candle] [small body] [down candle closes below mid of day 1]
+    day_m2_bullish = close.shift(2) > open_price.shift(2)
+    day_0_bearish = close < open_price
+    day_0_below_mid = close < day_m2_mid
+
+    evening_star = day_m2_bullish & day_m1_small & day_0_bearish & day_0_below_mid
+    features["evening_star_indicator"] = evening_star.fillna(False).astype(int)
+
+    # Three White Soldiers: 3 up days, each closing near high (upper wick < 30% of range)
+    upper_wick = high - np.maximum(open_price, close)
+    upper_wick_ratio = upper_wick / (day_range + eps)
+
+    is_up_day = close > open_price
+    closes_near_high = upper_wick_ratio < 0.3
+
+    three_white = (
+        is_up_day & is_up_day.shift(1) & is_up_day.shift(2) &
+        closes_near_high & closes_near_high.shift(1) & closes_near_high.shift(2)
+    )
+    features["three_white_soldiers"] = three_white.fillna(False).astype(int)
+
+    # Three Black Crows: 3 down days, each closing near low (lower wick < 30% of range)
+    lower_wick = np.minimum(open_price, close) - low
+    lower_wick_ratio = lower_wick / (day_range + eps)
+
+    is_down_day = close < open_price
+    closes_near_low = lower_wick_ratio < 0.3
+
+    three_black = (
+        is_down_day & is_down_day.shift(1) & is_down_day.shift(2) &
+        closes_near_low & closes_near_low.shift(1) & closes_near_low.shift(2)
+    )
+    features["three_black_crows"] = three_black.fillna(False).astype(int)
+
+    # Harami: today's body contained within yesterday's body
+    # Bullish harami: yesterday down, today up, today contained
+    # Bearish harami: yesterday up, today down, today contained
+    today_open = open_price
+    today_close = close
+    yest_open = open_price.shift(1)
+    yest_close = close.shift(1)
+
+    yest_high_body = np.maximum(yest_open, yest_close)
+    yest_low_body = np.minimum(yest_open, yest_close)
+    today_high_body = np.maximum(today_open, today_close)
+    today_low_body = np.minimum(today_open, today_close)
+
+    # Today's body contained within yesterday's body
+    body_contained = (today_high_body <= yest_high_body) & (today_low_body >= yest_low_body)
+
+    yest_bearish = yest_close < yest_open
+    yest_bullish = yest_close > yest_open
+    today_bullish = today_close > today_open
+    today_bearish = today_close < today_open
+
+    bullish_harami = body_contained & yest_bearish & today_bullish
+    bearish_harami = body_contained & yest_bullish & today_bearish
+
+    harami = pd.Series(0, index=close.index, dtype=int)
+    harami = harami.where(~bullish_harami, 1)
+    harami = harami.where(~bearish_harami, -1)
+    features["harami_indicator"] = harami.fillna(0).astype(int)
+
+    return features
+
+
+def _compute_9b_continuation_patterns(
+    open_price: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Multi-Candle Continuation Pattern features.
+
+    Features:
+    - piercing_line: 1 if down day then up day closing above mid of prior
+    - dark_cloud_cover: 1 if up day then down day closing below mid of prior
+    - tweezer_bottom: 1 if two lows match (within 0.1%) after downtrend
+    - tweezer_top: 1 if two highs match (within 0.1%) after uptrend
+
+    Args:
+        open_price: Open price series
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with 4 Continuation Pattern features
+    """
+    features = {}
+    eps = 1e-8
+
+    # Basic direction
+    is_up_day = close > open_price
+    is_down_day = close < open_price
+
+    # Yesterday's values
+    yest_open = open_price.shift(1)
+    yest_close = close.shift(1)
+    yest_high = high.shift(1)
+    yest_low = low.shift(1)
+
+    yest_mid = (yest_open + yest_close) / 2
+
+    # Piercing Line: yesterday down, today up, today closes above yesterday's midpoint
+    # Also: today opens below yesterday's low (gap down) - classic definition
+    yest_down = yest_close < yest_open
+    today_up = close > open_price
+    today_opens_low = open_price < yest_low
+    today_closes_above_mid = close > yest_mid
+    today_closes_below_yest_open = close < yest_open  # Doesn't fully engulf
+
+    piercing = yest_down & today_up & today_closes_above_mid
+    features["piercing_line"] = piercing.fillna(False).astype(int)
+
+    # Dark Cloud Cover: yesterday up, today down, today closes below yesterday's midpoint
+    yest_up = yest_close > yest_open
+    today_down = close < open_price
+    today_closes_below_mid = close < yest_mid
+
+    dark_cloud = yest_up & today_down & today_closes_below_mid
+    features["dark_cloud_cover"] = dark_cloud.fillna(False).astype(int)
+
+    # Tweezer Bottom: two lows match (within 0.1%) - typically after downtrend
+    # Check 3-day downtrend before pattern
+    low_match = np.abs(low - yest_low) / (yest_low + eps) < 0.001
+
+    # Simple downtrend: 3 lower closes before
+    downtrend = (close.shift(2) > close.shift(1)) & (close.shift(3) > close.shift(2))
+
+    tweezer_bottom = low_match & downtrend
+    features["tweezer_bottom"] = tweezer_bottom.fillna(False).astype(int)
+
+    # Tweezer Top: two highs match (within 0.1%) - typically after uptrend
+    high_match = np.abs(high - yest_high) / (yest_high + eps) < 0.001
+
+    # Simple uptrend: 3 higher closes before
+    uptrend = (close.shift(2) < close.shift(1)) & (close.shift(3) < close.shift(2))
+
+    tweezer_top = high_match & uptrend
+    features["tweezer_top"] = tweezer_top.fillna(False).astype(int)
+
+    return features
+
+
+def _compute_9b_pattern_context(
+    reversal_features: Mapping[str, pd.Series],
+    close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Pattern Context features.
+
+    Features:
+    - reversal_pattern_count_5d: Count of reversal patterns in last 5 days
+    - pattern_alignment_score: +1 if bullish patterns dominate, -1 if bearish, 0 mixed
+    - pattern_cluster_indicator: 1 if 2+ patterns in last 3 days
+
+    Args:
+        reversal_features: Dict with reversal pattern features from 9b
+        close: Close price series (for index)
+
+    Returns:
+        Dict with 3 Pattern Context features
+    """
+    features = {}
+
+    # Get individual pattern indicators
+    morning_star = reversal_features.get("morning_star_indicator", pd.Series(0, index=close.index))
+    evening_star = reversal_features.get("evening_star_indicator", pd.Series(0, index=close.index))
+    three_white = reversal_features.get("three_white_soldiers", pd.Series(0, index=close.index))
+    three_black = reversal_features.get("three_black_crows", pd.Series(0, index=close.index))
+    harami = reversal_features.get("harami_indicator", pd.Series(0, index=close.index))
+
+    # Bullish patterns: morning_star, three_white_soldiers, bullish harami
+    bullish_patterns = (
+        morning_star.astype(int) +
+        three_white.astype(int) +
+        (harami == 1).astype(int)
+    )
+
+    # Bearish patterns: evening_star, three_black_crows, bearish harami
+    bearish_patterns = (
+        evening_star.astype(int) +
+        three_black.astype(int) +
+        (harami == -1).astype(int)
+    )
+
+    # All reversal patterns count
+    all_patterns = bullish_patterns + bearish_patterns
+
+    # Reversal pattern count in 5-day window
+    pattern_count_5d = all_patterns.rolling(window=5, min_periods=1).sum()
+    features["reversal_pattern_count_5d"] = pattern_count_5d.fillna(0).astype(int)
+
+    # Pattern alignment score: compare bullish vs bearish in 5-day window
+    bullish_5d = bullish_patterns.rolling(window=5, min_periods=1).sum()
+    bearish_5d = bearish_patterns.rolling(window=5, min_periods=1).sum()
+
+    alignment = pd.Series(0, index=close.index, dtype=int)
+    alignment = alignment.where(~(bullish_5d > bearish_5d), 1)
+    alignment = alignment.where(~(bearish_5d > bullish_5d), -1)
+    features["pattern_alignment_score"] = alignment.fillna(0).astype(int)
+
+    # Pattern cluster: 2+ patterns in last 3 days
+    pattern_count_3d = all_patterns.rolling(window=3, min_periods=1).sum()
+    cluster = (pattern_count_3d >= 2).astype(int)
+    features["pattern_cluster_indicator"] = cluster.fillna(0).astype(int)
+
+    return features
+
+
+def _compute_chunk_9b(
+    open_price: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute all Sub-Chunk 9b features.
+
+    Args:
+        open_price: Open price series
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with all 25 Chunk 9b features
+    """
+    features = {}
+
+    # Doji Patterns (5 features)
+    features.update(_compute_9b_doji(open_price, high, low, close))
+
+    # Marubozu & Strong Candles (4 features)
+    features.update(_compute_9b_marubozu(open_price, high, low, close))
+
+    # Spinning Top & Indecision (4 features)
+    features.update(_compute_9b_spinning_top(open_price, high, low, close))
+
+    # Multi-Candle Reversal Patterns (5 features)
+    reversal_features = _compute_9b_reversal_patterns(open_price, high, low, close)
+    features.update(reversal_features)
+
+    # Multi-Candle Continuation Patterns (4 features)
+    features.update(_compute_9b_continuation_patterns(open_price, high, low, close))
+
+    # Pattern Context (3 features) - depends on reversal features
+    features.update(_compute_9b_pattern_context(reversal_features, close))
+
+    return features
+
+
 def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.DataFrame:
     """Build feature DataFrame with all tier_a500 indicators.
 
@@ -1999,6 +3450,21 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
     # Sub-Chunk 8a: TRD Complete (ranks 301-323)
     # =========================================================================
     features.update(_compute_chunk_8a(high, low, close))
+
+    # =========================================================================
+    # Sub-Chunk 8b: SR Complete (ranks 324-345)
+    # =========================================================================
+    features.update(_compute_chunk_8b(high, low, close))
+
+    # =========================================================================
+    # Sub-Chunk 9a: CDL Part 1 - Candlestick Patterns (ranks 346-370)
+    # =========================================================================
+    features.update(_compute_chunk_9a(open_price, high, low, close))
+
+    # =========================================================================
+    # Sub-Chunk 9b: CDL Part 2 - Candlestick Patterns (ranks 371-395)
+    # =========================================================================
+    features.update(_compute_chunk_9b(open_price, high, low, close))
 
     # Create feature DataFrame for new a500 features
     new_features_df = pd.DataFrame(features)

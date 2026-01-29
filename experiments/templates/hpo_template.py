@@ -52,6 +52,7 @@ from src.models.patchtst import PatchTSTConfig
 from src.data.dataset import SimpleSplitter
 from src.training.trainer import Trainer
 from src.training.hpo_coverage import CoverageTracker
+from src.training.losses import FocalLoss
 
 # ============================================================================
 # CONFIGURATION - Edit this section for your experiment
@@ -192,6 +193,9 @@ def create_objective(
     output_dir: Path,
     extreme_configs: list[dict],
     dry_run: bool = False,
+    loss_type: str = "bce",
+    focal_gamma: float = 2.0,
+    focal_alpha: float = 0.25,
 ):
     """Create Optuna objective function with full metrics capture."""
     # Coverage tracker for architecture exploration (shared across trials)
@@ -306,6 +310,12 @@ def create_objective(
         trial_dir = output_dir / f"trial_{trial.number:03d}"
         trial_dir.mkdir(parents=True, exist_ok=True)
 
+        # Create loss function based on loss_type
+        if loss_type == "focal":
+            criterion = FocalLoss(gamma=focal_gamma, alpha=focal_alpha)
+        else:
+            criterion = None  # Trainer defaults to BCE
+
         trainer = Trainer(
             experiment_config=experiment_config,
             model_config=model_config,
@@ -321,6 +331,7 @@ def create_objective(
             early_stopping_metric="val_auc",
             use_revin=True,
             high_prices=high_prices,
+            criterion=criterion,
         )
 
         try:
@@ -465,6 +476,12 @@ def main():
     parser.add_argument("--horizon", type=int, default=HORIZON, help="Prediction horizon")
     parser.add_argument("--tier", type=str, default=TIER, help="Feature tier")
     parser.add_argument("--trials", type=int, default=N_TRIALS, help="Number of trials")
+    parser.add_argument("--loss-type", type=str, choices=["bce", "focal"], default="bce",
+                        help="Loss function type: bce (default) or focal")
+    parser.add_argument("--focal-gamma", type=float, default=2.0,
+                        help="Focal loss gamma (focusing parameter, default 2.0)")
+    parser.add_argument("--focal-alpha", type=float, default=0.25,
+                        help="Focal loss alpha (positive class weight, default 0.25)")
     args = parser.parse_args()
 
     budget = args.budget.upper()
@@ -478,6 +495,8 @@ def main():
 
     print("=" * 70)
     print(f"HPO: {budget} / horizon={horizon} / tier={tier}")
+    loss_info = f"focal (gamma={args.focal_gamma}, alpha={args.focal_alpha})" if args.loss_type == "focal" else "bce"
+    print(f"Loss: {loss_info}")
     print("=" * 70)
 
     if budget not in SEARCH_SPACES:
@@ -536,6 +555,9 @@ def main():
         output_dir=output_dir,
         extreme_configs=extreme_configs,
         dry_run=args.dry_run,
+        loss_type=args.loss_type,
+        focal_gamma=args.focal_gamma,
+        focal_alpha=args.focal_alpha,
     )
 
     print(f"\nStarting HPO with {n_trials} trials...")
