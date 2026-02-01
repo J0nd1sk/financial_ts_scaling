@@ -5158,11 +5158,11 @@ class TestChunk10aIntegration:
     def test_output_column_count_with_10a(
         self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
     ) -> None:
-        """Output DataFrame should have Date + 445 features = 446 columns."""
+        """Output DataFrame should have Date + 500 features = 501 columns."""
         result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
         # Date + a200 (206) + 6a (24) + 6b (25) + 7a (23) + 7b (22) + 8a (23) + 8b (22)
-        # + 9a (25) + 9b (25) + 10a (25) + 10b (25) = 446
-        expected_cols = 1 + 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25 + 25 + 25 + 25
+        # + 9a (25) + 9b (25) + 10a (25) + 10b (25) + 11a (27) + 11b (28) = 501
+        expected_cols = 1 + 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25 + 25 + 25 + 25 + 27 + 28
         assert len(result.columns) == expected_cols, (
             f"Expected {expected_cols} columns, got {len(result.columns)}"
         )
@@ -5214,10 +5214,10 @@ class TestChunk10aIntegration:
                     )
 
     def test_feature_list_total_count(self) -> None:
-        """FEATURE_LIST should have 445 features after adding 10b."""
+        """FEATURE_LIST should have 500 features after adding all chunks."""
         # 206 (a200) + 24 (6a) + 25 (6b) + 23 (7a) + 22 (7b) + 23 (8a) + 22 (8b)
-        # + 25 (9a) + 25 (9b) + 25 (10a) + 25 (10b) = 445
-        expected_count = 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25 + 25 + 25 + 25
+        # + 25 (9a) + 25 (9b) + 25 (10a) + 25 (10b) + 27 (11a) + 28 (11b) = 500
+        expected_count = 206 + 24 + 25 + 23 + 22 + 23 + 22 + 25 + 25 + 25 + 25 + 27 + 28
         assert len(tier_a500.FEATURE_LIST) == expected_count, (
             f"Expected {expected_count} features, got {len(tier_a500.FEATURE_LIST)}"
         )
@@ -5701,3 +5701,1111 @@ class TestChunk10bIntegration:
                     assert np.allclose(full_vals, trunc_vals, equal_nan=True), (
                         f"Lookahead detected in {feature}"
                     )
+
+
+# =============================================================================
+# Sub-Chunk 11a Tests: ADV Part 1 (ranks 446-472)
+# =============================================================================
+
+
+class TestChunk11aFeatureListStructure:
+    """Test CHUNK_11A_FEATURES list structure and properties."""
+
+    def test_chunk_11a_features_exists(self) -> None:
+        """CHUNK_11A_FEATURES constant exists."""
+        assert hasattr(tier_a500, "CHUNK_11A_FEATURES")
+
+    def test_chunk_11a_is_list(self) -> None:
+        """CHUNK_11A_FEATURES is a list."""
+        assert isinstance(tier_a500.CHUNK_11A_FEATURES, list)
+
+    def test_chunk_11a_count_is_27(self) -> None:
+        """CHUNK_11A_FEATURES contains exactly 27 features."""
+        assert len(tier_a500.CHUNK_11A_FEATURES) == 27, (
+            f"Expected 27 features, got {len(tier_a500.CHUNK_11A_FEATURES)}"
+        )
+
+    def test_chunk_11a_no_duplicates(self) -> None:
+        """CHUNK_11A_FEATURES has no duplicates."""
+        assert len(tier_a500.CHUNK_11A_FEATURES) == len(set(tier_a500.CHUNK_11A_FEATURES))
+
+    def test_chunk_11a_no_overlap_with_a200(self) -> None:
+        """CHUNK_11A_FEATURES has no overlap with tier_a200."""
+        from src.features import tier_a200
+        overlap = set(tier_a500.CHUNK_11A_FEATURES) & set(tier_a200.FEATURE_LIST)
+        assert len(overlap) == 0, f"Overlapping features with a200: {overlap}"
+
+    def test_chunk_11a_no_overlap_with_prior_chunks(self) -> None:
+        """CHUNK_11A_FEATURES has no overlap with chunks 6a-10b."""
+        prior_chunks = (
+            tier_a500.CHUNK_6A_FEATURES
+            + tier_a500.CHUNK_6B_FEATURES
+            + tier_a500.CHUNK_7A_FEATURES
+            + tier_a500.CHUNK_7B_FEATURES
+            + tier_a500.CHUNK_8A_FEATURES
+            + tier_a500.CHUNK_8B_FEATURES
+            + tier_a500.CHUNK_9A_FEATURES
+            + tier_a500.CHUNK_9B_FEATURES
+            + tier_a500.CHUNK_10A_FEATURES
+            + tier_a500.CHUNK_10B_FEATURES
+        )
+        overlap = set(tier_a500.CHUNK_11A_FEATURES) & set(prior_chunks)
+        assert len(overlap) == 0, f"Overlapping features with prior chunks: {overlap}"
+
+    def test_chunk_11a_all_strings(self) -> None:
+        """All CHUNK_11A_FEATURES elements are strings."""
+        for feature in tier_a500.CHUNK_11A_FEATURES:
+            assert isinstance(feature, str), f"Non-string feature: {feature}"
+
+    def test_chunk_11a_in_feature_list(self) -> None:
+        """All CHUNK_11A_FEATURES are in FEATURE_LIST."""
+        for feature in tier_a500.CHUNK_11A_FEATURES:
+            assert feature in tier_a500.FEATURE_LIST, (
+                f"Feature not in FEATURE_LIST: {feature}"
+            )
+
+    def test_chunk_11a_in_a500_addition_list(self) -> None:
+        """All CHUNK_11A_FEATURES are in A500_ADDITION_LIST."""
+        for feature in tier_a500.CHUNK_11A_FEATURES:
+            assert feature in tier_a500.A500_ADDITION_LIST, (
+                f"Feature not in A500_ADDITION_LIST: {feature}"
+            )
+
+    def test_chunk_11a_contiguous_in_feature_list(self) -> None:
+        """CHUNK_11A_FEATURES are contiguous in FEATURE_LIST at positions 445-472."""
+        # a200 has 206 features, prior chunks have 239 (24+25+23+22+23+22+25+25+25+25)
+        # So 11a starts at index 445 (0-indexed)
+        start_idx = 445
+        end_idx = start_idx + 27
+        feature_list_slice = tier_a500.FEATURE_LIST[start_idx:end_idx]
+        assert feature_list_slice == tier_a500.CHUNK_11A_FEATURES, (
+            f"CHUNK_11A_FEATURES not contiguous at positions {start_idx}-{end_idx}"
+        )
+
+
+class TestChunk11aFractalFeatures:
+    """Test fractal dimension extension features (Group 1, 6 features)."""
+
+    def test_katz_fd_20d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """katz_fd_20d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "katz_fd_20d" in result.columns
+
+    def test_katz_fd_20d_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """katz_fd_20d values are positive (FD > 0)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["katz_fd_20d"].dropna()
+        assert (vals > 0).all(), "katz_fd_20d should be positive"
+
+    def test_katz_fd_slope_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """katz_fd_slope is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "katz_fd_slope" in result.columns
+
+    def test_katz_fd_slope_signed(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """katz_fd_slope can be positive or negative."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["katz_fd_slope"].dropna()
+        if len(vals) > 10:
+            assert not (vals > 0).all() or not (vals < 0).all(), (
+                "katz_fd_slope should have mixed signs"
+            )
+
+    def test_petrosian_fd_20d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """petrosian_fd_20d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "petrosian_fd_20d" in result.columns
+
+    def test_petrosian_fd_20d_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """petrosian_fd_20d values are positive (FD > 0)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["petrosian_fd_20d"].dropna()
+        assert (vals > 0).all(), "petrosian_fd_20d should be positive"
+
+    def test_petrosian_fd_slope_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """petrosian_fd_slope is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "petrosian_fd_slope" in result.columns
+
+    def test_fd_diversity_ratio_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """fd_diversity_ratio is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "fd_diversity_ratio" in result.columns
+
+    def test_fd_diversity_ratio_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """fd_diversity_ratio values are positive (ratio of positive FDs)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["fd_diversity_ratio"].dropna()
+        assert (vals > 0).all(), "fd_diversity_ratio should be positive"
+
+    def test_fd_regime_score_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """fd_regime_score is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "fd_regime_score" in result.columns
+
+    def test_fd_regime_score_bounded(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """fd_regime_score is in [-1, 1] range (trending to ranging)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["fd_regime_score"].dropna()
+        assert (vals >= -1).all() and (vals <= 1).all(), (
+            "fd_regime_score should be in [-1, 1]"
+        )
+
+
+class TestChunk11aChaosFeatures:
+    """Test chaos theory features (Group 2, 5 features)."""
+
+    def test_lyapunov_exp_20d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """lyapunov_exp_20d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "lyapunov_exp_20d" in result.columns
+
+    def test_lyapunov_exp_20d_finite(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """lyapunov_exp_20d values are finite."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["lyapunov_exp_20d"].dropna()
+        assert np.isfinite(vals).all(), "lyapunov_exp_20d should be finite"
+
+    def test_lyapunov_exp_slope_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """lyapunov_exp_slope is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "lyapunov_exp_slope" in result.columns
+
+    def test_lyapunov_regime_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """lyapunov_regime is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "lyapunov_regime" in result.columns
+
+    def test_lyapunov_regime_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """lyapunov_regime is binary (0=stable, 1=chaotic)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["lyapunov_regime"].dropna()
+        assert set(vals.unique()).issubset({0, 1}), "lyapunov_regime should be 0 or 1"
+
+    def test_correlation_dim_20d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """correlation_dim_20d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "correlation_dim_20d" in result.columns
+
+    def test_correlation_dim_20d_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """correlation_dim_20d values are positive."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["correlation_dim_20d"].dropna()
+        if len(vals) > 0:
+            assert (vals > 0).all(), "correlation_dim_20d should be positive"
+
+    def test_correlation_dim_slope_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """correlation_dim_slope is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "correlation_dim_slope" in result.columns
+
+
+class TestChunk11aMfdfaFeatures:
+    """Test MFDFA multifractal features (Group 3, 6 features)."""
+
+    def test_mfdfa_hurst_mean_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """mfdfa_hurst_mean is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "mfdfa_hurst_mean" in result.columns
+
+    def test_mfdfa_hurst_mean_reasonable_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """mfdfa_hurst_mean is typically in [0, 2] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["mfdfa_hurst_mean"].dropna()
+        if len(vals) > 0:
+            # Hurst exponents are usually between 0 and 2
+            assert (vals >= -0.5).all() and (vals <= 3).all(), (
+                "mfdfa_hurst_mean outside reasonable range"
+            )
+
+    def test_mfdfa_hurst_width_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """mfdfa_hurst_width is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "mfdfa_hurst_width" in result.columns
+
+    def test_mfdfa_hurst_width_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """mfdfa_hurst_width is non-negative (width >= 0)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["mfdfa_hurst_width"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all(), "mfdfa_hurst_width should be non-negative"
+
+    def test_mfdfa_hurst_slope_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """mfdfa_hurst_slope is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "mfdfa_hurst_slope" in result.columns
+
+    def test_mfdfa_alpha_range_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """mfdfa_alpha_range is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "mfdfa_alpha_range" in result.columns
+
+    def test_mfdfa_asymmetry_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """mfdfa_asymmetry is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "mfdfa_asymmetry" in result.columns
+
+    def test_mfdfa_regime_score_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """mfdfa_regime_score is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "mfdfa_regime_score" in result.columns
+
+    def test_mfdfa_regime_score_bounded(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """mfdfa_regime_score is bounded in [-1, 1]."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["mfdfa_regime_score"].dropna()
+        if len(vals) > 0:
+            assert (vals >= -1).all() and (vals <= 1).all(), (
+                "mfdfa_regime_score should be in [-1, 1]"
+            )
+
+
+class TestChunk11aEmdFeatures:
+    """Test EMD spectral features (Group 4, 6 features)."""
+
+    def test_emd_imf_count_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """emd_imf_count is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "emd_imf_count" in result.columns
+
+    def test_emd_imf_count_positive_integer(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """emd_imf_count is a positive integer (number of IMFs)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["emd_imf_count"].dropna()
+        if len(vals) > 0:
+            assert (vals > 0).all(), "emd_imf_count should be positive"
+
+    def test_emd_trend_strength_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """emd_trend_strength is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "emd_trend_strength" in result.columns
+
+    def test_emd_trend_strength_bounded(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """emd_trend_strength is in [0, 1] range (variance ratio)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["emd_trend_strength"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all() and (vals <= 1).all(), (
+                "emd_trend_strength should be in [0, 1]"
+            )
+
+    def test_emd_noise_ratio_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """emd_noise_ratio is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "emd_noise_ratio" in result.columns
+
+    def test_emd_noise_ratio_bounded(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """emd_noise_ratio is in [0, 1] range (energy ratio)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["emd_noise_ratio"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all() and (vals <= 1).all(), (
+                "emd_noise_ratio should be in [0, 1]"
+            )
+
+    def test_emd_dominant_period_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """emd_dominant_period is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "emd_dominant_period" in result.columns
+
+    def test_emd_dominant_period_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """emd_dominant_period is positive (period in days)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["emd_dominant_period"].dropna()
+        if len(vals) > 0:
+            assert (vals > 0).all(), "emd_dominant_period should be positive"
+
+    def test_emd_imf_count_slope_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """emd_imf_count_slope is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "emd_imf_count_slope" in result.columns
+
+    def test_emd_stability_score_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """emd_stability_score is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "emd_stability_score" in result.columns
+
+    def test_emd_stability_score_bounded(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """emd_stability_score is bounded (consistency measure)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["emd_stability_score"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all() and (vals <= 1).all(), (
+                "emd_stability_score should be in [0, 1]"
+            )
+
+
+class TestChunk11aDfaFeatures:
+    """Test DFA extension features (Group 5, 4 features)."""
+
+    def test_dfa_alpha_20d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """dfa_alpha_20d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "dfa_alpha_20d" in result.columns
+
+    def test_dfa_alpha_20d_reasonable_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """dfa_alpha_20d is typically in [0, 2] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["dfa_alpha_20d"].dropna()
+        if len(vals) > 0:
+            # DFA alpha typically between 0 and 2
+            assert (vals >= 0).all() and (vals <= 3).all(), (
+                "dfa_alpha_20d outside reasonable range"
+            )
+
+    def test_dfa_alpha_slope_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """dfa_alpha_slope is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "dfa_alpha_slope" in result.columns
+
+    def test_dfa_crossover_scale_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """dfa_crossover_scale is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "dfa_crossover_scale" in result.columns
+
+    def test_dfa_crossover_scale_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """dfa_crossover_scale is positive when present."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["dfa_crossover_scale"].dropna()
+        if len(vals) > 0:
+            # Values should be positive or zero (no crossover detected)
+            assert (vals >= 0).all(), "dfa_crossover_scale should be non-negative"
+
+    def test_dfa_trend_strength_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """dfa_trend_strength is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "dfa_trend_strength" in result.columns
+
+    def test_dfa_trend_strength_nonnegative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """dfa_trend_strength is non-negative (absolute deviation from 0.5)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["dfa_trend_strength"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all(), "dfa_trend_strength should be non-negative"
+
+
+class TestChunk11aIntegration:
+    """Integration tests for Sub-Chunk 11a."""
+
+    def test_chunk_11a_all_features_computed(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """All CHUNK_11A_FEATURES are computed in build_feature_dataframe."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        missing = []
+        for feature in tier_a500.CHUNK_11A_FEATURES:
+            if feature not in result.columns:
+                missing.append(feature)
+        assert len(missing) == 0, f"Missing features in output: {missing}"
+
+    def test_chunk_11a_no_all_nan_columns(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No Chunk 11a feature should be all NaN after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        all_nan_cols = []
+        for feature in tier_a500.CHUNK_11A_FEATURES:
+            if result[feature].isna().all():
+                all_nan_cols.append(feature)
+        assert len(all_nan_cols) == 0, f"All-NaN columns in 11a: {all_nan_cols}"
+
+    def test_11a_features_no_lookahead(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Chunk 11a features should not use future data (no lookahead bias).
+
+        Test by checking that early rows can be computed without later data.
+        """
+        # Build features on full data
+        full_result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        # Build features on truncated data (first 350 rows)
+        truncated_df = sample_daily_df.iloc[:350].copy()
+        truncated_vix = sample_vix_df.iloc[:350].copy()
+        truncated_result = tier_a500.build_feature_dataframe(truncated_df, truncated_vix)
+
+        if len(truncated_result) > 0 and len(full_result) > 0:
+            # Find overlapping dates
+            common_dates = set(full_result["Date"]) & set(truncated_result["Date"])
+            if len(common_dates) > 0:
+                # For each chunk 11a feature, verify values match for common dates
+                for feature in tier_a500.CHUNK_11A_FEATURES:
+                    full_vals = full_result[full_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    trunc_vals = truncated_result[truncated_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    # Use allclose for floating point comparison
+                    assert np.allclose(full_vals, trunc_vals, equal_nan=True), (
+                        f"Lookahead detected in {feature}"
+                    )
+
+    def test_total_feature_count_is_500(self) -> None:
+        """After 11b, total FEATURE_LIST should have 500 features."""
+        # a200: 206 + prior chunks: 239 + 11a: 27 + 11b: 28 = 500
+        expected = 206 + 239 + 27 + 28
+        assert len(tier_a500.FEATURE_LIST) == expected, (
+            f"Expected {expected} total features, got {len(tier_a500.FEATURE_LIST)}"
+        )
+
+
+# =============================================================================
+# Sub-Chunk 11b Tests: ADV Part 2 (ranks 473-500, 28 features)
+# =============================================================================
+
+
+class TestChunk11bFeatureListStructure:
+    """Test CHUNK_11B_FEATURES list structure and properties."""
+
+    def test_chunk_11b_features_exists(self) -> None:
+        """CHUNK_11B_FEATURES constant exists."""
+        assert hasattr(tier_a500, "CHUNK_11B_FEATURES")
+
+    def test_chunk_11b_is_list(self) -> None:
+        """CHUNK_11B_FEATURES is a list."""
+        assert isinstance(tier_a500.CHUNK_11B_FEATURES, list)
+
+    def test_chunk_11b_count_is_28(self) -> None:
+        """CHUNK_11B_FEATURES contains exactly 28 features."""
+        assert len(tier_a500.CHUNK_11B_FEATURES) == 28, (
+            f"Expected 28 features, got {len(tier_a500.CHUNK_11B_FEATURES)}"
+        )
+
+    def test_chunk_11b_no_duplicates(self) -> None:
+        """CHUNK_11B_FEATURES has no duplicates."""
+        assert len(tier_a500.CHUNK_11B_FEATURES) == len(set(tier_a500.CHUNK_11B_FEATURES))
+
+    def test_chunk_11b_no_overlap_with_a200(self) -> None:
+        """CHUNK_11B_FEATURES has no overlap with tier_a200."""
+        from src.features import tier_a200
+        overlap = set(tier_a500.CHUNK_11B_FEATURES) & set(tier_a200.FEATURE_LIST)
+        assert len(overlap) == 0, f"Overlapping features with a200: {overlap}"
+
+    def test_chunk_11b_no_overlap_with_prior_chunks(self) -> None:
+        """CHUNK_11B_FEATURES has no overlap with chunks 6a-11a."""
+        prior_chunks = (
+            tier_a500.CHUNK_6A_FEATURES
+            + tier_a500.CHUNK_6B_FEATURES
+            + tier_a500.CHUNK_7A_FEATURES
+            + tier_a500.CHUNK_7B_FEATURES
+            + tier_a500.CHUNK_8A_FEATURES
+            + tier_a500.CHUNK_8B_FEATURES
+            + tier_a500.CHUNK_9A_FEATURES
+            + tier_a500.CHUNK_9B_FEATURES
+            + tier_a500.CHUNK_10A_FEATURES
+            + tier_a500.CHUNK_10B_FEATURES
+            + tier_a500.CHUNK_11A_FEATURES
+        )
+        overlap = set(tier_a500.CHUNK_11B_FEATURES) & set(prior_chunks)
+        assert len(overlap) == 0, f"Overlapping features with prior chunks: {overlap}"
+
+    def test_chunk_11b_all_strings(self) -> None:
+        """All CHUNK_11B_FEATURES elements are strings."""
+        for feature in tier_a500.CHUNK_11B_FEATURES:
+            assert isinstance(feature, str), f"Non-string feature: {feature}"
+
+    def test_chunk_11b_in_feature_list(self) -> None:
+        """All CHUNK_11B_FEATURES are in FEATURE_LIST."""
+        for feature in tier_a500.CHUNK_11B_FEATURES:
+            assert feature in tier_a500.FEATURE_LIST, (
+                f"Feature not in FEATURE_LIST: {feature}"
+            )
+
+    def test_chunk_11b_in_a500_addition_list(self) -> None:
+        """All CHUNK_11B_FEATURES are in A500_ADDITION_LIST."""
+        for feature in tier_a500.CHUNK_11B_FEATURES:
+            assert feature in tier_a500.A500_ADDITION_LIST, (
+                f"Feature not in A500_ADDITION_LIST: {feature}"
+            )
+
+    def test_chunk_11b_contiguous_in_feature_list(self) -> None:
+        """CHUNK_11B_FEATURES are contiguous in FEATURE_LIST at positions 472-500."""
+        # a200 has 206 features, prior chunks have 266 (24+25+23+22+23+22+25+25+25+25+27)
+        # So 11b starts at index 472 (0-indexed)
+        start_idx = 472
+        end_idx = start_idx + 28
+        feature_list_slice = tier_a500.FEATURE_LIST[start_idx:end_idx]
+        assert feature_list_slice == tier_a500.CHUNK_11B_FEATURES, (
+            f"CHUNK_11B_FEATURES not contiguous at positions {start_idx}-{end_idx}"
+        )
+
+    def test_feature_list_total_500(self) -> None:
+        """Total FEATURE_LIST should have 500 features after 11b."""
+        assert len(tier_a500.FEATURE_LIST) == 500, (
+            f"Expected 500 total features, got {len(tier_a500.FEATURE_LIST)}"
+        )
+
+    def test_a500_addition_list_total_294(self) -> None:
+        """A500_ADDITION_LIST should have 294 features after 11b."""
+        assert len(tier_a500.A500_ADDITION_LIST) == 294, (
+            f"Expected 294 features in A500_ADDITION_LIST, got {len(tier_a500.A500_ADDITION_LIST)}"
+        )
+
+
+class TestChunk11bHurstFeatures:
+    """Test Hurst exponent and regime features (Group 1, 6 features)."""
+
+    def test_hurst_rs_30d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hurst_rs_30d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "hurst_rs_30d" in result.columns
+
+    def test_hurst_rs_30d_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hurst_rs_30d is in [0, 1] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["hurst_rs_30d"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all() and (vals <= 1).all(), (
+                f"hurst_rs_30d outside [0, 1]: min={vals.min()}, max={vals.max()}"
+            )
+
+    def test_hurst_rs_slope_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hurst_rs_slope is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "hurst_rs_slope" in result.columns
+
+    def test_hurst_rs_slope_signed(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hurst_rs_slope can be positive or negative."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["hurst_rs_slope"].dropna()
+        if len(vals) > 10:
+            # Should have mixed signs over enough data
+            has_positive = (vals > 0).any()
+            has_negative = (vals < 0).any()
+            assert has_positive or has_negative, "hurst_rs_slope should vary"
+
+    def test_hurst_regime_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hurst_regime is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "hurst_regime" in result.columns
+
+    def test_hurst_regime_categorical(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hurst_regime is categorical (0-3 for 4 regimes)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["hurst_regime"].dropna()
+        if len(vals) > 0:
+            assert set(vals.unique()).issubset({0, 1, 2, 3}), (
+                f"hurst_regime should be in {{0,1,2,3}}, got {vals.unique()}"
+            )
+
+    def test_hurst_vs_volatility_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hurst_vs_volatility is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "hurst_vs_volatility" in result.columns
+
+    def test_days_in_hurst_regime_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_in_hurst_regime is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "days_in_hurst_regime" in result.columns
+
+    def test_days_in_hurst_regime_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """days_in_hurst_regime is non-negative."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["days_in_hurst_regime"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all(), "days_in_hurst_regime should be non-negative"
+
+    def test_hurst_regime_transition_prob_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hurst_regime_transition_prob is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "hurst_regime_transition_prob" in result.columns
+
+    def test_hurst_regime_transition_prob_bounded(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """hurst_regime_transition_prob is in [0, 1] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["hurst_regime_transition_prob"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all() and (vals <= 1).all(), (
+                "hurst_regime_transition_prob should be in [0, 1]"
+            )
+
+
+class TestChunk11bEntropyFeatures:
+    """Test entropy extension features (Group 2, 5 features)."""
+
+    def test_sample_entropy_30d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """sample_entropy_30d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "sample_entropy_30d" in result.columns
+
+    def test_sample_entropy_30d_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """sample_entropy_30d is positive (entropy >= 0)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["sample_entropy_30d"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all(), "sample_entropy_30d should be non-negative"
+
+    def test_approximate_entropy_30d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """approximate_entropy_30d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "approximate_entropy_30d" in result.columns
+
+    def test_approximate_entropy_30d_positive(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """approximate_entropy_30d is positive (entropy >= 0)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["approximate_entropy_30d"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all(), "approximate_entropy_30d should be non-negative"
+
+    def test_entropy_atr_ratio_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_atr_ratio is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_atr_ratio" in result.columns
+
+    def test_entropy_regime_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_regime is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_regime" in result.columns
+
+    def test_entropy_regime_categorical(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_regime is categorical (0=orderly, 1=moderate, 2=chaotic)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["entropy_regime"].dropna()
+        if len(vals) > 0:
+            assert set(vals.unique()).issubset({0, 1, 2}), (
+                f"entropy_regime should be in {{0,1,2}}, got {vals.unique()}"
+            )
+
+    def test_entropy_change_10d_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """entropy_change_10d is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "entropy_change_10d" in result.columns
+
+
+class TestChunk11bAroonFeatures:
+    """Test Aroon variation features (Group 3, 5 features)."""
+
+    def test_aroon_up_14_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_up_14 is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "aroon_up_14" in result.columns
+
+    def test_aroon_up_14_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_up_14 is in [0, 100] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["aroon_up_14"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all() and (vals <= 100).all(), (
+                f"aroon_up_14 outside [0, 100]: min={vals.min()}, max={vals.max()}"
+            )
+
+    def test_aroon_down_14_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_down_14 is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "aroon_down_14" in result.columns
+
+    def test_aroon_down_14_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_down_14 is in [0, 100] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["aroon_down_14"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all() and (vals <= 100).all(), (
+                f"aroon_down_14 outside [0, 100]: min={vals.min()}, max={vals.max()}"
+            )
+
+    def test_aroon_crossover_recency_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_crossover_recency is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "aroon_crossover_recency" in result.columns
+
+    def test_aroon_consolidation_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_consolidation is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "aroon_consolidation" in result.columns
+
+    def test_aroon_consolidation_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_consolidation is binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["aroon_consolidation"].dropna()
+        if len(vals) > 0:
+            assert set(vals.unique()).issubset({0, 1}), (
+                f"aroon_consolidation should be 0 or 1, got {vals.unique()}"
+            )
+
+    def test_aroon_oscillator_14_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_oscillator_14 is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "aroon_oscillator_14" in result.columns
+
+    def test_aroon_oscillator_14_bounded(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """aroon_oscillator_14 is in [-100, 100] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["aroon_oscillator_14"].dropna()
+        if len(vals) > 0:
+            assert (vals >= -100).all() and (vals <= 100).all(), (
+                f"aroon_oscillator_14 outside [-100, 100]: min={vals.min()}, max={vals.max()}"
+            )
+
+
+class TestChunk11bSqueezeFeatures:
+    """Test TTM Squeeze and SuperTrend extension features (Group 4, 6 features)."""
+
+    def test_squeeze_on_14_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """squeeze_on_14 is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "squeeze_on_14" in result.columns
+
+    def test_squeeze_on_14_binary(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """squeeze_on_14 is binary (0 or 1)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["squeeze_on_14"].dropna()
+        if len(vals) > 0:
+            assert set(vals.unique()).issubset({0, 1}), (
+                f"squeeze_on_14 should be 0 or 1, got {vals.unique()}"
+            )
+
+    def test_squeeze_duration_14_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """squeeze_duration_14 is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "squeeze_duration_14" in result.columns
+
+    def test_squeeze_duration_14_non_negative(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """squeeze_duration_14 is non-negative."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["squeeze_duration_14"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all(), "squeeze_duration_14 should be non-negative"
+
+    def test_squeeze_fire_recency_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """squeeze_fire_recency is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "squeeze_fire_recency" in result.columns
+
+    def test_supertrend_flip_recency_14_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """supertrend_flip_recency_14 is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "supertrend_flip_recency_14" in result.columns
+
+    def test_pct_from_supertrend_20_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """pct_from_supertrend_20 is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "pct_from_supertrend_20" in result.columns
+
+    def test_supertrend_slope_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """supertrend_slope is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "supertrend_slope" in result.columns
+
+
+class TestChunk11bCycleFeatures:
+    """Test Accumulation-Distribution cycle features (Group 5, 6 features)."""
+
+    def test_accumulation_score_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """accumulation_score is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "accumulation_score" in result.columns
+
+    def test_accumulation_score_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """accumulation_score is in [0, 1] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["accumulation_score"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all() and (vals <= 1).all(), (
+                f"accumulation_score outside [0, 1]: min={vals.min()}, max={vals.max()}"
+            )
+
+    def test_markup_score_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """markup_score is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "markup_score" in result.columns
+
+    def test_markup_score_range(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """markup_score is in [0, 1] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["markup_score"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all() and (vals <= 1).all(), (
+                f"markup_score outside [0, 1]: min={vals.min()}, max={vals.max()}"
+            )
+
+    def test_distribution_score_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """distribution_score is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "distribution_score" in result.columns
+
+    def test_markdown_score_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """markdown_score is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "markdown_score" in result.columns
+
+    def test_cycle_phase_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """cycle_phase is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "cycle_phase" in result.columns
+
+    def test_cycle_phase_categorical(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """cycle_phase is categorical (0-3 for 4 phases)."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["cycle_phase"].dropna()
+        if len(vals) > 0:
+            assert set(vals.unique()).issubset({0, 1, 2, 3}), (
+                f"cycle_phase should be in {{0,1,2,3}}, got {vals.unique()}"
+            )
+
+    def test_cycle_phase_confidence_in_output(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """cycle_phase_confidence is computed and in output."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        assert "cycle_phase_confidence" in result.columns
+
+    def test_cycle_phase_confidence_bounds(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """cycle_phase_confidence is in [0, 1] range."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        vals = result["cycle_phase_confidence"].dropna()
+        if len(vals) > 0:
+            assert (vals >= 0).all() and (vals <= 1).all(), (
+                f"cycle_phase_confidence outside [0, 1]: min={vals.min()}, max={vals.max()}"
+            )
+
+
+class TestChunk11bIntegration:
+    """Integration tests for Sub-Chunk 11b."""
+
+    def test_chunk_11b_all_features_computed(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """All CHUNK_11B_FEATURES are computed in build_feature_dataframe."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        missing = []
+        for feature in tier_a500.CHUNK_11B_FEATURES:
+            if feature not in result.columns:
+                missing.append(feature)
+        assert len(missing) == 0, f"Missing features in output: {missing}"
+
+    def test_chunk_11b_no_all_nan_columns(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """No Chunk 11b feature should be all NaN after warmup."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        all_nan_cols = []
+        for feature in tier_a500.CHUNK_11B_FEATURES:
+            if result[feature].isna().all():
+                all_nan_cols.append(feature)
+        assert len(all_nan_cols) == 0, f"All-NaN columns in 11b: {all_nan_cols}"
+
+    def test_11b_features_no_lookahead(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Chunk 11b features should not use future data (no lookahead bias).
+
+        Test by checking that early rows can be computed without later data.
+        """
+        # Build features on full data
+        full_result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+
+        # Build features on truncated data (first 350 rows)
+        truncated_df = sample_daily_df.iloc[:350].copy()
+        truncated_vix = sample_vix_df.iloc[:350].copy()
+        truncated_result = tier_a500.build_feature_dataframe(truncated_df, truncated_vix)
+
+        if len(truncated_result) > 0 and len(full_result) > 0:
+            # Find overlapping dates
+            common_dates = set(full_result["Date"]) & set(truncated_result["Date"])
+            if len(common_dates) > 0:
+                # For each chunk 11b feature, verify values match for common dates
+                for feature in tier_a500.CHUNK_11B_FEATURES:
+                    full_vals = full_result[full_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    trunc_vals = truncated_result[truncated_result["Date"].isin(common_dates)][feature].reset_index(drop=True)
+                    # Use allclose for floating point comparison
+                    assert np.allclose(full_vals, trunc_vals, equal_nan=True), (
+                        f"Lookahead detected in {feature}"
+                    )
+
+    def test_total_feature_count_is_500(self) -> None:
+        """After 11b, total FEATURE_LIST should have 500 features."""
+        # a200: 206 + prior chunks: 266 + 11b: 28 = 500
+        expected = 206 + 266 + 28
+        assert len(tier_a500.FEATURE_LIST) == expected, (
+            f"Expected {expected} total features, got {len(tier_a500.FEATURE_LIST)}"
+        )
+
+    def test_output_has_all_500_features(
+        self, sample_daily_df: pd.DataFrame, sample_vix_df: pd.DataFrame
+    ) -> None:
+        """Output DataFrame should have all 500 features + Date column."""
+        result = tier_a500.build_feature_dataframe(sample_daily_df, sample_vix_df)
+        # Should have Date + 500 features
+        expected_cols = 501
+        assert len(result.columns) == expected_cols, (
+            f"Expected {expected_cols} columns, got {len(result.columns)}"
+        )

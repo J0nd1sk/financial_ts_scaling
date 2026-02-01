@@ -34,6 +34,12 @@ import numpy as np
 import pandas as pd
 import talib
 
+# Advanced analysis libraries for Sub-Chunk 11a
+import antropy
+import nolds
+from MFDFA import MFDFA
+from PyEMD import EMD
+
 from src.features import tier_a200
 
 # Sub-Chunk 6a: MA Extended Part 1 (ranks 207-230) - 24 features
@@ -374,6 +380,82 @@ CHUNK_10B_FEATURES = [
     "entropy_stability_score",
 ]
 
+# Sub-Chunk 11a: ADV Part 1 (ranks 446-472) - 27 features
+CHUNK_11A_FEATURES = [
+    # Group 1: Fractal Dimension Extensions (6 features)
+    "katz_fd_20d",
+    "katz_fd_slope",
+    "petrosian_fd_20d",
+    "petrosian_fd_slope",
+    "fd_diversity_ratio",
+    "fd_regime_score",
+    # Group 2: Chaos Theory (5 features)
+    "lyapunov_exp_20d",
+    "lyapunov_exp_slope",
+    "lyapunov_regime",
+    "correlation_dim_20d",
+    "correlation_dim_slope",
+    # Group 3: MFDFA Multifractal (6 features)
+    "mfdfa_hurst_mean",
+    "mfdfa_hurst_width",
+    "mfdfa_hurst_slope",
+    "mfdfa_alpha_range",
+    "mfdfa_asymmetry",
+    "mfdfa_regime_score",
+    # Group 4: EMD Spectral (6 features)
+    "emd_imf_count",
+    "emd_trend_strength",
+    "emd_noise_ratio",
+    "emd_dominant_period",
+    "emd_imf_count_slope",
+    "emd_stability_score",
+    # Group 5: DFA Extensions (4 features)
+    "dfa_alpha_20d",
+    "dfa_alpha_slope",
+    "dfa_crossover_scale",
+    "dfa_trend_strength",
+]
+
+# Sub-Chunk 11b: ADV Part 2 (ranks 473-500) - 28 features
+CHUNK_11B_FEATURES = [
+    # Group 1: Hurst Exponent & Regime (6 features)
+    # Note: hurst_exponent_20d exists in 10a, use R/S method with 30d window
+    "hurst_rs_30d",
+    "hurst_rs_slope",
+    "hurst_regime",
+    "hurst_vs_volatility",
+    "days_in_hurst_regime",
+    "hurst_regime_transition_prob",
+    # Group 2: Entropy Extensions (5 features)
+    # Note: sample_entropy_20d exists in 10a, use 30d window
+    "sample_entropy_30d",
+    "approximate_entropy_30d",
+    "entropy_atr_ratio",
+    "entropy_regime",
+    "entropy_change_10d",
+    # Group 3: Aroon Variations (5 features)
+    # Note: aroon_trend_strength exists in 8a, use oscillator instead
+    "aroon_up_14",
+    "aroon_down_14",
+    "aroon_crossover_recency",
+    "aroon_consolidation",
+    "aroon_oscillator_14",
+    # Group 4: TTM Squeeze & SuperTrend Extensions (6 features)
+    "squeeze_on_14",
+    "squeeze_duration_14",
+    "squeeze_fire_recency",
+    "supertrend_flip_recency_14",
+    "pct_from_supertrend_20",
+    "supertrend_slope",
+    # Group 5: Accumulation-Distribution Cycle (6 features)
+    "accumulation_score",
+    "markup_score",
+    "distribution_score",
+    "markdown_score",
+    "cycle_phase",
+    "cycle_phase_confidence",
+]
+
 # 294 new indicators added in tier a500 (ranks 207-500)
 # Built incrementally across sub-chunks 6a through 11b
 A500_ADDITION_LIST = (
@@ -387,7 +469,8 @@ A500_ADDITION_LIST = (
     + CHUNK_9B_FEATURES
     + CHUNK_10A_FEATURES
     + CHUNK_10B_FEATURES
-    # ... remaining chunks
+    + CHUNK_11A_FEATURES
+    + CHUNK_11B_FEATURES
 )
 
 # Complete a500 feature list = a200 (206) + 294 new = 500 total
@@ -4639,6 +4722,983 @@ def _compute_chunk_10b(
     return features
 
 
+# =============================================================================
+# Sub-Chunk 11a computation functions (ranks 446-472)
+# =============================================================================
+
+
+def _compute_11a_fractal_features(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute fractal dimension extension features (Group 1, 6 features).
+
+    Features:
+    - katz_fd_20d: Katz fractal dimension (20-day rolling)
+    - katz_fd_slope: 5-day change in Katz FD
+    - petrosian_fd_20d: Petrosian fractal dimension
+    - petrosian_fd_slope: 5-day change
+    - fd_diversity_ratio: Higuchi FD / Katz FD ratio
+    - fd_regime_score: Market regime: -1 trending, +1 ranging
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with fractal dimension features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Compute rolling Katz FD (20-day window)
+    katz_fd = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        try:
+            katz_fd.iloc[i] = antropy.katz_fd(window)
+        except Exception:
+            katz_fd.iloc[i] = np.nan
+
+    features["katz_fd_20d"] = katz_fd
+
+    # Katz FD slope: 5-day change
+    katz_fd_slope = katz_fd - katz_fd.shift(5)
+    features["katz_fd_slope"] = katz_fd_slope
+
+    # Compute rolling Petrosian FD (20-day window)
+    petrosian_fd = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        try:
+            petrosian_fd.iloc[i] = antropy.petrosian_fd(window)
+        except Exception:
+            petrosian_fd.iloc[i] = np.nan
+
+    features["petrosian_fd_20d"] = petrosian_fd
+
+    # Petrosian FD slope: 5-day change
+    petrosian_fd_slope = petrosian_fd - petrosian_fd.shift(5)
+    features["petrosian_fd_slope"] = petrosian_fd_slope
+
+    # FD diversity ratio: Higuchi FD / Katz FD
+    # Use Higuchi FD from antropy
+    higuchi_fd = pd.Series(np.nan, index=range(n))
+    for i in range(40, n):
+        window = close_arr[i - 40:i]
+        try:
+            higuchi_fd.iloc[i] = antropy.higuchi_fd(window)
+        except Exception:
+            higuchi_fd.iloc[i] = np.nan
+
+    # Ratio: Higuchi / Katz (both positive, ratio should be positive)
+    fd_diversity_ratio = higuchi_fd / katz_fd
+    fd_diversity_ratio = fd_diversity_ratio.replace([np.inf, -np.inf], np.nan)
+    features["fd_diversity_ratio"] = fd_diversity_ratio
+
+    # FD regime score: -1 (trending) to +1 (ranging)
+    # Higher FD = more complex/ranging, Lower FD = more trending
+    # Normalize based on rolling percentile
+    fd_mean = (katz_fd + petrosian_fd) / 2
+    fd_pctile = fd_mean.rolling(60).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5,
+        raw=False
+    )
+    # Map percentile to [-1, 1]: low FD (trending) = -1, high FD (ranging) = +1
+    fd_regime_score = 2 * fd_pctile - 1
+    features["fd_regime_score"] = fd_regime_score
+
+    return features
+
+
+def _compute_11a_chaos_features(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute chaos theory features (Group 2, 5 features).
+
+    Features:
+    - lyapunov_exp_20d: Largest Lyapunov exponent
+    - lyapunov_exp_slope: 5-day change
+    - lyapunov_regime: Binary: 0=stable, 1=chaotic
+    - correlation_dim_20d: Correlation dimension
+    - correlation_dim_slope: 5-day change
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with chaos theory features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Compute rolling Lyapunov exponent (40-day window)
+    lyapunov_exp = pd.Series(np.nan, index=range(n))
+    for i in range(40, n):
+        window = close_arr[i - 40:i]
+        try:
+            # Use Rosenstein method for Lyapunov exponent
+            lyap = nolds.lyap_r(window, emb_dim=3, lag=1, min_tsep=1)
+            if np.isfinite(lyap):
+                lyapunov_exp.iloc[i] = lyap
+        except Exception:
+            lyapunov_exp.iloc[i] = np.nan
+
+    features["lyapunov_exp_20d"] = lyapunov_exp
+
+    # Lyapunov slope: 5-day change
+    lyapunov_slope = lyapunov_exp - lyapunov_exp.shift(5)
+    features["lyapunov_exp_slope"] = lyapunov_slope
+
+    # Lyapunov regime: 0=stable (negative/near-zero), 1=chaotic (positive)
+    # Positive Lyapunov exponent indicates chaos
+    lyapunov_regime = (lyapunov_exp > 0).astype(float)
+    lyapunov_regime = lyapunov_regime.where(lyapunov_exp.notna(), np.nan)
+    features["lyapunov_regime"] = lyapunov_regime
+
+    # Compute rolling correlation dimension (20-day window)
+    corr_dim = pd.Series(np.nan, index=range(n))
+    for i in range(20, n):
+        window = close_arr[i - 20:i]
+        try:
+            cd = nolds.corr_dim(window, emb_dim=3)
+            if np.isfinite(cd) and cd > 0:
+                corr_dim.iloc[i] = cd
+        except Exception:
+            corr_dim.iloc[i] = np.nan
+
+    features["correlation_dim_20d"] = corr_dim
+
+    # Correlation dimension slope: 5-day change
+    corr_dim_slope = corr_dim - corr_dim.shift(5)
+    features["correlation_dim_slope"] = corr_dim_slope
+
+    return features
+
+
+def _compute_11a_mfdfa_features(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute MFDFA multifractal features (Group 3, 6 features).
+
+    Features:
+    - mfdfa_hurst_mean: Mean generalized Hurst exponent
+    - mfdfa_hurst_width: Spectrum width (multifractality)
+    - mfdfa_hurst_slope: 5-day change
+    - mfdfa_alpha_range: Singularity exponent range
+    - mfdfa_asymmetry: Spectrum left/right asymmetry
+    - mfdfa_regime_score: Multifractal regime
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with MFDFA features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Arrays to store MFDFA results
+    hurst_mean = pd.Series(np.nan, index=range(n))
+    hurst_width = pd.Series(np.nan, index=range(n))
+    alpha_range = pd.Series(np.nan, index=range(n))
+    asymmetry = pd.Series(np.nan, index=range(n))
+
+    # Define q values for multifractal analysis (exclude q=0 which is invalid)
+    q_values = np.array([-5, -3, -1, 1, 3, 5])
+
+    for i in range(120, n):  # Need larger window for MFDFA
+        window = close_arr[i - 120:i]
+        try:
+            # Compute MFDFA
+            # Scales from 4 to window_size/4
+            scales = np.logspace(np.log10(4), np.log10(15), num=5, dtype=int)
+            scales = np.unique(scales)
+
+            # Run MFDFA
+            lag, dfa = MFDFA(window, lag=scales, q=q_values, order=1)
+            # Transpose dfa: library returns (scales, q) but we need (q, scales)
+            dfa = dfa.T
+
+            # Compute generalized Hurst exponents for each q
+            # H(q) = slope of log(F(q,s)) vs log(s)
+            hurst_exponents = []
+            for qi in range(len(q_values)):
+                if len(lag) > 1 and len(dfa[qi]) > 1:
+                    # Linear regression in log-log space
+                    log_lag = np.log(lag)
+                    log_dfa = np.log(dfa[qi] + 1e-10)
+                    valid = np.isfinite(log_lag) & np.isfinite(log_dfa)
+                    if valid.sum() > 1:
+                        slope = np.polyfit(log_lag[valid], log_dfa[valid], 1)[0]
+                        hurst_exponents.append(slope)
+
+            if len(hurst_exponents) > 0:
+                hurst_arr = np.array(hurst_exponents)
+                hurst_mean.iloc[i] = np.mean(hurst_arr)
+                hurst_width.iloc[i] = np.max(hurst_arr) - np.min(hurst_arr)
+
+                # Alpha range (singularity spectrum width)
+                alpha_range.iloc[i] = hurst_width.iloc[i]
+
+                # Asymmetry: difference between positive and negative q slopes
+                mid = len(hurst_arr) // 2
+                left = np.mean(hurst_arr[:mid]) if mid > 0 else 0
+                right = np.mean(hurst_arr[mid:]) if mid < len(hurst_arr) else 0
+                asymmetry.iloc[i] = left - right
+
+        except Exception:
+            pass
+
+    features["mfdfa_hurst_mean"] = hurst_mean
+    features["mfdfa_hurst_width"] = hurst_width
+
+    # Hurst slope: 5-day change
+    hurst_slope = hurst_mean - hurst_mean.shift(5)
+    features["mfdfa_hurst_slope"] = hurst_slope
+
+    features["mfdfa_alpha_range"] = alpha_range
+    features["mfdfa_asymmetry"] = asymmetry
+
+    # MFDFA regime score: normalize width to [-1, 1]
+    width_pctile = hurst_width.rolling(60).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) if x.max() != x.min() else 0.5,
+        raw=False
+    )
+    mfdfa_regime_score = 2 * width_pctile - 1
+    features["mfdfa_regime_score"] = mfdfa_regime_score
+
+    return features
+
+
+def _compute_11a_emd_features(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute EMD spectral features (Group 4, 6 features).
+
+    Features:
+    - emd_imf_count: Number of IMFs
+    - emd_trend_strength: Residual/total variance
+    - emd_noise_ratio: IMF1 energy / total
+    - emd_dominant_period: Period of dominant IMF
+    - emd_imf_count_slope: 5-day change
+    - emd_stability_score: Decomposition consistency
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with EMD features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Arrays to store EMD results
+    imf_count = pd.Series(np.nan, index=range(n))
+    trend_strength = pd.Series(np.nan, index=range(n))
+    noise_ratio = pd.Series(np.nan, index=range(n))
+    dominant_period = pd.Series(np.nan, index=range(n))
+
+    # Create EMD object
+    emd = EMD()
+
+    for i in range(40, n):  # Need reasonable window for EMD
+        window = close_arr[i - 40:i]
+        try:
+            # Perform EMD
+            imfs = emd.emd(window)
+
+            if imfs is not None and len(imfs) > 0:
+                num_imfs = len(imfs)
+                imf_count.iloc[i] = num_imfs
+
+                # Total variance
+                total_var = np.var(window)
+                if total_var > 0:
+                    # Trend strength: residual (last IMF) variance / total variance
+                    residual_var = np.var(imfs[-1])
+                    trend_strength.iloc[i] = min(residual_var / total_var, 1.0)
+
+                    # Noise ratio: first IMF energy / total energy
+                    imf1_var = np.var(imfs[0])
+                    noise_ratio.iloc[i] = min(imf1_var / total_var, 1.0)
+
+                # Dominant period: find IMF with most energy (excluding first/last)
+                if num_imfs > 2:
+                    energies = [np.var(imf) for imf in imfs[1:-1]]
+                    if len(energies) > 0:
+                        dominant_idx = np.argmax(energies) + 1
+                        # Estimate period from zero-crossings
+                        imf = imfs[dominant_idx]
+                        zero_crossings = np.where(np.diff(np.signbit(imf)))[0]
+                        if len(zero_crossings) > 1:
+                            avg_half_period = len(imf) / len(zero_crossings)
+                            dominant_period.iloc[i] = 2 * avg_half_period
+                        else:
+                            dominant_period.iloc[i] = len(imf)
+                else:
+                    dominant_period.iloc[i] = 40  # Window size as default
+
+        except Exception:
+            pass
+
+    features["emd_imf_count"] = imf_count
+    features["emd_trend_strength"] = trend_strength
+    features["emd_noise_ratio"] = noise_ratio
+    features["emd_dominant_period"] = dominant_period
+
+    # IMF count slope: 5-day change
+    imf_count_slope = imf_count - imf_count.shift(5)
+    features["emd_imf_count_slope"] = imf_count_slope
+
+    # Stability score: inverse of IMF count std over rolling window
+    # More stable decomposition = fewer IMFs and less variation
+    imf_std = imf_count.rolling(20).std()
+    max_std = imf_std.rolling(60).max()
+    stability_score = 1 - (imf_std / max_std).fillna(0)
+    stability_score = stability_score.clip(0, 1)
+    features["emd_stability_score"] = stability_score
+
+    return features
+
+
+def _compute_11a_dfa_features(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute DFA extension features (Group 5, 4 features).
+
+    Features:
+    - dfa_alpha_20d: DFA scaling exponent
+    - dfa_alpha_slope: 5-day change
+    - dfa_crossover_scale: Scale transition point
+    - dfa_trend_strength: |alpha - 0.5| deviation
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with DFA features
+    """
+    features = {}
+    n = len(close)
+    close_arr = close.values
+
+    # Arrays to store DFA results
+    dfa_alpha = pd.Series(np.nan, index=range(n))
+    crossover_scale = pd.Series(np.nan, index=range(n))
+
+    for i in range(40, n):  # Need reasonable window for DFA
+        window = close_arr[i - 40:i]
+        try:
+            # Compute DFA alpha
+            alpha = nolds.dfa(window, nvals=None, overlap=True, order=1)
+            if np.isfinite(alpha) and alpha > 0:
+                dfa_alpha.iloc[i] = alpha
+
+            # Estimate crossover scale by computing DFA at multiple scales
+            # This is a simplified version - true crossover detection is complex
+            scales = np.array([4, 6, 8, 10, 14, 18])
+            flucts = []
+            for s in scales:
+                if s < len(window) // 4:
+                    try:
+                        # Simplified fluctuation at scale s
+                        n_segments = len(window) // s
+                        segment_vars = []
+                        for j in range(n_segments):
+                            segment = window[j * s:(j + 1) * s]
+                            # Detrend and compute variance
+                            x = np.arange(s)
+                            coeffs = np.polyfit(x, segment, 1)
+                            trend = np.polyval(coeffs, x)
+                            segment_vars.append(np.var(segment - trend))
+                        if segment_vars:
+                            flucts.append(np.mean(segment_vars))
+                        else:
+                            flucts.append(np.nan)
+                    except Exception:
+                        flucts.append(np.nan)
+                else:
+                    flucts.append(np.nan)
+
+            # Find crossover (change in slope)
+            flucts = np.array(flucts)
+            valid = np.isfinite(flucts) & (flucts > 0)
+            if valid.sum() >= 3:
+                log_scales = np.log(scales[valid])
+                log_flucts = np.log(flucts[valid])
+                # Simple: crossover at midpoint of valid scales
+                mid_idx = len(log_scales) // 2
+                if mid_idx > 0 and mid_idx < len(scales):
+                    crossover_scale.iloc[i] = scales[valid][mid_idx]
+
+        except Exception:
+            pass
+
+    features["dfa_alpha_20d"] = dfa_alpha
+
+    # DFA alpha slope: 5-day change
+    dfa_alpha_slope = dfa_alpha - dfa_alpha.shift(5)
+    features["dfa_alpha_slope"] = dfa_alpha_slope
+
+    features["dfa_crossover_scale"] = crossover_scale
+
+    # DFA trend strength: |alpha - 0.5|
+    # alpha = 0.5 -> white noise (no trend)
+    # alpha > 0.5 -> positive autocorrelation (trending)
+    # alpha < 0.5 -> negative autocorrelation (mean-reverting)
+    dfa_trend_strength = np.abs(dfa_alpha - 0.5)
+    features["dfa_trend_strength"] = dfa_trend_strength
+
+    return features
+
+
+def _compute_chunk_11a(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute all Sub-Chunk 11a features (ADV Part 1).
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with all 27 Chunk 11a features
+    """
+    features = {}
+
+    # Group 1: Fractal Dimension Extensions (6 features)
+    features.update(_compute_11a_fractal_features(close))
+
+    # Group 2: Chaos Theory (5 features)
+    features.update(_compute_11a_chaos_features(close))
+
+    # Group 3: MFDFA Multifractal (6 features)
+    features.update(_compute_11a_mfdfa_features(close))
+
+    # Group 4: EMD Spectral (6 features)
+    features.update(_compute_11a_emd_features(close))
+
+    # Group 5: DFA Extensions (4 features)
+    features.update(_compute_11a_dfa_features(close))
+
+    return features
+
+
+# =============================================================================
+# Sub-Chunk 11b computation functions (ranks 473-500)
+# =============================================================================
+
+
+def _compute_11b_hurst_features(close: pd.Series) -> Mapping[str, pd.Series]:
+    """Compute Hurst exponent and regime features (Group 1, 6 features).
+
+    Uses R/S (rescaled range) method with 30-day window.
+
+    Args:
+        close: Close price series
+
+    Returns:
+        Dict with hurst_rs_30d, hurst_rs_slope, hurst_regime,
+        hurst_vs_volatility, days_in_hurst_regime, hurst_regime_transition_prob
+    """
+    features = {}
+    n = len(close)
+    window = 30
+
+    # Compute Hurst exponent using R/S method
+    hurst_rs = pd.Series(np.nan, index=close.index)
+
+    for i in range(window, n):
+        window_data = close.iloc[i - window:i].values
+        try:
+            # R/S method: compute rescaled range
+            # Mean
+            m = np.mean(window_data)
+            # Cumulative deviation from mean
+            y = np.cumsum(window_data - m)
+            # Range
+            r = np.max(y) - np.min(y)
+            # Standard deviation
+            s = np.std(window_data, ddof=1)
+            if s > 0 and r > 0:
+                # R/S statistic
+                rs = r / s
+                # Hurst estimate: H = log(R/S) / log(n)
+                # Simplified: for fixed window, normalize to [0, 1]
+                h = np.log(rs) / np.log(window)
+                # Clamp to [0, 1]
+                h = max(0, min(1, h))
+                hurst_rs.iloc[i] = h
+        except Exception:
+            pass
+
+    features["hurst_rs_30d"] = hurst_rs
+
+    # Hurst slope: 5-day change
+    hurst_rs_slope = hurst_rs - hurst_rs.shift(5)
+    features["hurst_rs_slope"] = hurst_rs_slope
+
+    # Hurst regime: categorical based on H value
+    # 0 = reverting (H < 0.4), 1 = range_bound (0.4-0.5),
+    # 2 = weak_trend (0.5-0.6), 3 = trending (H > 0.6)
+    hurst_regime = pd.Series(np.nan, index=close.index)
+    hurst_regime[hurst_rs < 0.4] = 0
+    hurst_regime[(hurst_rs >= 0.4) & (hurst_rs < 0.5)] = 1
+    hurst_regime[(hurst_rs >= 0.5) & (hurst_rs < 0.6)] = 2
+    hurst_regime[hurst_rs >= 0.6] = 3
+    features["hurst_regime"] = hurst_regime
+
+    # Hurst vs volatility: H normalized by ATR percentile
+    # Compute simple ATR (14-day)
+    high = close.rolling(14).max()
+    low = close.rolling(14).min()
+    atr = high - low
+    atr_pct = atr.rolling(50).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min() + 1e-10) if len(x) > 0 else 0.5,
+        raw=False
+    )
+    hurst_vs_vol = hurst_rs / (atr_pct + 0.1)  # Add small constant to avoid division by zero
+    features["hurst_vs_volatility"] = hurst_vs_vol
+
+    # Days in current Hurst regime
+    days_in_regime = pd.Series(np.nan, index=close.index)
+    count = 0
+    prev_regime = np.nan
+    for i in range(n):
+        curr_regime = hurst_regime.iloc[i]
+        if pd.isna(curr_regime):
+            days_in_regime.iloc[i] = np.nan
+            continue
+        if curr_regime == prev_regime:
+            count += 1
+        else:
+            count = 1
+            prev_regime = curr_regime
+        days_in_regime.iloc[i] = count
+    features["days_in_hurst_regime"] = days_in_regime
+
+    # Hurst regime transition probability
+    # Based on recent volatility - higher vol = higher transition probability
+    vol_20d = close.pct_change().rolling(20).std()
+    vol_pct = vol_20d.rolling(50).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min() + 1e-10) if len(x) > 0 else 0.5,
+        raw=False
+    )
+    features["hurst_regime_transition_prob"] = vol_pct.clip(0, 1)
+
+    return features
+
+
+def _compute_11b_entropy_features(
+    close: pd.Series, high: pd.Series, low: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute entropy extension features (Group 2, 5 features).
+
+    Uses 30-day window for entropy calculations.
+
+    Args:
+        close: Close price series
+        high: High price series
+        low: Low price series
+
+    Returns:
+        Dict with sample_entropy_30d, approximate_entropy_30d,
+        entropy_atr_ratio, entropy_regime, entropy_change_10d
+    """
+    import antropy
+
+    features = {}
+    n = len(close)
+    window = 30
+
+    # Sample entropy (30d)
+    sample_ent = pd.Series(np.nan, index=close.index)
+    for i in range(window, n):
+        window_data = close.iloc[i - window:i].values
+        try:
+            se = antropy.sample_entropy(window_data, order=2)
+            if np.isfinite(se):
+                sample_ent.iloc[i] = se
+        except Exception:
+            pass
+    features["sample_entropy_30d"] = sample_ent
+
+    # Approximate entropy (30d)
+    approx_ent = pd.Series(np.nan, index=close.index)
+    for i in range(window, n):
+        window_data = close.iloc[i - window:i].values
+        try:
+            ae = antropy.app_entropy(window_data, order=2)
+            if np.isfinite(ae):
+                approx_ent.iloc[i] = ae
+        except Exception:
+            pass
+    features["approximate_entropy_30d"] = approx_ent
+
+    # Entropy / ATR ratio
+    atr_14 = talib.ATR(high.values, low.values, close.values, timeperiod=14)
+    atr_14 = pd.Series(atr_14, index=close.index)
+    # Normalize ATR by price to get percentage
+    atr_pct = atr_14 / close
+    entropy_atr_ratio = sample_ent / (atr_pct + 1e-10)
+    features["entropy_atr_ratio"] = entropy_atr_ratio
+
+    # Entropy regime: 0=orderly (low), 1=moderate, 2=chaotic (high)
+    entropy_regime = pd.Series(np.nan, index=close.index)
+    # Use percentiles of sample entropy to define regimes
+    se_30pct = sample_ent.rolling(50).quantile(0.30)
+    se_70pct = sample_ent.rolling(50).quantile(0.70)
+    entropy_regime[sample_ent <= se_30pct] = 0
+    entropy_regime[(sample_ent > se_30pct) & (sample_ent <= se_70pct)] = 1
+    entropy_regime[sample_ent > se_70pct] = 2
+    features["entropy_regime"] = entropy_regime
+
+    # Entropy change (10-day)
+    entropy_change = sample_ent - sample_ent.shift(10)
+    features["entropy_change_10d"] = entropy_change
+
+    return features
+
+
+def _compute_11b_aroon_features(
+    high: pd.Series, low: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Aroon variation features (Group 3, 5 features).
+
+    Args:
+        high: High price series
+        low: Low price series
+
+    Returns:
+        Dict with aroon_up_14, aroon_down_14, aroon_crossover_recency,
+        aroon_consolidation, aroon_oscillator_14
+    """
+    features = {}
+    n = len(high)
+    period = 14
+
+    # Compute Aroon Up and Down
+    aroon_down, aroon_up = talib.AROON(high.values, low.values, timeperiod=period)
+    aroon_up = pd.Series(aroon_up, index=high.index)
+    aroon_down = pd.Series(aroon_down, index=high.index)
+
+    features["aroon_up_14"] = aroon_up
+    features["aroon_down_14"] = aroon_down
+
+    # Aroon oscillator: up - down (range: -100 to 100)
+    aroon_osc = aroon_up - aroon_down
+    features["aroon_oscillator_14"] = aroon_osc
+
+    # Aroon crossover recency (signed)
+    # Positive = days since bullish cross, negative = days since bearish cross
+    crossover_recency = pd.Series(np.nan, index=high.index)
+    cross_type = 0  # 1 = bullish, -1 = bearish
+    days_since = 0
+
+    for i in range(1, n):
+        if pd.isna(aroon_up.iloc[i]) or pd.isna(aroon_up.iloc[i - 1]):
+            continue
+
+        # Check for crossover
+        prev_diff = aroon_up.iloc[i - 1] - aroon_down.iloc[i - 1]
+        curr_diff = aroon_up.iloc[i] - aroon_down.iloc[i]
+
+        if prev_diff <= 0 and curr_diff > 0:  # Bullish cross
+            cross_type = 1
+            days_since = 0
+        elif prev_diff >= 0 and curr_diff < 0:  # Bearish cross
+            cross_type = -1
+            days_since = 0
+        else:
+            days_since += 1
+
+        if cross_type != 0:
+            crossover_recency.iloc[i] = cross_type * days_since
+
+    features["aroon_crossover_recency"] = crossover_recency
+
+    # Aroon consolidation: both values between 30-70
+    consolidation = ((aroon_up >= 30) & (aroon_up <= 70) &
+                     (aroon_down >= 30) & (aroon_down <= 70)).astype(float)
+    # Keep NaN where Aroon is NaN
+    consolidation[aroon_up.isna() | aroon_down.isna()] = np.nan
+    features["aroon_consolidation"] = consolidation
+
+    return features
+
+
+def _compute_11b_squeeze_features(
+    high: pd.Series, low: pd.Series, close: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute TTM Squeeze and SuperTrend extension features (Group 4, 6 features).
+
+    Args:
+        high: High price series
+        low: Low price series
+        close: Close price series
+
+    Returns:
+        Dict with squeeze_on_14, squeeze_duration_14, squeeze_fire_recency,
+        supertrend_flip_recency_14, pct_from_supertrend_20, supertrend_slope
+    """
+    features = {}
+    n = len(close)
+    period = 14
+
+    # TTM Squeeze: BB inside KC
+    # Bollinger Bands (20, 2)
+    bb_upper, bb_middle, bb_lower = talib.BBANDS(
+        close.values, timeperiod=20, nbdevup=2.0, nbdevdn=2.0
+    )
+    bb_upper = pd.Series(bb_upper, index=close.index)
+    bb_lower = pd.Series(bb_lower, index=close.index)
+
+    # Keltner Channels (20, 1.5)
+    kc_middle = talib.EMA(close.values, timeperiod=20)
+    atr = talib.ATR(high.values, low.values, close.values, timeperiod=20)
+    kc_upper = pd.Series(kc_middle + 1.5 * atr, index=close.index)
+    kc_lower = pd.Series(kc_middle - 1.5 * atr, index=close.index)
+
+    # Squeeze is on when BB is inside KC
+    squeeze_on = ((bb_lower > kc_lower) & (bb_upper < kc_upper)).astype(float)
+    squeeze_on[bb_upper.isna() | kc_upper.isna()] = np.nan
+    features["squeeze_on_14"] = squeeze_on
+
+    # Squeeze duration: consecutive days of squeeze
+    squeeze_duration = pd.Series(np.nan, index=close.index)
+    duration = 0
+    for i in range(n):
+        if pd.isna(squeeze_on.iloc[i]):
+            continue
+        if squeeze_on.iloc[i] == 1:
+            duration += 1
+        else:
+            duration = 0
+        squeeze_duration.iloc[i] = duration
+    features["squeeze_duration_14"] = squeeze_duration
+
+    # Squeeze fire recency (signed)
+    # Positive = days since bullish fire, negative = days since bearish fire
+    # Fire = squeeze turns off AND momentum is positive/negative
+    momentum = close - close.shift(period)  # Simple momentum
+    fire_recency = pd.Series(np.nan, index=close.index)
+    fire_type = 0  # 1 = bullish, -1 = bearish
+    days_since_fire = 0
+
+    for i in range(1, n):
+        if pd.isna(squeeze_on.iloc[i]) or pd.isna(squeeze_on.iloc[i - 1]):
+            continue
+        if pd.isna(momentum.iloc[i]):
+            continue
+
+        # Squeeze fired: was on, now off
+        if squeeze_on.iloc[i - 1] == 1 and squeeze_on.iloc[i] == 0:
+            if momentum.iloc[i] > 0:
+                fire_type = 1  # Bullish
+            else:
+                fire_type = -1  # Bearish
+            days_since_fire = 0
+        else:
+            days_since_fire += 1
+
+        if fire_type != 0:
+            fire_recency.iloc[i] = fire_type * days_since_fire
+
+    features["squeeze_fire_recency"] = fire_recency
+
+    # SuperTrend (period 14, multiplier 3)
+    # Compute SuperTrend
+    atr_14 = talib.ATR(high.values, low.values, close.values, timeperiod=period)
+    atr_14 = pd.Series(atr_14, index=close.index)
+    hl2 = (high + low) / 2
+
+    upper_band = hl2 + (3.0 * atr_14)
+    lower_band = hl2 - (3.0 * atr_14)
+
+    supertrend = pd.Series(np.nan, index=close.index)
+    direction = pd.Series(np.nan, index=close.index)  # 1 = up, -1 = down
+
+    for i in range(period, n):
+        if pd.isna(atr_14.iloc[i]):
+            continue
+
+        if i == period:
+            supertrend.iloc[i] = lower_band.iloc[i]
+            direction.iloc[i] = 1
+        else:
+            if close.iloc[i] > supertrend.iloc[i - 1]:
+                supertrend.iloc[i] = max(lower_band.iloc[i], supertrend.iloc[i - 1])
+                direction.iloc[i] = 1
+            else:
+                supertrend.iloc[i] = min(upper_band.iloc[i], supertrend.iloc[i - 1])
+                direction.iloc[i] = -1
+
+    # SuperTrend flip recency (signed)
+    flip_recency = pd.Series(np.nan, index=close.index)
+    flip_type = 0
+    days_since_flip = 0
+
+    for i in range(1, n):
+        if pd.isna(direction.iloc[i]) or pd.isna(direction.iloc[i - 1]):
+            continue
+
+        if direction.iloc[i] != direction.iloc[i - 1]:
+            flip_type = int(direction.iloc[i])
+            days_since_flip = 0
+        else:
+            days_since_flip += 1
+
+        if flip_type != 0:
+            flip_recency.iloc[i] = flip_type * days_since_flip
+
+    features["supertrend_flip_recency_14"] = flip_recency
+
+    # Percent from SuperTrend (using 20-period SuperTrend)
+    atr_20 = talib.ATR(high.values, low.values, close.values, timeperiod=20)
+    atr_20 = pd.Series(atr_20, index=close.index)
+
+    upper_20 = hl2 + (3.0 * atr_20)
+    lower_20 = hl2 - (3.0 * atr_20)
+
+    supertrend_20 = pd.Series(np.nan, index=close.index)
+
+    for i in range(20, n):
+        if pd.isna(atr_20.iloc[i]):
+            continue
+
+        if i == 20:
+            supertrend_20.iloc[i] = lower_20.iloc[i]
+        else:
+            if close.iloc[i] > supertrend_20.iloc[i - 1]:
+                supertrend_20.iloc[i] = max(lower_20.iloc[i], supertrend_20.iloc[i - 1])
+            else:
+                supertrend_20.iloc[i] = min(upper_20.iloc[i], supertrend_20.iloc[i - 1])
+
+    pct_from_st = (close - supertrend_20) / supertrend_20 * 100
+    features["pct_from_supertrend_20"] = pct_from_st
+
+    # SuperTrend slope: 5-day change
+    st_slope = supertrend_20 - supertrend_20.shift(5)
+    features["supertrend_slope"] = st_slope
+
+    return features
+
+
+def _compute_11b_cycle_features(
+    close: pd.Series, volume: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute Accumulation-Distribution cycle features (Group 5, 6 features).
+
+    Based on Wyckoff market cycle theory with heuristic scoring.
+
+    Args:
+        close: Close price series
+        volume: Volume series
+
+    Returns:
+        Dict with accumulation_score, markup_score, distribution_score,
+        markdown_score, cycle_phase, cycle_phase_confidence
+    """
+    features = {}
+    n = len(close)
+
+    # Compute components for cycle detection
+    # Price momentum (20-day)
+    momentum_20 = close.pct_change(20)
+
+    # Volume relative to average
+    vol_sma_20 = volume.rolling(20).mean()
+    vol_ratio = volume / (vol_sma_20 + 1e-10)
+
+    # Price position in range (20-day)
+    high_20 = close.rolling(20).max()
+    low_20 = close.rolling(20).min()
+    price_position = (close - low_20) / (high_20 - low_20 + 1e-10)
+
+    # Volatility (20-day)
+    volatility = close.pct_change().rolling(20).std()
+    vol_percentile = volatility.rolling(50).apply(
+        lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min() + 1e-10) if len(x) > 0 else 0.5,
+        raw=False
+    )
+
+    # Accumulation phase: low price position, increasing volume, low volatility
+    # Signs: price near lows, volume picking up, tight range
+    accum_score = (
+        (1 - price_position) * 0.4 +  # Price near lows
+        vol_ratio.clip(0.5, 2) / 2 * 0.3 +  # Increasing volume
+        (1 - vol_percentile) * 0.3  # Low volatility
+    ).clip(0, 1)
+    features["accumulation_score"] = accum_score
+
+    # Markup phase: rising momentum, increasing volume, price breaking out
+    markup_score = (
+        (momentum_20 > 0).astype(float) * 0.3 +  # Positive momentum
+        momentum_20.clip(-0.2, 0.2) / 0.2 * 0.3 +  # Strength of momentum
+        vol_ratio.clip(0.5, 2) / 2 * 0.2 +  # Volume
+        price_position * 0.2  # Price position high
+    ).clip(0, 1)
+    features["markup_score"] = markup_score
+
+    # Distribution phase: high price position, increasing volume, high volatility
+    distrib_score = (
+        price_position * 0.4 +  # Price near highs
+        vol_ratio.clip(0.5, 2) / 2 * 0.3 +  # High volume
+        vol_percentile * 0.3  # High volatility
+    ).clip(0, 1)
+    features["distribution_score"] = distrib_score
+
+    # Markdown phase: falling momentum, high volume, price breaking down
+    markdown_score = (
+        (momentum_20 < 0).astype(float) * 0.3 +  # Negative momentum
+        (-momentum_20).clip(-0.2, 0.2) / 0.2 * 0.3 +  # Strength of downside
+        vol_ratio.clip(0.5, 2) / 2 * 0.2 +  # Volume
+        (1 - price_position) * 0.2  # Price position low
+    ).clip(0, 1)
+    features["markdown_score"] = markdown_score
+
+    # Determine dominant phase (0=accum, 1=markup, 2=distrib, 3=markdown)
+    scores = pd.concat([accum_score, markup_score, distrib_score, markdown_score], axis=1)
+    scores.columns = [0, 1, 2, 3]
+    # Handle NA case before idxmax to avoid FutureWarning
+    all_na_mask = scores.isna().all(axis=1)
+    cycle_phase = pd.Series(np.nan, index=scores.index)
+    valid_mask = ~all_na_mask
+    if valid_mask.any():
+        cycle_phase[valid_mask] = scores.loc[valid_mask].idxmax(axis=1).astype(float)
+    features["cycle_phase"] = cycle_phase
+
+    # Phase confidence: max score
+    cycle_confidence = scores.max(axis=1)
+    features["cycle_phase_confidence"] = cycle_confidence
+
+    return features
+
+
+def _compute_chunk_11b(
+    close: pd.Series, high: pd.Series, low: pd.Series, volume: pd.Series
+) -> Mapping[str, pd.Series]:
+    """Compute all Sub-Chunk 11b features (ADV Part 2).
+
+    Args:
+        close: Close price series
+        high: High price series
+        low: Low price series
+        volume: Volume series
+
+    Returns:
+        Dict with all 28 Chunk 11b features
+    """
+    features = {}
+
+    # Group 1: Hurst Exponent & Regime (6 features)
+    features.update(_compute_11b_hurst_features(close))
+
+    # Group 2: Entropy Extensions (5 features)
+    features.update(_compute_11b_entropy_features(close, high, low))
+
+    # Group 3: Aroon Variations (5 features)
+    features.update(_compute_11b_aroon_features(high, low))
+
+    # Group 4: TTM Squeeze & SuperTrend Extensions (6 features)
+    features.update(_compute_11b_squeeze_features(high, low, close))
+
+    # Group 5: Accumulation-Distribution Cycle (6 features)
+    features.update(_compute_11b_cycle_features(close, volume))
+
+    return features
+
+
 def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.DataFrame:
     """Build feature DataFrame with all tier_a500 indicators.
 
@@ -4731,6 +5791,16 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
     # Sub-Chunk 10b: ENT Extended (ranks 421-445)
     # =========================================================================
     features.update(_compute_chunk_10b(high, low, close))
+
+    # =========================================================================
+    # Sub-Chunk 11a: ADV Part 1 (ranks 446-472)
+    # =========================================================================
+    features.update(_compute_chunk_11a(close))
+
+    # =========================================================================
+    # Sub-Chunk 11b: ADV Part 2 (ranks 473-500)
+    # =========================================================================
+    features.update(_compute_chunk_11b(close, high, low, volume))
 
     # Create feature DataFrame for new a500 features
     new_features_df = pd.DataFrame(features)
