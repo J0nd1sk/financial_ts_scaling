@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Callable
 
 import pandas as pd
 import pytest
+
+# Add project root to path for experiments imports
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 
 @pytest.fixture(autouse=True)
