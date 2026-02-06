@@ -1,0 +1,22 @@
+{
+  "tier": "a50",
+  "context_length": 120,
+  "val_auc": 0.7154833270887974,
+  "val_precision": 0.3448275862068966,
+  "val_recall": 0.14705882352941177,
+  "architecture": {
+    "d_model": 128,
+    "n_layers": 6,
+    "n_heads": 8,
+    "d_ff_ratio": 4,
+    "dropout": 0.3,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0001
+  },
+  "batch_size": 64,
+  "epochs": 50,
+  "training_time_min": 0.6624877214431762,
+  "train_samples": 7164,
+  "val_samples": 382,
+  "timestamp": "2026-01-31T08:15:15.813870"
+}

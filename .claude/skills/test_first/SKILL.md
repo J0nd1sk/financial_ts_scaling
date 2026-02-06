@@ -198,9 +198,37 @@ Ready for commit? (yes/no)
 ✅ No exceptions for "simple" code
 ✅ If you can't write the test, you don't understand the requirement
 
+## Makefile Test Target Maintenance
+
+When adding NEW test files, update the Makefile's workstream-specific test target:
+
+**Current Workstream Mappings:**
+| Workstream | Test Target | Test Files |
+|------------|-------------|------------|
+| ws1 (feature_generation) | `test-ws1` | `tests/features/` |
+| ws2 (foundation) | `test-ws2` | `tests/test_evaluation.py`, `tests/test_context_ablation_nf.py`, `tests/test_hpo_neuralforecast.py` |
+| ws3 (phase6c/HPO) | `test-ws3` | `tests/test_hpo*.py`, `tests/test_loss*.py` |
+
+**When adding a new test file:**
+1. Determine which workstream owns the test
+2. Update the corresponding `test-ws{N}` target in `Makefile`
+3. Add the new file path to the pytest command
+
+**Example:** Adding `tests/test_new_feature.py` for ws2:
+```makefile
+# Before
+test-ws2:
+	@pytest tests/test_evaluation.py tests/test_context_ablation_nf.py -v --tb=short
+
+# After
+test-ws2:
+	@pytest tests/test_evaluation.py tests/test_context_ablation_nf.py tests/test_new_feature.py -v --tb=short
+```
+
 ## Critical Notes
 
 - Tests define the specification
 - Implementation follows specification
 - If tests are hard to write, the design needs work
-- NEVER run individual tests - always `make test`
+- NEVER run individual tests - always `make test` (or `make test-ws{N}` for quick verification)
+- When adding new test files, update Makefile workstream target

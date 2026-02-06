@@ -1387,3 +1387,118 @@ if x is None:
 - Experiments FD-01/FD-02 ready to run
 - CDF approximation accuracy validated in tests (relative ordering preserved)
 - Full gradient flow enables end-to-end fine-tuning
+
+## 2026-01-31 Context Ablation Results - Architecture-Specific Optima
+
+**Context**: Ran context ablation experiments for iTransformer and Informer across 60d, 80d, 120d, 180d, 220d to determine optimal context length per architecture.
+
+**Findings**:
+
+| Model | 60d | 80d | 120d | 180d | 220d | **Best** |
+|-------|-----|-----|------|------|------|----------|
+| iTransformer | 0.552 | **0.590** | 0.503 | 0.548 | 0.583 | **80d** |
+| Informer | 0.539 | 0.554 | 0.512 | **0.585** | 0.557 | **180d** |
+
+**Decision**: Use architecture-specific optimal context lengths for a200 training:
+- iTransformer: 80d (matches PatchTST optimal)
+- Informer: 180d (benefits from longer context due to ProbSparse attention)
+
+**Key Observations**:
+1. Both architectures show non-monotonic relationship with context length
+2. Both dip at 120d (possibly noise or regime-specific artifact)
+3. Neither approaches PatchTST performance (0.718) - gap of ~12-15% persists
+4. Informer's ProbSparse attention may be better suited to longer sequences
+
+**Rationale**: Context length significantly affects performance, but the optimal differs by architecture. Using architecture-specific optima ensures fair comparison and best possible performance before feature scaling tests.
+
+**Implications**:
+- a200 training must use optimal context per architecture
+- Performance gap vs PatchTST is architectural, not configuration-related
+- Future research should investigate why patching mechanism outperforms attention variants
+
+**Workstream**: ws2 (foundation)
+
+---
+
+## 2026-01-30 Feature Scaling Requires Higher Regularization
+
+**Context**: Phase 6C loss sweep experiments revealed that feature tier (a50 vs a100) requires different architecture configurations, with more features needing more regularization.
+
+**Evidence**:
+
+| Tier | Features | Best Architecture | Best Precision | Best AUC |
+|------|----------|-------------------|----------------|----------|
+| a50 | 55 | d_model=128, layers=6, **dropout=0.3** | **100%** | **0.738** |
+| a100 | 105 | d_model=64, layers=4, **dropout=0.7** | 58.3% | 0.714 |
+
+**Key Observations**:
+1. a100 requires **2.3x higher dropout** (0.7 vs 0.3) compared to a50
+2. a100 requires **4x smaller model** (d_model 64 vs 128)
+3. Despite optimal architecture per tier, a100 still underperforms a50
+4. 20 more configs achieve ≥50% precision on a50 vs a100 (20 vs 10)
+
+**Decision**: When scaling to more features, proactively increase regularization strength. Use a100's architecture (high dropout, smaller model) as baseline for a200+.
+
+**Rationale**: Additional features introduce more noise that the model can overfit to. Higher regularization (dropout, smaller model) is necessary but not sufficient - even with optimal regularization, more features may hurt precision for this task.
+
+**Interpretation**: This is a **scaling law violation** - more features should help, but for financial time series with limited signal, additional technical indicators may be redundant or contradictory, adding noise faster than signal.
+
+**Alternatives Considered**:
+- Use a50's architecture for a200: Rejected - would likely overfit severely with 2x more features
+- Skip a200 entirely: Rejected - need data point to confirm pattern continues
+
+**Implications**:
+- a200 sweep uses a100 architecture as starting point (high regularization)
+- Feature quality > feature quantity hypothesis strengthened
+- Research paper should highlight this inverse scaling finding
+- Future feature engineering should prioritize signal-to-noise ratio over feature count
+
+**Workstream**: ws3 (loss_function_optimization)
+
+**Memory Entities**: `Feature_Scaling_Violation`, `Feature_Regularization_Relationship`
+
+## 2026-02-01 Two-Phase Budget-Aware HPO Strategy
+
+**Context**: Previous HPO focused on single parameter budget (2M). Need systematic exploration across all scales (750k → 2M → 20M → 200M) to understand scaling laws and identify optimal architectures.
+
+**Decision**: Implement two-phase HPO strategy with budget-aware forced extremes.
+
+**Phase 1 Design (18 forced configs + TPE)**:
+- Group 1: Budget × Architecture (8 configs) - all 4 budgets × 2 styles (shallow-wide vs deep-narrow)
+- Group 2: Dropout extremes (4 configs) - 0.1, 0.3, 0.7 on 2M and 200M
+- Group 3: Learning rate extremes (3 configs) - 1e-5, 1e-3 on 2M and 20M
+- Group 4: Weight decay extremes (3 configs) - 0.0, 1e-2 on 2M and 200M
+- Early stopping when top-5 trials converge within 0.02 AUC
+
+**Phase 2 Design (supplementary)**:
+- Focus on top 2 budgets from Phase 1
+- Explore n_heads, extreme LRs, high weight decay, batch sizes
+- ~20-30 trials per budget
+
+**Architecture Sizing Formula**: params ≈ 12 × n_layers × d_model²
+
+| Budget | Shallow (d, L, h) | Deep (d, L, h) |
+|--------|-------------------|----------------|
+| 750k | 192, 2, 4 | 128, 4, 4 |
+| 2M | 320, 2, 4 | 192, 5, 4 |
+| 20M | 768, 3, 8 | 384, 12, 8 |
+| 200M | 1536, 8, 16 | 768, 28, 16 |
+
+**Rationale**:
+1. Forced extremes ensure boundary conditions are tested (not left to random sampling)
+2. Budget-aware sizing ensures valid architectures per parameter scale
+3. Early stopping avoids wasting compute on converged trials
+4. Two-phase approach focuses resources on promising budgets
+
+**Alternatives Considered**:
+- Single-phase TPE only: Rejected - may miss extremes due to random sampling
+- Full grid search: Rejected - too expensive (would require 1000+ trials)
+- Focus on single budget: Rejected - need multi-scale data for scaling laws
+
+**Implementation**:
+- `src/training/hpo_budget_extremes.py` - Core logic (~150 lines)
+- `tests/test_hpo_budget_extremes.py` - 30 tests
+- CLI flags: `--forced-extremes`, `--budgets`, `--early-stop-patience`, `--early-stop-threshold`, `--supplementary`, `--param-budget`
+- Documentation: `docs/hpo_strategy_phase6.md`
+
+**Workstream**: ws2 (foundation)

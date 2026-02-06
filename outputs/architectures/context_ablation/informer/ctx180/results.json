@@ -1,0 +1,39 @@
+{
+  "auc": 0.5845164316930447,
+  "accuracy": 0.4940239043824701,
+  "precision": 0.2277580071174377,
+  "recall": 0.6336633663366337,
+  "f1": 0.33507853403141363,
+  "n_positive_preds": 281,
+  "n_samples": 502,
+  "class_balance": 0.20119521912350596,
+  "pred_min": 2.9344064387260005e-05,
+  "pred_max": 0.9999715089797974,
+  "pred_mean": 0.5595449209213257,
+  "pred_std": 0.4726022481918335,
+  "mse": 0.5352909544866506,
+  "mae": 0.5603047633023397,
+  "direction_accuracy": 0.5199203187250996,
+  "context_length": 180,
+  "model_type": "informer",
+  "training_time_min": 23.431189699967703,
+  "best_params": {
+    "hidden_size": 256,
+    "learning_rate": 0.0001,
+    "max_steps": 1000,
+    "dropout": 0.4,
+    "n_layers": 2,
+    "n_heads": 2,
+    "batch_size": 16,
+    "focal_gamma": 0.5,
+    "focal_alpha": 0.9
+  },
+  "baseline_comparison": {
+    "baseline_auc": 0.718,
+    "model_auc": 0.5845164316930447,
+    "improvement_pct": -18.591026226595446,
+    "meets_threshold": false,
+    "beats_baseline": false
+  },
+  "timestamp": "2026-01-31T09:13:44.950002+00:00"
+}

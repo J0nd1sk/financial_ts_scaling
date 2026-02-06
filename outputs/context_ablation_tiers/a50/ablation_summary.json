@@ -1,0 +1,39 @@
+{
+  "tier": "a50",
+  "architecture": {
+    "d_model": 128,
+    "n_layers": 6,
+    "n_heads": 8,
+    "d_ff_ratio": 4,
+    "dropout": 0.3,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0001
+  },
+  "results": [
+    {
+      "tier": "a50",
+      "context_length": 75,
+      "val_auc": 0.6477922077922078,
+      "val_precision": 0.5833333333333334,
+      "val_recall": 0.09090909090909091,
+      "architecture": {
+        "d_model": 128,
+        "n_layers": 6,
+        "n_heads": 8,
+        "d_ff_ratio": 4,
+        "dropout": 0.3,
+        "learning_rate": 0.0001,
+        "weight_decay": 0.0001
+      },
+      "batch_size": 64,
+      "epochs": 50,
+      "training_time_min": 0.7351845026016235,
+      "train_samples": 7209,
+      "val_samples": 427,
+      "timestamp": "2026-01-31T16:07:34.541879"
+    }
+  ],
+  "best_context": 75,
+  "best_auc": 0.6477922077922078,
+  "timestamp": "2026-01-31T16:07:34.542573"
+}

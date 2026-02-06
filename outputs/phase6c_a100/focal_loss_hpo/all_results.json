@@ -1,0 +1,222 @@
+[
+  {
+    "trial": 1,
+    "tier": "a100",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 64,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 2,
+      "dropout": 0.7,
+      "learning_rate": 0.0005,
+      "weight_decay": 0.001
+    },
+    "duration_sec": 25.281991243362427,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7033769394584728,
+    "val_accuracy": 0.7417061611374408,
+    "val_precision": 0.368,
+    "val_recall": 0.6052631578947368,
+    "val_pred_range": [
+      0.018112296238541603,
+      0.972944438457489
+    ],
+    "val_confusion": {
+      "tp": 46,
+      "tn": 267,
+      "fp": 79,
+      "fn": 30
+    },
+    "train_auc": null,
+    "train_precision": 0.4141270293363714,
+    "train_recall": 0.8182329769274057,
+    "train_pred_range": [
+      0.01369388122111559,
+      0.991541862487793
+    ],
+    "timestamp": "2026-01-29T10:02:04.627709",
+    "config_name": "FL01"
+  },
+  {
+    "trial": 2,
+    "tier": "a100",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 64,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 2,
+      "dropout": 0.6,
+      "learning_rate": 0.0005,
+      "weight_decay": 0.001
+    },
+    "duration_sec": 19.99474000930786,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7096516580468513,
+    "val_accuracy": 0.7345971563981043,
+    "val_precision": 0.3656716417910448,
+    "val_recall": 0.6447368421052632,
+    "val_pred_range": [
+      0.024111300706863403,
+      0.9683997631072998
+    ],
+    "val_confusion": {
+      "tp": 49,
+      "tn": 261,
+      "fp": 85,
+      "fn": 27
+    },
+    "train_auc": null,
+    "train_precision": 0.4096783062963981,
+    "train_recall": 0.8384918401800788,
+    "train_pred_range": [
+      0.011410041712224483,
+      0.9911195635795593
+    ],
+    "timestamp": "2026-01-29T10:02:24.648281",
+    "config_name": "FL02"
+  },
+  {
+    "trial": 3,
+    "tier": "a100",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 64,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 2,
+      "dropout": 0.5,
+      "learning_rate": 0.0005,
+      "weight_decay": 0.001
+    },
+    "duration_sec": 20.006936073303223,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7031867964709462,
+    "val_accuracy": 0.7369668246445498,
+    "val_precision": 0.366412213740458,
+    "val_recall": 0.631578947368421,
+    "val_pred_range": [
+      0.018895599991083145,
+      0.9593511819839478
+    ],
+    "val_confusion": {
+      "tp": 48,
+      "tn": 263,
+      "fp": 83,
+      "fn": 28
+    },
+    "train_auc": null,
+    "train_precision": 0.4264870931537598,
+    "train_recall": 0.855374226223973,
+    "train_pred_range": [
+      0.009287183173000813,
+      0.9895808100700378
+    ],
+    "timestamp": "2026-01-29T10:02:44.678322",
+    "config_name": "FL03"
+  },
+  {
+    "trial": 4,
+    "tier": "a100",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 64,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 2,
+      "dropout": 0.7,
+      "learning_rate": 0.0003,
+      "weight_decay": 0.001
+    },
+    "duration_sec": 21.77052903175354,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.707864313964101,
+    "val_accuracy": 0.7677725118483413,
+    "val_precision": 0.39814814814814814,
+    "val_recall": 0.5657894736842105,
+    "val_pred_range": [
+      0.017952123656868935,
+      0.9493581056594849
+    ],
+    "val_confusion": {
+      "tp": 43,
+      "tn": 281,
+      "fp": 65,
+      "fn": 33
+    },
+    "train_auc": null,
+    "train_precision": 0.4148278905560459,
+    "train_recall": 0.7934721440630276,
+    "train_pred_range": [
+      0.014994175173342228,
+      0.9905931353569031
+    ],
+    "timestamp": "2026-01-29T10:03:06.472883",
+    "config_name": "FL04"
+  },
+  {
+    "trial": 5,
+    "tier": "a100",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 64,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 2,
+      "dropout": 0.7,
+      "learning_rate": 0.0005,
+      "weight_decay": 0.002
+    },
+    "duration_sec": 24.02689504623413,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7055825981137815,
+    "val_accuracy": 0.7393364928909952,
+    "val_precision": 0.35344827586206895,
+    "val_recall": 0.5394736842105263,
+    "val_pred_range": [
+      0.03942514583468437,
+      0.9436272978782654
+    ],
+    "val_confusion": {
+      "tp": 41,
+      "tn": 271,
+      "fp": 75,
+      "fn": 35
+    },
+    "train_auc": null,
+    "train_precision": 0.39909553420011307,
+    "train_recall": 0.7945976364659538,
+    "train_pred_range": [
+      0.03356688842177391,
+      0.9777702689170837
+    ],
+    "timestamp": "2026-01-29T10:03:30.521469",
+    "config_name": "FL05"
+  }
+]

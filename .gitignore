@@ -110,6 +110,9 @@ tmp/
 temp/
 *.tmp
 
+# Test lock file (prevents parallel make test runs)
+.test.lock
+
 # Documentation builds (if using Sphinx/MkDocs)
 docs/_build/
 site/

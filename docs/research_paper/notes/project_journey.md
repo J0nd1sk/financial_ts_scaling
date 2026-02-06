@@ -528,18 +528,86 @@ This seems obvious in hindsight, but was easy to miss because:
 2. AUC looked reasonable (0.62-0.67), masking the underlying problem
 3. We didn't inspect raw prediction values until investigating 0% recall
 
+### v3 Results (2026-01-29)
+
+After correcting the methodology with Focal Loss (Bernoulli distribution), we re-ran HPO:
+
+**v3 HPO Results** (50 trials each, Focal Loss):
+| Model | Best AUC | Best Config |
+|-------|----------|-------------|
+| iTransformer | 0.590 | hidden=32, lr=1e-5, steps=3000, dropout=0.4, L=6 |
+| Informer | 0.574 | hidden=256, lr=1e-4, steps=1000, dropout=0.4, L=2 |
+
+**Observation**: Now producing valid probabilities with non-zero recall, but still significantly worse than PatchTST (0.718).
+
+### Context Length Ablation (2026-01-31)
+
+Tested whether optimal context length differs by architecture:
+
+| Model | 60d | 80d | 120d | 180d | 220d | **Best** |
+|-------|-----|-----|------|------|------|----------|
+| iTransformer | 0.552 | **0.590** | 0.503 | 0.548 | 0.583 | **80d** |
+| Informer | 0.539 | 0.554 | 0.512 | **0.585** | 0.557 | **180d** |
+
+**Key findings:**
+1. **iTransformer**: Optimal at 80d (same as PatchTST)
+2. **Informer**: Optimal at 180d (ProbSparse attention benefits from longer context)
+3. **Neither approaches PatchTST**: ~17-18% AUC gap persists regardless of context tuning
+4. **Both dip at 120d**: Non-monotonic relationship with context length
+
+### Conclusion on Alternative Architectures
+
+**PatchTST's patching mechanism is fundamentally superior** for this task:
+
+| Architecture | Best Context | Best AUC | Δ vs PatchTST |
+|--------------|--------------|----------|---------------|
+| **PatchTST** | 80d | **0.718** | baseline |
+| iTransformer | 80d | 0.590 | **-17.8%** |
+| Informer | 180d | 0.585 | **-18.5%** |
+
+The investigation is complete. Alternative architectures cannot compete with PatchTST for financial direction prediction, even with:
+- Proper classification training (Focal Loss)
+- 50-trial HPO per architecture
+- Architecture-specific optimal context lengths
+
 ### What This Means for the Project
 
-1. **v1/v2 results are invalid** - cannot draw conclusions about architecture performance
-2. **v3 design ready** - corrected experiments with Bernoulli loss documented
-3. **PatchTST remains champion** - only fairly-evaluated model so far
-4. **Foundation models assessment stands** - domain mismatch is the issue, not task alignment
+1. **v1/v2 results are invalid** - methodology flaw (MAE loss for classification task)
+2. **v3 results are valid** - proper classification with Focal Loss
+3. **PatchTST remains champion** - ~18% better than alternatives
+4. **Context is architecture-specific** - iTransformer 80d, Informer 180d
+5. **Patching mechanism is key** - aggregating local patterns before attention is superior
 
-### Documents Created
+### Documents Created/Updated
 
 - `docs/methodology_lessons_v1_v2.md` - Detailed error analysis
 - `docs/architecture_hpo_v3_design.md` - Corrected experiment design
+- `docs/architecture_comparison_results.md` - Final results with context ablation
+- `docs/context_length_ablation_results.md` - Extended with iTransformer/Informer
 
 ---
 
+## 10. Next: a200 Training (2026-01-31)
+
+### Motivation
+
+With architecture investigation complete (PatchTST is best), the next step is to test whether iTransformer and Informer can benefit from richer features (a200 tier = 206 features).
+
+### Pre-Training Validation (6 Requirements)
+
+Before training, systematic validation of:
+1. **#1 Prevent early convergence** - slower training, warmup steps
+2. **#2 Accurate and valid data** - verify a200 dataset
+3. **#3 Best loss function** - Focal Loss confirmed
+4. **#4 Best context length** - iTransformer 80d, Informer 180d
+5. **#5 Optimal hyperparameters** - supplementary HPO for a200
+6. **#6 No bugs** - full test suite, code review
+
+### Hypothesis
+
+With 206 features (vs 20), the attention mechanisms may have more to learn, potentially closing the gap with PatchTST. However, based on ws3 findings, more features may require stronger regularization.
+
+---
+
+*Last updated: 2026-01-31*
 *This document will be updated as the project progresses. See `decision_log.md` for granular decision history.*

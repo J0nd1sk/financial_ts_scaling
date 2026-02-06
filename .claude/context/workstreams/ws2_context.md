@@ -1,168 +1,234 @@
 # Workstream 2 Context: foundation
-# Last Updated: 2026-01-28 15:00
+# Last Updated: 2026-02-01 10:00
 
 ## Identity
 - **ID**: ws2
 - **Name**: foundation
 - **Focus**: Foundation model & alternative architecture investigation
-- **Status**: METHODOLOGY CORRECTION - v3 design ready, pending implementation
+- **Status**: active - two-phase budget-aware HPO implemented
 
 ---
 
 ## Current Task
-- **Working on**: Alternative Architecture HPO v3 Design
-- **Status**: Documentation complete, awaiting implementation approval
+- **Working on**: Two-phase budget-aware HPO strategy implementation
+- **Status**: Core implementation COMPLETE, ready for experiments
 
 ---
 
-## Investigation Summary
+## Progress Summary
 
-### Research Questions
-1. Can pre-trained foundation models (Lag-Llama, TimesFM) beat task-specific PatchTST?
-2. Can alternative transformer architectures (iTransformer, Informer) beat PatchTST?
-3. **CRITICAL DISCOVERY**: v1/v2 had fundamental methodology flaw (regression vs classification)
+### Completed
+- [2026-01-28] Methodology correction: v1/v2 invalid (MAE vs Bernoulli mismatch)
+- [2026-01-29] v3 HPO: 50 trials iTransformer, 50 trials Informer (Focal Loss)
+- [2026-01-30 AM] direction_accuracy bug fix in common.py
+- [2026-01-30 AM] Comprehensive HPO audit completed
+- [2026-01-30 12:15] Context ablation implementation COMPLETE
+- [2026-01-30 15:15] Runner script created: `scripts/run_context_ablation.sh`
+- [2026-01-31 08:15] **Context ablation experiments COMPLETE** (10 runs)
+- [2026-01-31 22:00] **--data-tier support added** (Task 1 of 6-point validation)
+- [2026-02-01] **Two-phase budget-aware HPO strategy IMPLEMENTED**:
+  - `src/training/hpo_budget_extremes.py` - 150 lines, BUDGET_CONFIGS, generate_forced_configs, check_early_stopping_convergence
+  - `tests/test_hpo_budget_extremes.py` - 30 tests, all passing
+  - CLI integration in `hpo_neuralforecast.py` - 6 new flags
+  - `docs/hpo_strategy_phase6.md` - comprehensive documentation
 
-### Foundation Models - Results (FINAL)
-
-| Experiment | Val AUC | vs PatchTST | Status |
-|------------|---------|-------------|--------|
-| **PatchTST 200M** | **0.718** | Baseline | BEST |
-| TimesFM TFM-01 | 0.364 | -49% | Anti-correlated |
-| TimesFM TFM-07 (50 features) | 0.364 | -49% | IDENTICAL to TFM-01 |
-| TimesFM (inverted) | 0.636 | -11% | Still below baseline |
-| Lag-Llama (all modes) | 0.499-0.576 | -20% to -30% | FAILED |
-
-**Conclusion**: Foundation models failed due to domain mismatch (pre-trained on non-financial data). Results stand - no rerun needed.
-
-### Alternative Architectures - v2 Results (INVALID)
-
-| Experiment | Val AUC | Recall | Prediction Range | Status |
-|------------|---------|--------|------------------|--------|
-| iTransformer v2 | 0.621 | **0%** | [0.004, 0.004] | INVALID |
-| Informer v2 | 0.669 | **0%** | ~constant | INVALID |
-
-**Root Cause**: Trained as regressors (MAE on returns), evaluated as classifiers. See `docs/methodology_lessons_v1_v2.md`.
+### Pending
+1. **Run forced extremes HPO** - Execute 18 forced configs + TPE trials
+2. **Analyze Phase 1 results** - Identify top 2 budgets for Phase 2
+3. **Phase 2 supplementary trials** - Deep dive on top budgets
 
 ---
 
-## Critical Discovery: Methodology Flaw (2026-01-28)
+## Last Session Work (2026-02-01 ~10:00)
 
-### What Went Wrong
+### Two-Phase Budget-Aware HPO Strategy Implemented
 
-| Aspect | v1/v2 (Wrong) | PatchTST (Correct) | v3 (Planned) |
-|--------|---------------|-------------------|--------------|
-| Loss | MAE on returns | BCE on binary | Bernoulli |
-| Target | Float returns | Binary (0/1) | Binary (0/1) |
-| Output | ~0.005 range | [0, 1] probabilities | [0, 1] probabilities |
-| Task | Regression | Classification | Classification |
+**New Files Created:**
+1. `src/training/hpo_budget_extremes.py` (~150 lines)
+   - `BUDGET_CONFIGS`: Architecture configs for 750k/2M/20M/200M
+   - `DEFAULT_REGULARIZATION`: dropout=0.5, lr=1e-4, wd=1e-3
+   - `generate_forced_configs()`: Generates 18 forced extreme configs
+   - `check_early_stopping_convergence()`: Early stopping logic
+   - `compute_budget_aware_extremes()`: Get config for budget/style
+   - `estimate_params()`: Parameter count estimation
 
-### Why 0% Recall
+2. `tests/test_hpo_budget_extremes.py` (~200 lines)
+   - 30 tests covering all functions
+   - All tests passing
 
-1. MAE loss trains model to predict expected returns (~0.005)
-2. All predictions cluster in [0.004, 0.006] range
-3. Threshold at 0.5 → no positive predictions
-4. Result: 0% recall despite moderate AUC (ranking vs calibration)
+3. `docs/hpo_strategy_phase6.md` (~100 lines)
+   - Strategy overview
+   - Phase 1 (18 forced configs) tables
+   - Phase 2 supplementary approach
+   - Usage examples
 
-### v3 Correct Approach
+**Modified Files:**
+4. `experiments/architectures/hpo_neuralforecast.py`
+   - Added import for hpo_budget_extremes
+   - Added 6 new CLI flags: `--forced-extremes`, `--budgets`, `--early-stop-patience`, `--early-stop-threshold`, `--supplementary`, `--param-budget`
+   - Updated `run_hpo()` signature with new parameters
 
-```python
-from neuralforecast.losses.pytorch import DistributionLoss
-loss = DistributionLoss(distribution='Bernoulli')
-```
+5. `tests/test_hpo_neuralforecast.py`
+   - Added 10 new tests for CLI flags and imports
+   - Total: 46 tests (all passing)
+
+**Test Results:** 76 HPO-related tests passing
 
 ---
 
-## Last Session Work (2026-01-28 15:00)
+### Previous Session (2026-01-31 ~22:10)
 
-### Methodology Correction Documentation
-1. Created `docs/methodology_lessons_v1_v2.md` - What went wrong
-2. Created `docs/architecture_hpo_v3_design.md` - Correct approach
-3. Updated `docs/project_history.md` - Section 6.16
-4. Updated `docs/research_paper/notes/project_journey.md` - Section 9
-5. Updated `.claude/context/decision_log.md` - Entry 2026-01-28
-6. Created Memory MCP entity for lesson
+### --data-tier Support Implemented (Task 1 of Plan)
 
-### Key Insight
-**Always match training objective to evaluation objective.**
+**Completed:**
+1. Added `DATA_PATH_A200` to `common.py`
+2. Added `DATA_PATHS` dict and `get_data_path()` helper
+3. Added `--data-tier` CLI argument to `hpo_neuralforecast.py`
+4. Added `data_tier` param to `run_hpo()`
+5. Updated `prepare_hpo_data()` to accept `data_path` param
+6. Added 7 new tests - all pass (36/36 total)
 
-If you want classification (AUC, precision, recall), train with classification loss (BCE, Bernoulli).
+**Data Verification:**
+- a200 file: 212 columns, 7977 rows, 0 NaN
+- Path: `data/processed/v1/SPY_dataset_a200_combined.parquet`
+
+### Validation Runs (Exposed Methodology Gap)
+
+| Model | Tier | Context | AUC | Issue |
+|-------|------|---------|-----|-------|
+| iTransformer | a200 | 80d | 0.47 | Random params |
+| Informer | a200 | 180d | 0.56 | Random params |
+
+**Root Cause**: `--trials 1` samples random params from search space, not optimal params from prior HPO.
+
+**Prior Best (a20 HPO, itransformer_v2):**
+- AUC: 0.62
+- Params: dropout=0.6, lr=5e-5, hidden=512, layers=5, heads=8, steps=2000
+
+**Gap**: Random params vs optimal params explains the AUC difference.
 
 ---
 
 ## Files Owned/Modified
-- `experiments/foundation/` - PRIMARY
-- `experiments/architectures/` - PRIMARY
-- `experiments/architectures/hpo_neuralforecast.py` - Needs v3 update
-- `outputs/foundation/` - Results
-- `outputs/architectures/` - Results (v2 invalid)
-- `docs/methodology_lessons_v1_v2.md` - NEW
-- `docs/architecture_hpo_v3_design.md` - NEW
-- `docs/foundation_model_results.md` - Documentation
-- `docs/architecture_comparison_results.md` - Needs update for v2 invalidity
+- `experiments/architectures/common.py` - MODIFIED (direction_accuracy fix + data tier support)
+- `experiments/architectures/hpo_neuralforecast.py` - MODIFIED (--input-size, --data-tier, **--forced-extremes, --budgets, --early-stop-*, --supplementary, --param-budget**)
+- `experiments/architectures/context_ablation_nf.py` - NEW (~350 lines)
+- `scripts/run_context_ablation.sh` - NEW (runner script)
+- `scripts/audit_hpo_results.py` - NEW
+- `src/training/hpo_budget_extremes.py` - **NEW** (~150 lines, budget-aware HPO)
+- `tests/test_evaluation.py` - NEW
+- `tests/test_context_ablation_nf.py` - NEW (~150 lines)
+- `tests/test_hpo_neuralforecast.py` - MODIFIED (+17 tests, **46 total**)
+- `tests/test_hpo_budget_extremes.py` - **NEW** (~200 lines, **30 tests**)
+- `docs/hpo_strategy_phase6.md` - **NEW** (~100 lines, strategy docs)
+- `outputs/hpo/architectures/itransformer_ctx80_a200/` - NEW (validation result)
+- `outputs/hpo/architectures/informer_ctx180_a200/` - NEW (validation result)
 
 ---
 
 ## Key Decisions (Workstream-Specific)
 
-### Methodology Correction (2026-01-28)
-- **Context**: v1/v2 had 0% recall due to regression/classification mismatch
-- **Decision**: Discard v2 results, design v3 with proper Bernoulli loss
-- **Rationale**: Task mismatch caused invalid results
-- **Documented**: methodology_lessons_v1_v2.md, architecture_hpo_v3_design.md
+### Validation Methodology Gap (2026-01-31)
+- **Issue**: Single-trial validation samples random params, not optimal
+- **Options**:
+  - A: Run full HPO (50 trials) on a200 - finds a200-specific optima
+  - B: Add `--use-best-from <path>` to transfer known-good params - faster validation
+- **Recommendation**: Option B for quick validation, then Option A for optimization
+- **Status**: User decision pending
 
-### Foundation Models Conclusion (2026-01-25)
-- **Finding**: Domain mismatch is primary issue, not task alignment
-- **Decision**: No rerun needed for foundation models
-- **Status**: Investigation complete, PatchTST wins
+---
+
+## Best Configurations (from 80d HPO on a20)
+
+### iTransformer (AUC: 0.620 from itransformer_v2)
+| Parameter | Value |
+|-----------|-------|
+| hidden_size | 512 |
+| learning_rate | 5e-5 |
+| max_steps | 2000 |
+| dropout | 0.6 |
+| n_layers | 5 |
+| n_heads | 8 |
+| batch_size | 64 |
+| weight_decay | 0.0 |
+
+### Informer (AUC: 0.574)
+| Parameter | Value |
+|-----------|-------|
+| hidden_size | 256 |
+| learning_rate | 1e-4 |
+| max_steps | 1000 |
+| dropout | 0.4 |
+| n_layers | 2 |
+| n_heads | 2 |
+| focal_gamma | 0.5 |
+| focal_alpha | 0.9 |
+
+---
+
+## Context Length Results (COMPLETE)
+
+| Architecture | 60d | 80d | 120d | 180d | 220d | Best |
+|--------------|-----|-----|------|------|------|------|
+| PatchTST | 0.703 | **0.718** | 0.695 | 0.683 | - | 80d |
+| iTransformer | 0.552 | **0.590** | 0.503 | 0.548 | 0.583 | 80d |
+| Informer | 0.539 | 0.554 | 0.512 | **0.585** | 0.557 | 180d |
 
 ---
 
 ## Session History
 
-### 2026-01-28 15:00
-- Discovered methodology flaw in v1/v2 experiments
-- Created comprehensive documentation
-- Updated project history and decision log
-- v3 design ready for implementation
+### 2026-01-31 22:10 (This Session)
+- Implemented --data-tier support (TDD, 7 tests)
+- Ran a200 validation: iTransformer 0.47, Informer 0.56
+- Identified gap: validation used random params, not optimal
+- Proposed fix: --use-best-from or full HPO
 
-### 2026-01-26 12:00
-- Created HPO script for NeuralForecast models
-- Fixed early stopping (val_size to fit(), not constructor)
-- Smoke test passed (3 trials in 0.9 min)
-- **NOTE**: v2 results now known to be invalid
+### 2026-01-31 09:00
+- Ran context ablation experiments (10 runs)
+- Results: iTransformer best @ 80d (0.590), Informer best @ 180d (0.585)
+- Updated all documentation (5 files)
+- Created 6-point validation plan for a200 training
 
-### 2026-01-25 15:00
-- Fixed NeuralForecast bugs (loss API, early stopping, parameter naming)
-- Ran iTransformer: AUC 0.517 → 0.621 (v2)
-- Ran Informer: AUC 0.587 → 0.669 (v2)
-- **NOTE**: Results invalid due to methodology flaw
+### 2026-01-30 15:15
+- Created `scripts/run_context_ablation.sh` runner script
+- Context lengths: 60, 80, 120, 180, 220 (max 220d due to data constraint)
 
 ---
 
 ## Next Session Should
 
-1. **Review v3 design** with user
-   - Confirm Bernoulli loss approach is acceptable
-   - Approve implementation plan
+### Run Phase 1 Forced Extremes HPO
+```bash
+# Verify configs (dry run)
+./venv/bin/python experiments/architectures/hpo_neuralforecast.py \
+    --model itransformer \
+    --data-tier a200 \
+    --trials 70 \
+    --forced-extremes \
+    --dry-run
 
-2. **Implement v3 changes** to `hpo_neuralforecast.py`
-   - Change `MAE()` to `DistributionLoss('Bernoulli')`
-   - Verify binary targets passed correctly
+# Full run with early stopping
+./venv/bin/python experiments/architectures/hpo_neuralforecast.py \
+    --model itransformer \
+    --data-tier a200 \
+    --trials 70 \
+    --forced-extremes \
+    --early-stop-patience 20 \
+    --early-stop-threshold 0.02
+```
 
-3. **Run v3 smoke test** (3 trials)
-   - Verify predictions in [0, 1] range
-   - Verify prediction spread > 0.1
-   - Verify recall > 0%
+### After Phase 1 Completes
+1. Analyze results to identify top 2 budgets
+2. Run Phase 2 supplementary trials on those budgets
+3. Document findings in research paper notes
 
-4. **If smoke test passes**, run full HPO
-   - iTransformer first (50 trials)
-   - Informer second (50 trials)
-
-5. **Decision point after v3**
-   - If AUC >= 0.65: Consider horizon experiments
-   - If AUC < 0.65: Close investigation, PatchTST wins
+### Commit Changes
+- All new files created this session (uncommitted)
+- Update global_context.md summary
 
 ---
 
 ## Memory Entities (Workstream-Specific)
-- `Alternative_Architecture_Methodology_Lesson_20260128` - Critical lesson learned
+- `Alternative_Architecture_Methodology_Lesson_20260128` - v1/v2 flaw
+- `iTransformer_FocalLoss_Finding_20260129` - smaller model discovery

@@ -1,0 +1,23 @@
+{
+  "tier": "a50",
+  "loss_type": "focal",
+  "focal_gamma": 0.0,
+  "focal_alpha": 0.8,
+  "total": 25,
+  "completed": 25,
+  "failed": 0,
+  "best_trial": "FL19",
+  "best_auc": 0.7366899908731366,
+  "best_precision": 0.36666666666666664,
+  "best_recall": 0.5789473684210527,
+  "best_params": {
+    "d_model": 128,
+    "n_layers": 6,
+    "n_heads": 8,
+    "d_ff_ratio": 4,
+    "dropout": 0.45,
+    "learning_rate": 5e-05,
+    "weight_decay": 0.0005
+  },
+  "timestamp": "2026-01-29T09:47:54.584138"
+}

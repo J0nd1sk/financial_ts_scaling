@@ -1,94 +1,108 @@
-# Global Project Context - 2026-01-29
+# Global Project Context - 2026-02-06
 
 ## Active Workstreams
 
 | ID | Name | Status | Last Update | Summary |
 |----|------|--------|-------------|---------|
-| ws1 | feature_generation | active | 2026-01-29 15:00 | tier_a500 Sub-Chunk 10b COMPLETE (445 features, 1664 tests pass) |
-| ws2 | foundation | active | 2026-01-29 09:30 | v3 HPO COMPLETE - evaluation bug found, needs fix + audit |
-| ws3 | phase6c_hpo_analysis | paused | 2026-01-27 19:15 | HPO analysis COMPLETE - a50/a100 metrics captured |
+| ws1 | feature_generation | **COMPLETE** | 2026-01-31 16:45 | tier_a500 DONE - 500 features committed + data regenerated |
+| ws2 | foundation | **active** | 2026-02-01 10:00 | Two-phase budget-aware HPO IMPLEMENTED (18 forced configs, 76 tests pass) |
+| ws3 | a200_hpo_v3 | **active** | 2026-02-06 14:15 | HPO v3 READY (precision-first + loss HPO, 20 tests pass) |
 
 ## Shared State
 
 ### Branch & Git
 - **Branch**: `experiment/foundation-decoder-investigation`
-- **Last commit**: `6b7fb96` feat: Add tier_a500 Sub-Chunk 10a
-- **Uncommitted**: `experiments/architectures/hpo_neuralforecast.py` (v3 changes)
+- **Last commit**: `41f1da4` feat: Add tier_a500 Sub-Chunks 11a+11b (55 ADV features, 500 total)
+- **Uncommitted** (pending commit):
+  - `experiments/phase6c_a200/hpo_20m_h1_a200_v3.py` - **NEW: v3 HPO script**
+  - `tests/test_hpo_a200_v3.py` - **NEW: 20 tests**
+  - `src/training/losses.py` - FocalLoss, WeightedBCELoss
+  - `tests/test_losses.py` - loss function tests
+  - `src/training/hpo_budget_extremes.py` - budget-aware HPO module (ws2)
+  - `tests/test_hpo_budget_extremes.py` - 30 tests (ws2)
+  - `docs/hpo_strategy_phase6.md` - strategy documentation
+  - Context files, skills, various outputs
 
 ### Test Status
-- Last `make test`: 2026-01-29 ~15:00 - **1664 passed**, 5 failed (threshold_sweep - pre-existing), 2 skipped
-- 56 new tests added for Sub-Chunk 10b
+- **ws3 tests (make test-ws3)**: 236/236 passed
+- **v3 HPO tests**: 20/20 passed
+- **Full suite**: Some feature tests may have pre-existing issues
 
 ### Data Versions
 - **Raw**: SPY/DIA/QQQ/VIX OHLCV (v1)
 - **Processed**:
-  - a20: features + combined (25 features)
-  - a50: features + combined (55 features)
-  - a100: features + combined (105 features)
-  - a200: features + combined (206 features)
-  - a500: 300 features (needs regeneration for 445)
+  - a20: 25 features
+  - a50: 55 features
+  - a100: 105 features
+  - a200: 206 features (**VERIFIED**: 212 cols, 7977 rows, 0 NaN)
+  - a500: 500 features (v2 - COMPLETE)
 
 ---
 
 ## Cross-Workstream Coordination
 
 ### Blocking Dependencies
-- [ws2 foundation]: v3 HPO complete but evaluation bug found - metrics invalid
-- [ws1 tier_a500]: 10/12 sub-chunks complete (445/500 features)
-- [ws3 HPO Analysis]: COMPLETE
+- None currently
 
 ### File Ownership
 
 | Files | Owner | Status |
 |-------|-------|--------|
-| `src/features/tier_a500.py` | ws1 | 445 features implemented (10b done) |
-| `experiments/architectures/hpo_neuralforecast.py` | ws2 | MODIFIED - v3 changes |
-| `experiments/architectures/common.py` | ws2 | NEEDS FIX - evaluation bug |
-| `outputs/hpo/architectures/itransformer/` | ws2 | v3 results (50 trials) |
-| `outputs/hpo/architectures/informer/` | ws2 | v3 results (50 trials) |
+| `src/features/tier_a500.py` | ws1 | **COMPLETE** |
+| `experiments/architectures/common.py` | ws2 | +DATA_PATH_A200, DATA_PATHS, get_data_path() |
+| `experiments/architectures/hpo_neuralforecast.py` | ws2 | +--data-tier argument |
+| `experiments/phase6c_a200/hpo_20m_h1_a200_v3.py` | ws3 | Precision-first HPO |
+| `src/training/losses.py` | SHARED | FocalLoss, WeightedBCELoss |
 
 ---
 
-## Session Summary (2026-01-29 - ws2)
+## Session Summary (2026-02-06 - ws3)
 
-### v3 HPO Implementation & Bug Discovery
+### Session Restore After Crash
+- Computer crashed during HPO v3 run (only trial 0 completed)
+- Context files were stale (described v2, actual state is v3)
+- Updated ws3_context.md and global_context.md
+- All v3 tests pass (20/20)
 
-**What Was Done:**
-1. Implemented v3 changes to `hpo_neuralforecast.py`:
-   - Changed `MSE()` to `DistributionLoss(distribution='Bernoulli')`
-   - Changed target from returns to binary `threshold_target`
-2. Ran smoke test (3 trials) - verified predictions in [0, 1]
-3. User ran full HPO: 50 trials iTransformer, 50 trials Informer
+### HPO v3 Key Features
+1. **Composite objective**: `precision*2 + recall*1 + auc*0.1`
+2. **Loss type as hyperparameter**: `focal` vs `weighted_bce`
+3. **Conditional params**: `focal_alpha/gamma` or `bce_pos_weight`
+4. **Multi-threshold metrics**: t30, t40, t50, t60, t70
+5. **80d context** (per CLAUDE.md)
 
-**Critical Bug Found:**
-- `evaluate_forecasting_model()` uses `return_threshold=0.01` (designed for v1/v2 regression)
-- For Bernoulli outputs [0, 1], this gives 100% recall (everything > 0.01)
-- All v3 precision/recall metrics are INVALID
+---
 
-**Actual Prediction Distribution (verified separately):**
-- Only 7.5% of predictions >= 0.5
-- Mean: 0.23, Median: 0.19
-- Models predict mostly NEGATIVE (opposite of what HPO metrics showed)
+## Session Summary (2026-02-01 - ws2)
+
+### Two-Phase Budget-Aware HPO Implemented
+- Created `src/training/hpo_budget_extremes.py` with 18 forced extreme configs
+- 30 tests pass
+- Addresses methodology gap (random params in single-trial runs)
+
+---
+
+## Session Summary (2026-01-31 - ws1 FINAL)
+
+### tier_a500 COMPLETE
+- Committed `41f1da4`: tier_a500 Sub-Chunks 11a+11b (55 ADV features, 500 total)
+- Regenerated data: 906 rows, 500 features, v2 in manifest
 
 ---
 
 ## User Priorities
 
-### ws2 (foundation) - ACTIVE - Next Session
-1. **Fix evaluation bug** in `common.py`
-   - Use threshold=0.5 for Bernoulli/classification outputs
-2. **Re-evaluate all 100 trials** with correct threshold
-3. **Comprehensive HPO audit** - verify no other issues
-4. **Proper threshold sweep** - show precision/recall separately
-5. **Compare to PatchTST** at same thresholds
+### ws1 (feature_generation) - COMPLETE
+tier_a500 done. Next: push to remote if desired.
 
-### ws1 (feature_generation) - Queued
-1. Commit current changes (10a + 10b)
-2. Regenerate data for 445 features
-3. Continue with Sub-Chunk 11a (ADV Part 1)
+### ws2 (foundation) - Ready
+1. Commit budget-aware HPO changes
+2. Run validation with optimal params
 
-### ws3 (phase6c) - Paused
-- Analysis complete, supplementary trials optional
+### ws3 (a200_hpo_v3) - Ready
+1. ~~Update stale context~~ ✅
+2. Commit v3 work
+3. Run 50-trial HPO (~2-3 hours)
 
 ---
 
@@ -102,14 +116,11 @@
 | Secondary | AUC-ROC | Ranking only, not primary |
 | **NEVER** | F1, Accuracy | Hides tradeoffs, irrelevant for imbalanced data |
 
-**KEY**: Precision should INCREASE with higher probability thresholds. If it doesn't, model hasn't learned meaningful discrimination.
-
-Show precision and recall SEPARATELY across threshold changes.
-
 ### Development Approach
 - TDD: tests first, always
 - Planning sessions before implementation
 - Uses tmux for long-running experiments
+- **Workstream-specific testing**: `make test-ws{N}` for fast iteration
 
 ### Context Durability
 - Multiple places: Memory MCP + context files + docs/
@@ -121,13 +132,12 @@ Show precision and recall SEPARATELY across threshold changes.
 - Consolidate rather than delete
 
 ### Hyperparameters (HPO-Validated)
-Based on analysis of 250 trials:
-- **Dropout**: 0.5 (high regularization critical)
-- **Learning Rate**: 1e-4
-- **Weight Decay**: 1e-4 to 1e-3
-- **d_model**: 128 for 20M budget
-- **n_layers**: 2 (shallow) or 6-7 (mid-deep) - bimodal
-- **Context**: 80d
+- **Dropout**: 0.3-0.6 (v3 search space)
+- **Learning Rate**: 5e-5 to 1.5e-4
+- **Weight Decay**: 1e-5 to 1e-3
+- **d_model**: 64-192 depending on budget
+- **n_layers**: 4-8
+- **Context**: 80d (standard)
 - **Normalization**: RevIN only
 - **Splitter**: SimpleSplitter
 
@@ -135,16 +145,16 @@ Based on analysis of 250 trials:
 
 ## Key Insights
 
-**v3 Evaluation Bug (2026-01-29):**
-- HPO used threshold=0.01 (designed for regression outputs)
-- For classification probabilities, this gives 100% recall (meaningless)
-- Need to re-evaluate with threshold=0.5
+### HPO v3 Strategy (2026-02-01)
+- **Precision-first composite**: Optimizes what we actually care about
+- **Loss function HPO**: Focal vs weighted_bce can significantly impact precision/recall tradeoff
+- **Multi-threshold logging**: Enables post-hoc analysis of precision-recall curves
 
-**Scaling laws are VIOLATED for this task:**
-- Parameter scaling: 20M beats both 2M and 200M
-- Feature scaling: 55 features beats 105 features consistently
-- Regularization is critical: High dropout (0.5) dominates
+### Context Ablation Results (2026-01-31)
+- a200 @ 75d = 66.7% precision, 7.8% recall (best combo)
+- a200 @ 80d = 0.730 AUC (best ranking)
+- v3 uses 80d for consistency with CLAUDE.md
 
-**Methodology lesson:**
-- Always match training objective to evaluation objective
-- Always match evaluation threshold to output type
+### tier_a500 Complete (2026-01-31)
+- 500 features achieved across 12 sub-chunks (6a-11b)
+- Data regenerated: 906 rows, 500 features, v2 in manifest

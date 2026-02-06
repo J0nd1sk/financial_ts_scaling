@@ -56,9 +56,10 @@ git status --short
 
 ### 3. Check Test Status
 
-- When was `make test` last run?
+- When was `make test-ws{N}` last run for this workstream?
 - Did it pass or fail?
 - Any failing tests to note?
+- **NEW TEST FILES?** If new test files were added this session, verify Makefile `test-ws{N}` target includes them
 
 ### 4. Compile Session Summary
 
@@ -241,6 +242,24 @@ Cross-workstream notes:
 | inactive | No update >7 days | Remove from global table, keep file |
 | archived | User archives explicitly | Move to workstreams/archive/ |
 
+## Makefile Test Target Maintenance
+
+If NEW test files were added during this session, ensure the Makefile's `test-ws{N}` target is updated:
+
+**Check:**
+```bash
+grep "test-ws{N}:" Makefile
+```
+
+**Current Mappings:**
+| Workstream | Target | Files |
+|------------|--------|-------|
+| ws1 | `test-ws1` | `tests/features/` |
+| ws2 | `test-ws2` | `tests/test_evaluation.py`, `tests/test_context_ablation_nf.py`, `tests/test_hpo_neuralforecast.py` |
+| ws3 | `test-ws3` | `tests/test_hpo*.py`, `tests/test_loss*.py` |
+
+**If a new test file was added but not in Makefile:** Update the target before handoff.
+
 ## Critical Notes
 
 - Always capture uncommitted work prominently
@@ -249,3 +268,4 @@ Cross-workstream notes:
 - Be specific about "what remains" for in-progress tasks
 - Update BOTH workstream file AND global summary
 - Cross-workstream coordination notes are important for parallel work
+- **Check Makefile test targets are current for workstream**

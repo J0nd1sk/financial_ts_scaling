@@ -1,0 +1,60 @@
+{
+  "experiment": "hpo_200m_h1_a200",
+  "budget": "200M",
+  "horizon": 1,
+  "n_trials": 50,
+  "best_trial": 17,
+  "best_value": 0.726764526924247,
+  "best_params": {
+    "d_model": 192,
+    "n_layers": 6,
+    "n_heads": 16,
+    "d_ff_ratio": 2,
+    "learning_rate": 1e-05,
+    "dropout": 0.3,
+    "weight_decay": 0.0001
+  },
+  "search_space": {
+    "d_model": [
+      128,
+      192,
+      256,
+      320,
+      384
+    ],
+    "n_layers": [
+      6,
+      8,
+      10,
+      12
+    ],
+    "n_heads": [
+      8,
+      16
+    ],
+    "d_ff_ratio": [
+      2,
+      4
+    ],
+    "learning_rate": [
+      1e-05,
+      5e-05,
+      0.0001,
+      0.0005
+    ],
+    "dropout": [
+      0.1,
+      0.3,
+      0.5,
+      0.7
+    ],
+    "weight_decay": [
+      0.0,
+      1e-05,
+      0.0001,
+      0.001
+    ]
+  },
+  "total_time_min": 62.771891764799754,
+  "timestamp": "2026-01-30T17:44:16.304653"
+}

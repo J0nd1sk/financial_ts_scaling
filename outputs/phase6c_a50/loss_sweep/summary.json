@@ -1,0 +1,19 @@
+{
+  "tier": "a50",
+  "total": 120,
+  "completed": 120,
+  "failed": 0,
+  "best_gamma": 2.0,
+  "best_alpha": 0.9,
+  "best_dropout": 0.3,
+  "best_auc": 0.7384773349558869,
+  "best_precision_gamma": 1.0,
+  "best_precision_alpha": 0.3,
+  "best_precision_dropout": 0.5,
+  "best_precision_value": 1.0,
+  "best_recall_gamma": 2.0,
+  "best_recall_alpha": 0.9,
+  "best_recall_dropout": 0.5,
+  "best_recall_value": 0.9342105263157895,
+  "timestamp": "2026-01-29T16:09:22.128617"
+}

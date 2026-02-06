@@ -27,9 +27,34 @@ from sklearn.metrics import (
 # DATA PATHS
 # ============================================================================
 
-DATA_PATH_A100 = PROJECT_ROOT / "data/processed/v1/SPY_dataset_a100_combined.parquet"
 DATA_PATH_A20 = PROJECT_ROOT / "data/processed/v1/SPY_dataset_a20.parquet"
+DATA_PATH_A100 = PROJECT_ROOT / "data/processed/v1/SPY_dataset_a100_combined.parquet"
+DATA_PATH_A200 = PROJECT_ROOT / "data/processed/v1/SPY_dataset_a200_combined.parquet"
+
+DATA_PATHS = {
+    "a20": DATA_PATH_A20,
+    "a100": DATA_PATH_A100,
+    "a200": DATA_PATH_A200,
+}
+
 OUTPUT_BASE = PROJECT_ROOT / "outputs/architectures"
+
+
+def get_data_path(tier: str = "a20") -> Path:
+    """Get data path for a given tier.
+
+    Args:
+        tier: Data tier name ('a20', 'a100', 'a200')
+
+    Returns:
+        Path to the parquet file for the tier
+
+    Raises:
+        ValueError: If tier is not recognized
+    """
+    if tier not in DATA_PATHS:
+        raise ValueError(f"Unknown tier: {tier}. Valid: {list(DATA_PATHS.keys())}")
+    return DATA_PATHS[tier]
 
 
 # ============================================================================
@@ -207,24 +232,31 @@ def evaluate_forecasting_model(
     actual_returns: np.ndarray,
     threshold_targets: np.ndarray,
     return_threshold: float = 0.01,
+    is_classification: bool = False,
 ) -> dict:
     """Evaluate forecasting model via threshold classification.
 
     Converts return forecasts to binary predictions:
-    - positive if predicted_return > return_threshold
+    - positive if predicted_return > return_threshold (regression mode)
+    - positive if predicted_return > 0.5 (classification mode)
     - negative otherwise
 
     Args:
-        predicted_returns: Model's return forecasts
+        predicted_returns: Model's return forecasts or probability predictions
         actual_returns: Actual returns
         threshold_targets: Binary targets (1 if high reached +1%)
-        return_threshold: Threshold for classifying as positive
+        return_threshold: Threshold for classifying as positive (regression mode)
+        is_classification: If True, use 0.5 threshold (for probability outputs).
+            If False, use return_threshold (for return forecasts).
 
     Returns:
         Dictionary with classification and forecasting metrics
     """
     # Convert forecasts to binary predictions
-    binary_preds = (predicted_returns > return_threshold).astype(int)
+    if is_classification:
+        binary_preds = (predicted_returns > 0.5).astype(int)
+    else:
+        binary_preds = (predicted_returns > return_threshold).astype(int)
 
     # Classification metrics
     try:
@@ -252,7 +284,12 @@ def evaluate_forecasting_model(
     mae = np.mean(np.abs(predicted_returns - actual_returns))
 
     # Direction accuracy
-    pred_direction = (predicted_returns > 0).astype(int)
+    # For classification outputs (Bernoulli probabilities), direction is positive if > 0.5
+    # For regression outputs (return forecasts), direction is positive if > 0
+    if is_classification:
+        pred_direction = (predicted_returns > 0.5).astype(int)
+    else:
+        pred_direction = (predicted_returns > 0).astype(int)
     actual_direction = (actual_returns > 0).astype(int)
     direction_acc = accuracy_score(actual_direction, pred_direction)
 

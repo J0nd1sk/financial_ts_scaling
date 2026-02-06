@@ -1,0 +1,1102 @@
+[
+  {
+    "trial": 1,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.3,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 53.01147818565369,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7249771828414968,
+    "val_accuracy": 0.7227488151658767,
+    "val_precision": 0.3458646616541353,
+    "val_recall": 0.6052631578947368,
+    "val_pred_range": [
+      0.0308467298746109,
+      0.9564594030380249
+    ],
+    "val_confusion": {
+      "tp": 46,
+      "tn": 259,
+      "fp": 87,
+      "fn": 30
+    },
+    "train_auc": null,
+    "train_precision": 0.3938862440491105,
+    "train_recall": 0.8846370287000562,
+    "train_pred_range": [
+      0.02164318785071373,
+      0.982859194278717
+    ],
+    "timestamp": "2026-01-29T09:27:51.078553",
+    "config_name": "FL01"
+  },
+  {
+    "trial": 2,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 53.330925703048706,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7326589595375724,
+    "val_accuracy": 0.7369668246445498,
+    "val_precision": 0.3643410852713178,
+    "val_recall": 0.618421052631579,
+    "val_pred_range": [
+      0.030046937987208366,
+      0.9587354063987732
+    ],
+    "val_confusion": {
+      "tp": 47,
+      "tn": 264,
+      "fp": 82,
+      "fn": 29
+    },
+    "train_auc": null,
+    "train_precision": 0.3940710452338359,
+    "train_recall": 0.8677546426561621,
+    "train_pred_range": [
+      0.02606215327978134,
+      0.9827030897140503
+    ],
+    "timestamp": "2026-01-29T09:28:44.431831",
+    "config_name": "FL02"
+  },
+  {
+    "trial": 3,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 53.81855010986328,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7344843322178278,
+    "val_accuracy": 0.7440758293838863,
+    "val_precision": 0.373015873015873,
+    "val_recall": 0.618421052631579,
+    "val_pred_range": [
+      0.03243733197450638,
+      0.9599061012268066
+    ],
+    "val_confusion": {
+      "tp": 47,
+      "tn": 267,
+      "fp": 79,
+      "fn": 29
+    },
+    "train_auc": null,
+    "train_precision": 0.3866427840327533,
+    "train_recall": 0.8503095104108047,
+    "train_pred_range": [
+      0.030001385137438774,
+      0.9849551320075989
+    ],
+    "timestamp": "2026-01-29T09:29:38.271085",
+    "config_name": "FL03"
+  },
+  {
+    "trial": 4,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.3,
+      "learning_rate": 7e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 35.441922187805176,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7329631883176149,
+    "val_accuracy": 0.7417061611374408,
+    "val_precision": 0.3565217391304348,
+    "val_recall": 0.5394736842105263,
+    "val_pred_range": [
+      0.03704296797513962,
+      0.9360209107398987
+    ],
+    "val_confusion": {
+      "tp": 41,
+      "tn": 272,
+      "fp": 74,
+      "fn": 35
+    },
+    "train_auc": null,
+    "train_precision": 0.4031772117228157,
+    "train_recall": 0.8283624085537422,
+    "train_pred_range": [
+      0.02765199914574623,
+      0.9762352705001831
+    ],
+    "timestamp": "2026-01-29T09:30:13.738969",
+    "config_name": "FL04"
+  },
+  {
+    "trial": 5,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.3,
+      "learning_rate": 0.0001,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 27.666006803512573,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7233799817462733,
+    "val_accuracy": 0.7393364928909952,
+    "val_precision": 0.35833333333333334,
+    "val_recall": 0.5657894736842105,
+    "val_pred_range": [
+      0.04530196264386177,
+      0.948140561580658
+    ],
+    "val_confusion": {
+      "tp": 43,
+      "tn": 269,
+      "fp": 77,
+      "fn": 33
+    },
+    "train_auc": null,
+    "train_precision": 0.3896701610841217,
+    "train_recall": 0.8576252110298256,
+    "train_pred_range": [
+      0.03781258314847946,
+      0.9813350439071655
+    ],
+    "timestamp": "2026-01-29T09:30:41.427626",
+    "config_name": "FL05"
+  },
+  {
+    "trial": 6,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 52.43403911590576,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.734750532400365,
+    "val_accuracy": 0.7511848341232228,
+    "val_precision": 0.38016528925619836,
+    "val_recall": 0.6052631578947368,
+    "val_pred_range": [
+      0.01754336804151535,
+      0.9555865526199341
+    ],
+    "val_confusion": {
+      "tp": 46,
+      "tn": 271,
+      "fp": 75,
+      "fn": 30
+    },
+    "train_auc": null,
+    "train_precision": 0.39697443922796033,
+    "train_recall": 0.8564997186268992,
+    "train_pred_range": [
+      0.014613294042646885,
+      0.9892403483390808
+    ],
+    "timestamp": "2026-01-29T09:31:33.883333",
+    "config_name": "FL06"
+  },
+  {
+    "trial": 7,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 160,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.3,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 47.47825789451599,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7241025250988743,
+    "val_accuracy": 0.7298578199052133,
+    "val_precision": 0.3602941176470588,
+    "val_recall": 0.6447368421052632,
+    "val_pred_range": [
+      0.042463842779397964,
+      0.9577502608299255
+    ],
+    "val_confusion": {
+      "tp": 49,
+      "tn": 259,
+      "fp": 87,
+      "fn": 27
+    },
+    "train_auc": null,
+    "train_precision": 0.3845586427342021,
+    "train_recall": 0.8801350590883511,
+    "train_pred_range": [
+      0.024742472916841507,
+      0.9834723472595215
+    ],
+    "timestamp": "2026-01-29T09:32:21.382399",
+    "config_name": "FL07"
+  },
+  {
+    "trial": 8,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 7e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 42.008378982543945,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7130362032248251,
+    "val_accuracy": 0.7251184834123223,
+    "val_precision": 0.35074626865671643,
+    "val_recall": 0.618421052631579,
+    "val_pred_range": [
+      0.026923997327685356,
+      0.9613020420074463
+    ],
+    "val_confusion": {
+      "tp": 47,
+      "tn": 259,
+      "fp": 87,
+      "fn": 29
+    },
+    "train_auc": null,
+    "train_precision": 0.38618290258449306,
+    "train_recall": 0.8745075970737197,
+    "train_pred_range": [
+      0.02299623191356659,
+      0.9849632382392883
+    ],
+    "timestamp": "2026-01-29T09:33:03.414508",
+    "config_name": "FL08"
+  },
+  {
+    "trial": 9,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.5,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 60.01806688308716,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7317843017949498,
+    "val_accuracy": 0.7393364928909952,
+    "val_precision": 0.35833333333333334,
+    "val_recall": 0.5657894736842105,
+    "val_pred_range": [
+      0.042061321437358856,
+      0.959226667881012
+    ],
+    "val_confusion": {
+      "tp": 43,
+      "tn": 269,
+      "fp": 77,
+      "fn": 33
+    },
+    "train_auc": null,
+    "train_precision": 0.3812893081761006,
+    "train_recall": 0.8187957231288688,
+    "train_pred_range": [
+      0.03403383865952492,
+      0.9893191456794739
+    ],
+    "timestamp": "2026-01-29T09:34:03.456634",
+    "config_name": "FL09"
+  },
+  {
+    "trial": 10,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.3,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0003
+    },
+    "duration_sec": 49.430784940719604,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.726650441131731,
+    "val_accuracy": 0.7061611374407583,
+    "val_precision": 0.32857142857142857,
+    "val_recall": 0.6052631578947368,
+    "val_pred_range": [
+      0.03860705345869064,
+      0.9507756233215332
+    ],
+    "val_confusion": {
+      "tp": 46,
+      "tn": 252,
+      "fp": 94,
+      "fn": 30
+    },
+    "train_auc": null,
+    "train_precision": 0.37805474095796676,
+    "train_recall": 0.8705683736634777,
+    "train_pred_range": [
+      0.02944568730890751,
+      0.982309877872467
+    ],
+    "timestamp": "2026-01-29T09:34:52.912865",
+    "config_name": "FL10"
+  },
+  {
+    "trial": 11,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.2,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 36.458256244659424,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7291603285670823,
+    "val_accuracy": 0.7369668246445498,
+    "val_precision": 0.34782608695652173,
+    "val_recall": 0.5263157894736842,
+    "val_pred_range": [
+      0.03280527517199516,
+      0.9223738312721252
+    ],
+    "val_confusion": {
+      "tp": 40,
+      "tn": 271,
+      "fp": 75,
+      "fn": 36
+    },
+    "train_auc": null,
+    "train_precision": 0.4083264405845051,
+    "train_recall": 0.8334271243669106,
+    "train_pred_range": [
+      0.026355938985943794,
+      0.9740196466445923
+    ],
+    "timestamp": "2026-01-29T09:35:29.396772",
+    "config_name": "FL11"
+  },
+  {
+    "trial": 12,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.3,
+      "learning_rate": 5e-05,
+      "weight_decay": 1e-05
+    },
+    "duration_sec": 55.02367115020752,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7200334651658046,
+    "val_accuracy": 0.7203791469194313,
+    "val_precision": 0.34558823529411764,
+    "val_recall": 0.618421052631579,
+    "val_pred_range": [
+      0.028747055679559708,
+      0.9609553813934326
+    ],
+    "val_confusion": {
+      "tp": 47,
+      "tn": 257,
+      "fp": 89,
+      "fn": 29
+    },
+    "train_auc": null,
+    "train_precision": 0.3941278925105748,
+    "train_recall": 0.891389983117614,
+    "train_pred_range": [
+      0.018563374876976013,
+      0.9845824241638184
+    ],
+    "timestamp": "2026-01-29T09:36:24.447207",
+    "config_name": "FL12"
+  },
+  {
+    "trial": 13,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 160,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 55.02626395225525,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.721478551871007,
+    "val_accuracy": 0.7440758293838863,
+    "val_precision": 0.3644067796610169,
+    "val_recall": 0.5657894736842105,
+    "val_pred_range": [
+      0.018251795321702957,
+      0.9590243697166443
+    ],
+    "val_confusion": {
+      "tp": 43,
+      "tn": 271,
+      "fp": 75,
+      "fn": 33
+    },
+    "train_auc": null,
+    "train_precision": 0.40083835472884466,
+    "train_recall": 0.8610016882386043,
+    "train_pred_range": [
+      0.014475804753601551,
+      0.9863272905349731
+    ],
+    "timestamp": "2026-01-29T09:37:19.501728",
+    "config_name": "FL13"
+  },
+  {
+    "trial": 14,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 7e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 41.219849824905396,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7277152418618801,
+    "val_accuracy": 0.7037914691943128,
+    "val_precision": 0.3310344827586207,
+    "val_recall": 0.631578947368421,
+    "val_pred_range": [
+      0.02386208064854145,
+      0.9664684534072876
+    ],
+    "val_confusion": {
+      "tp": 48,
+      "tn": 249,
+      "fp": 97,
+      "fn": 28
+    },
+    "train_auc": null,
+    "train_precision": 0.3870104597421552,
+    "train_recall": 0.895329206527856,
+    "train_pred_range": [
+      0.020558344200253487,
+      0.9851157069206238
+    ],
+    "timestamp": "2026-01-29T09:38:00.749317",
+    "config_name": "FL14"
+  },
+  {
+    "trial": 15,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 7,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0003
+    },
+    "duration_sec": 68.5532579421997,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7274110130818375,
+    "val_accuracy": 0.7251184834123223,
+    "val_precision": 0.3611111111111111,
+    "val_recall": 0.6842105263157895,
+    "val_pred_range": [
+      0.040787871927022934,
+      0.9636718034744263
+    ],
+    "val_confusion": {
+      "tp": 52,
+      "tn": 254,
+      "fp": 92,
+      "fn": 24
+    },
+    "train_auc": null,
+    "train_precision": 0.3793927803012192,
+    "train_recall": 0.8930782217220034,
+    "train_pred_range": [
+      0.026518704369664192,
+      0.9820370078086853
+    ],
+    "timestamp": "2026-01-29T09:39:09.330768",
+    "config_name": "FL15"
+  },
+  {
+    "trial": 16,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 96,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.3,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 37.8616840839386,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7198052935807727,
+    "val_accuracy": 0.7369668246445498,
+    "val_precision": 0.37037037037037035,
+    "val_recall": 0.6578947368421053,
+    "val_pred_range": [
+      0.035944536328315735,
+      0.9581074118614197
+    ],
+    "val_confusion": {
+      "tp": 50,
+      "tn": 261,
+      "fp": 85,
+      "fn": 26
+    },
+    "train_auc": null,
+    "train_precision": 0.392449961996453,
+    "train_recall": 0.8716938660664041,
+    "train_pred_range": [
+      0.027824876829981804,
+      0.9798359870910645
+    ],
+    "timestamp": "2026-01-29T09:39:47.221944",
+    "config_name": "FL16"
+  },
+  {
+    "trial": 17,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 160,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 37.6064670085907,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7188926072406451,
+    "val_accuracy": 0.7369668246445498,
+    "val_precision": 0.36220472440944884,
+    "val_recall": 0.6052631578947368,
+    "val_pred_range": [
+      0.027352912351489067,
+      0.961973249912262
+    ],
+    "val_confusion": {
+      "tp": 46,
+      "tn": 265,
+      "fp": 81,
+      "fn": 30
+    },
+    "train_auc": null,
+    "train_precision": 0.38185975609756095,
+    "train_recall": 0.8458075407990996,
+    "train_pred_range": [
+      0.03221258893609047,
+      0.9867161512374878
+    ],
+    "timestamp": "2026-01-29T09:40:24.859598",
+    "config_name": "FL17"
+  },
+  {
+    "trial": 18,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.25,
+      "learning_rate": 7e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 36.24980425834656,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7256616975965926,
+    "val_accuracy": 0.7393364928909952,
+    "val_precision": 0.3559322033898305,
+    "val_recall": 0.5526315789473685,
+    "val_pred_range": [
+      0.032557323575019836,
+      0.9300416111946106
+    ],
+    "val_confusion": {
+      "tp": 42,
+      "tn": 270,
+      "fp": 76,
+      "fn": 34
+    },
+    "train_auc": null,
+    "train_precision": 0.41027754877713657,
+    "train_recall": 0.8401800787844682,
+    "train_pred_range": [
+      0.022894863039255142,
+      0.9760268330574036
+    ],
+    "timestamp": "2026-01-29T09:41:01.143945",
+    "config_name": "FL18"
+  },
+  {
+    "trial": 19,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.45,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0005
+    },
+    "duration_sec": 55.36215114593506,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7366899908731366,
+    "val_accuracy": 0.7440758293838863,
+    "val_precision": 0.36666666666666664,
+    "val_recall": 0.5789473684210527,
+    "val_pred_range": [
+      0.037751808762550354,
+      0.9598525166511536
+    ],
+    "val_confusion": {
+      "tp": 44,
+      "tn": 270,
+      "fp": 76,
+      "fn": 32
+    },
+    "train_auc": null,
+    "train_precision": 0.3844142259414226,
+    "train_recall": 0.827236916150816,
+    "train_pred_range": [
+      0.030806228518486023,
+      0.9825125932693481
+    ],
+    "timestamp": "2026-01-29T09:41:56.537126",
+    "config_name": "FL19"
+  },
+  {
+    "trial": 20,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 192,
+      "n_layers": 6,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.3,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 61.69921088218689,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7177897779129906,
+    "val_accuracy": 0.7582938388625592,
+    "val_precision": 0.3879310344827586,
+    "val_recall": 0.5921052631578947,
+    "val_pred_range": [
+      0.01080753281712532,
+      0.9719431400299072
+    ],
+    "val_confusion": {
+      "tp": 45,
+      "tn": 275,
+      "fp": 71,
+      "fn": 31
+    },
+    "train_auc": null,
+    "train_precision": 0.41864864864864865,
+    "train_recall": 0.8716938660664041,
+    "train_pred_range": [
+      0.0077391257509589195,
+      0.9819186925888062
+    ],
+    "timestamp": "2026-01-29T09:42:58.266319",
+    "config_name": "FL20"
+  },
+  {
+    "trial": 21,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 8,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.35,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 77.94261312484741,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7236081533313051,
+    "val_accuracy": 0.7464454976303317,
+    "val_precision": 0.36752136752136755,
+    "val_recall": 0.5657894736842105,
+    "val_pred_range": [
+      0.023322386667132378,
+      0.9625319242477417
+    ],
+    "val_confusion": {
+      "tp": 43,
+      "tn": 272,
+      "fp": 74,
+      "fn": 33
+    },
+    "train_auc": null,
+    "train_precision": 0.39626071150350556,
+    "train_recall": 0.8587507034327518,
+    "train_pred_range": [
+      0.02147066593170166,
+      0.9819190502166748
+    ],
+    "timestamp": "2026-01-29T09:44:16.245628",
+    "config_name": "FL21"
+  },
+  {
+    "trial": 22,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 8,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0003
+    },
+    "duration_sec": 79.30500078201294,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7299589291146943,
+    "val_accuracy": 0.7582938388625592,
+    "val_precision": 0.37735849056603776,
+    "val_recall": 0.5263157894736842,
+    "val_pred_range": [
+      0.02620900422334671,
+      0.9499145746231079
+    ],
+    "val_confusion": {
+      "tp": 40,
+      "tn": 280,
+      "fp": 66,
+      "fn": 36
+    },
+    "train_auc": null,
+    "train_precision": 0.39510204081632655,
+    "train_recall": 0.8171074845244795,
+    "train_pred_range": [
+      0.025760138407349586,
+      0.9817616939544678
+    ],
+    "timestamp": "2026-01-29T09:45:35.582589",
+    "config_name": "FL22"
+  },
+  {
+    "trial": 23,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 192,
+      "n_layers": 4,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 42.74972486495972,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7256236689990874,
+    "val_accuracy": 0.7345971563981043,
+    "val_precision": 0.3656716417910448,
+    "val_recall": 0.6447368421052632,
+    "val_pred_range": [
+      0.019311513751745224,
+      0.976966917514801
+    ],
+    "val_confusion": {
+      "tp": 49,
+      "tn": 261,
+      "fp": 85,
+      "fn": 27
+    },
+    "train_auc": null,
+    "train_precision": 0.3919469928644241,
+    "train_recall": 0.8655036578503095,
+    "train_pred_range": [
+      0.018230518326163292,
+      0.9859613180160522
+    ],
+    "timestamp": "2026-01-29T09:46:18.366874",
+    "config_name": "FL23"
+  },
+  {
+    "trial": 24,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 160,
+      "n_layers": 5,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 7e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 56.55341291427612,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7195390933982354,
+    "val_accuracy": 0.7322274881516587,
+    "val_precision": 0.352,
+    "val_recall": 0.5789473684210527,
+    "val_pred_range": [
+      0.015917159616947174,
+      0.9680611491203308
+    ],
+    "val_confusion": {
+      "tp": 44,
+      "tn": 265,
+      "fp": 81,
+      "fn": 32
+    },
+    "train_auc": null,
+    "train_precision": 0.39896640826873386,
+    "train_recall": 0.8688801350590883,
+    "train_pred_range": [
+      0.010866268537938595,
+      0.9902353882789612
+    ],
+    "timestamp": "2026-01-29T09:47:14.956117",
+    "config_name": "FL24"
+  },
+  {
+    "trial": 25,
+    "tier": "a50",
+    "budget": "20M",
+    "horizon": 1,
+    "loss_type": "focal",
+    "focal_gamma": 0.0,
+    "focal_alpha": 0.8,
+    "params": {
+      "d_model": 128,
+      "n_layers": 3,
+      "n_heads": 8,
+      "d_ff_ratio": 4,
+      "dropout": 0.4,
+      "learning_rate": 5e-05,
+      "weight_decay": 0.0001
+    },
+    "duration_sec": 39.59152173995972,
+    "epochs_run": 50,
+    "stopped_early": true,
+    "val_auc": 0.7333054456951628,
+    "val_accuracy": 0.7251184834123223,
+    "val_precision": 0.35294117647058826,
+    "val_recall": 0.631578947368421,
+    "val_pred_range": [
+      0.03125418722629547,
+      0.9563422799110413
+    ],
+    "val_confusion": {
+      "tp": 48,
+      "tn": 258,
+      "fp": 88,
+      "fn": 28
+    },
+    "train_auc": null,
+    "train_precision": 0.385448136958711,
+    "train_recall": 0.8615644344400676,
+    "train_pred_range": [
+      0.022980323061347008,
+      0.9826898574829102
+    ],
+    "timestamp": "2026-01-29T09:47:54.582357",
+    "config_name": "FL25"
+  }
+]

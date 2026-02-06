@@ -1,1 +1,3 @@
-caffeinate -i ./scripts/run_hpo_batch.sh a50 2>&1 | tee outputs/hpo_a50_batch.log    
+Informer validation:                                                                                             
+  ./venv/bin/python experiments/architectures/hpo_neuralforecast.py --model informer --data-tier a200 --input-size 180 --trials 1                                                                                                   
+                       

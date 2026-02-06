@@ -85,13 +85,23 @@ Read `.claude/context/workstreams/ws{N}_context.md` for detailed context:
 
 ### 6. Verify Environment
 
+Run **workstream-specific tests** for faster feedback:
+
 ```bash
 source venv/bin/activate
-make test
+make test-ws{N}    # Replace N with workstream number (1, 2, or 3)
 git status
-make verify
 git branch --show-current
 ```
+
+**Workstream Test Targets:**
+| Workstream | Command | Tests Run |
+|------------|---------|-----------|
+| ws1 (feature_generation) | `make test-ws1` | `tests/features/` |
+| ws2 (foundation) | `make test-ws2` | `tests/test_evaluation.py`, `tests/test_context_ablation_nf.py`, `tests/test_hpo_neuralforecast.py` |
+| ws3 (phase6c/HPO) | `make test-ws3` | `tests/test_hpo*.py`, `tests/test_loss*.py` |
+
+**Note:** Full `make test` is still REQUIRED before any git operations. Workstream-specific tests are for session restore verification only.
 
 ### 7. Check for Drift
 
@@ -181,9 +191,9 @@ Wait for user confirmation before proceeding.
 
 ## Environment Check
 - venv:  activated
-- make test:  pass /  [N] failing
+- make test-ws{N}:  pass /  [N] failing
 - git status:  clean /  [N] uncommitted files
-- make verify:  pass /  errors
+- Full `make test` required before git ops
 
 ## Other Active Workstreams
 | ID | Name | Status | Relationship |

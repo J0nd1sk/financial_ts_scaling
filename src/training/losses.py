@@ -154,6 +154,57 @@ class FocalLoss(nn.Module):
         return loss.mean()
 
 
+class WeightedBCELoss(nn.Module):
+    """Weighted BCE Loss for class imbalance.
+
+    Simpler alternative to FocalLoss - just weights positive class more heavily.
+    This encourages the model to focus on correctly classifying the minority
+    positive class by penalizing false negatives more than false positives.
+
+    Formula:
+        L = -[pos_weight * y * log(p) + (1-y) * log(1-p)]
+
+    Args:
+        pos_weight: Weight for positive class. Default 1.0 (no weighting).
+            Typical: n_negative / n_positive (e.g., 4.0 for 20% positive rate)
+        eps: Numerical stability constant. Default 1e-7.
+
+    Example:
+        >>> loss_fn = WeightedBCELoss(pos_weight=4.0)  # For ~20% positive rate
+        >>> predictions = torch.tensor([0.9, 0.8, 0.2, 0.1])
+        >>> targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+        >>> loss = loss_fn(predictions, targets)
+    """
+
+    def __init__(self, pos_weight: float = 1.0, eps: float = 1e-7) -> None:
+        super().__init__()
+        self.pos_weight = pos_weight
+        self.eps = eps
+
+    def forward(self, predictions: Tensor, targets: Tensor) -> Tensor:
+        """Compute weighted BCE loss.
+
+        Args:
+            predictions: Model predictions (probabilities), shape (N,) or (N, 1).
+            targets: Binary targets (0 or 1), shape (N,) or (N, 1).
+
+        Returns:
+            Scalar loss tensor.
+        """
+        # Flatten to 1D
+        predictions = predictions.view(-1)
+        targets = targets.view(-1)
+
+        # Clamp predictions for numerical stability
+        predictions = predictions.clamp(self.eps, 1 - self.eps)
+
+        # Weighted BCE: weight positive class by pos_weight
+        pos_loss = -targets * torch.log(predictions) * self.pos_weight
+        neg_loss = -(1 - targets) * torch.log(1 - predictions)
+
+        return (pos_loss + neg_loss).mean()
+
+
 class WeightedSumLoss(nn.Module):
     """Weighted sum of BCE and SoftAUC losses for multi-objective optimization.
 

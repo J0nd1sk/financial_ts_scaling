@@ -1,10 +1,12 @@
-"""Tests for custom loss functions.
+"""Tests for custom loss functions and evaluation utilities.
 
 Tests SoftAUCLoss which optimizes ranking directly to avoid prior collapse.
+Also tests evaluation function is_classification parameter.
 """
 
 from __future__ import annotations
 
+import sys
 import tempfile
 from pathlib import Path
 
@@ -13,6 +15,10 @@ import pandas as pd
 import pytest
 import torch
 import torch.nn as nn
+
+# Add project root to path for experiments module
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.training.losses import SoftAUCLoss
 
@@ -650,3 +656,235 @@ class TestWeightedSumLossGradient:
 
         assert predictions.grad is not None, "Gradients should flow to predictions"
         assert not torch.all(predictions.grad == 0), "Gradients should be non-zero"
+
+
+# =============================================================================
+# WeightedBCELoss Tests
+# =============================================================================
+
+
+class TestWeightedBCELossBasic:
+    """Basic functionality tests for WeightedBCELoss."""
+
+    def test_weighted_bce_returns_scalar_tensor(self):
+        """Test WeightedBCELoss returns a scalar tensor."""
+        from src.training.losses import WeightedBCELoss
+
+        torch.manual_seed(42)
+        loss_fn = WeightedBCELoss(pos_weight=4.0)
+
+        predictions = torch.rand(100)
+        targets = torch.cat([torch.ones(25), torch.zeros(75)])  # 25% positive
+
+        loss = loss_fn(predictions, targets)
+
+        assert isinstance(loss, torch.Tensor), "Loss should be a tensor"
+        assert loss.dim() == 0, "Loss should be a scalar"
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert loss.item() > 0, "Loss should be positive"
+
+    def test_weighted_bce_pos_weight_one_equals_standard_bce(self):
+        """Test that pos_weight=1.0 produces standard BCE."""
+        from src.training.losses import WeightedBCELoss
+
+        torch.manual_seed(42)
+        predictions = torch.rand(50)
+        targets = torch.cat([torch.ones(25), torch.zeros(25)])
+
+        # WeightedBCE with pos_weight=1.0 (no weighting)
+        weighted_loss_fn = WeightedBCELoss(pos_weight=1.0)
+        weighted_loss = weighted_loss_fn(predictions, targets)
+
+        # Standard BCE
+        bce_loss_fn = nn.BCELoss()
+        bce_loss = bce_loss_fn(predictions, targets)
+
+        assert abs(weighted_loss.item() - bce_loss.item()) < 1e-5, \
+            f"pos_weight=1.0 should match BCE: weighted={weighted_loss.item()}, bce={bce_loss.item()}"
+
+    def test_weighted_bce_higher_weight_increases_fn_penalty(self):
+        """Test that higher pos_weight increases penalty for false negatives."""
+        from src.training.losses import WeightedBCELoss
+
+        # False negative: positive target, low prediction
+        predictions = torch.tensor([0.2])  # Low prob for positive
+        targets = torch.tensor([1.0])  # Positive target
+
+        # Low weight
+        loss_low = WeightedBCELoss(pos_weight=1.0)(predictions, targets)
+
+        # High weight
+        loss_high = WeightedBCELoss(pos_weight=4.0)(predictions, targets)
+
+        assert loss_high.item() > loss_low.item(), \
+            f"Higher pos_weight should increase FN penalty: low={loss_low.item()}, high={loss_high.item()}"
+
+    def test_weighted_bce_fp_penalty_unchanged(self):
+        """Test that pos_weight does not affect false positive penalty."""
+        from src.training.losses import WeightedBCELoss
+
+        # False positive: negative target, high prediction
+        predictions = torch.tensor([0.8])  # High prob for negative
+        targets = torch.tensor([0.0])  # Negative target
+
+        # Low weight
+        loss_low = WeightedBCELoss(pos_weight=1.0)(predictions, targets)
+
+        # High weight
+        loss_high = WeightedBCELoss(pos_weight=4.0)(predictions, targets)
+
+        # FP penalty should be the same regardless of pos_weight
+        assert abs(loss_high.item() - loss_low.item()) < 1e-5, \
+            f"FP penalty should be unchanged: low={loss_low.item()}, high={loss_high.item()}"
+
+
+class TestWeightedBCELossEdgeCases:
+    """Edge case tests for WeightedBCELoss."""
+
+    def test_weighted_bce_no_positive_handles_gracefully(self):
+        """Test loss handles batch with no positive samples."""
+        from src.training.losses import WeightedBCELoss
+
+        loss_fn = WeightedBCELoss(pos_weight=4.0)
+
+        predictions = torch.tensor([0.3, 0.4, 0.5])
+        targets = torch.tensor([0.0, 0.0, 0.0])  # All negative
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+    def test_weighted_bce_no_negative_handles_gracefully(self):
+        """Test loss handles batch with no negative samples."""
+        from src.training.losses import WeightedBCELoss
+
+        loss_fn = WeightedBCELoss(pos_weight=4.0)
+
+        predictions = torch.tensor([0.7, 0.8, 0.9])
+        targets = torch.tensor([1.0, 1.0, 1.0])  # All positive
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+    def test_weighted_bce_extreme_predictions_handled(self):
+        """Test loss handles predictions at 0 and 1 boundaries."""
+        from src.training.losses import WeightedBCELoss
+
+        loss_fn = WeightedBCELoss(pos_weight=4.0)
+
+        # Extreme predictions (should be clamped by eps)
+        predictions = torch.tensor([0.0, 1.0, 0.5, 0.5])
+        targets = torch.tensor([0.0, 1.0, 0.0, 1.0])
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+
+class TestWeightedBCELossGradient:
+    """Gradient flow tests for WeightedBCELoss."""
+
+    def test_weighted_bce_gradient_flows(self):
+        """Test gradients propagate through WeightedBCELoss."""
+        from src.training.losses import WeightedBCELoss
+
+        loss_fn = WeightedBCELoss(pos_weight=4.0)
+
+        predictions = torch.tensor([0.7, 0.6, 0.3, 0.2], requires_grad=True)
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+        loss.backward()
+
+        assert predictions.grad is not None, "Gradients should flow to predictions"
+        assert not torch.all(predictions.grad == 0), "Gradients should be non-zero"
+
+
+# =============================================================================
+# evaluate_forecasting_model is_classification Tests
+# =============================================================================
+
+
+class TestEvaluateForecastingModelClassification:
+    """Tests for is_classification parameter in evaluate_forecasting_model."""
+
+    def test_is_classification_uses_half_threshold(self):
+        """Test that is_classification=True uses 0.5 threshold."""
+        import sys
+        sys.path.insert(0, str(PROJECT_ROOT / "experiments" / "architectures"))
+        from common import evaluate_forecasting_model
+
+        # Probability predictions: 3 above 0.5, 2 below
+        predictions = np.array([0.7, 0.6, 0.55, 0.4, 0.3])
+        actual_returns = np.array([0.01, -0.01, 0.005, -0.02, 0.01])
+        threshold_targets = np.array([1, 0, 1, 0, 1])
+
+        metrics = evaluate_forecasting_model(
+            predicted_returns=predictions,
+            actual_returns=actual_returns,
+            threshold_targets=threshold_targets,
+            is_classification=True,
+        )
+
+        # With 0.5 threshold: predictions [0.7, 0.6, 0.55] > 0.5 → 3 positive preds
+        assert metrics["n_positive_preds"] == 3, \
+            f"Expected 3 positive predictions with 0.5 threshold, got {metrics['n_positive_preds']}"
+
+    def test_default_uses_return_threshold(self):
+        """Test that default (is_classification=False) uses return_threshold."""
+        import sys
+        sys.path.insert(0, str(PROJECT_ROOT / "experiments" / "architectures"))
+        from common import evaluate_forecasting_model
+
+        # Return predictions: all well above 0.01 return threshold
+        predictions = np.array([0.05, 0.03, 0.02, 0.015, -0.01])
+        actual_returns = np.array([0.01, -0.01, 0.005, -0.02, 0.01])
+        threshold_targets = np.array([1, 0, 1, 0, 1])
+
+        metrics = evaluate_forecasting_model(
+            predicted_returns=predictions,
+            actual_returns=actual_returns,
+            threshold_targets=threshold_targets,
+            return_threshold=0.01,
+            is_classification=False,
+        )
+
+        # With 0.01 return threshold: 4 predictions > 0.01
+        assert metrics["n_positive_preds"] == 4, \
+            f"Expected 4 positive predictions with 0.01 threshold, got {metrics['n_positive_preds']}"
+
+    def test_classification_different_from_return_threshold(self):
+        """Test that is_classification gives different results than default for probs."""
+        import sys
+        sys.path.insert(0, str(PROJECT_ROOT / "experiments" / "architectures"))
+        from common import evaluate_forecasting_model
+
+        # Probability predictions in [0, 1]
+        predictions = np.array([0.7, 0.4, 0.6, 0.3, 0.8])
+        actual_returns = np.array([0.01, -0.01, 0.005, -0.02, 0.01])
+        threshold_targets = np.array([1, 0, 1, 0, 1])
+
+        # With is_classification=True: threshold=0.5, predictions > 0.5: [0.7, 0.6, 0.8] → 3
+        metrics_cls = evaluate_forecasting_model(
+            predicted_returns=predictions,
+            actual_returns=actual_returns,
+            threshold_targets=threshold_targets,
+            is_classification=True,
+        )
+
+        # With is_classification=False (default): threshold=0.01, all > 0.01 → 5
+        metrics_return = evaluate_forecasting_model(
+            predicted_returns=predictions,
+            actual_returns=actual_returns,
+            threshold_targets=threshold_targets,
+            return_threshold=0.01,
+            is_classification=False,
+        )
+
+        assert metrics_cls["n_positive_preds"] == 3
+        assert metrics_return["n_positive_preds"] == 5
+        assert metrics_cls["n_positive_preds"] != metrics_return["n_positive_preds"]
