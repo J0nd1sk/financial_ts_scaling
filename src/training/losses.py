@@ -686,3 +686,292 @@ class CalibratedFocalLoss(nn.Module):
         loss = focal_loss + self.lambda_cal * calibration_loss
 
         return loss
+
+
+# ============================================================================
+# NOISE-ROBUST LOSS FUNCTIONS (NR Category)
+# For handling label noise in financial data where targets may be unreliable.
+# ============================================================================
+
+
+class BootstrapLoss(nn.Module):
+    """Bootstrap Loss for training with noisy labels.
+
+    Blends the target label with the model's own prediction, effectively
+    allowing the model to "correct" potentially noisy labels over time.
+
+    Formula: L = -[(β * y + (1-β) * p) * log(p) + (1 - β * y - (1-β) * p) * log(1-p)]
+
+    Where:
+        y = target label
+        p = model prediction
+        β = blend coefficient (1.0 = trust labels, 0.0 = trust model)
+
+    As training progresses, the model becomes more confident and the bootstrap
+    term helps filter out noisy labels that contradict confident predictions.
+
+    Reference: Reed et al. "Training Deep Neural Networks on Noisy Labels
+               with Bootstrapping" (2014)
+
+    Args:
+        beta: Blend coefficient in [0, 1]. Default 0.8.
+            Higher values trust the original labels more.
+            Typical: 0.6-0.9 depending on expected noise level.
+        mode: "soft" or "hard". Default "soft".
+            - soft: Uses model's probability p directly
+            - hard: Uses thresholded prediction (p >= 0.5 -> 1, else 0)
+        eps: Numerical stability constant. Default 1e-7.
+
+    Example:
+        >>> loss_fn = BootstrapLoss(beta=0.8, mode="soft")
+        >>> predictions = torch.tensor([0.9, 0.8, 0.2, 0.1])
+        >>> targets = torch.tensor([1.0, 0.0, 0.0, 1.0])  # Some noisy labels
+        >>> loss = loss_fn(predictions, targets)
+    """
+
+    def __init__(
+        self,
+        beta: float = 0.8,
+        mode: str = "soft",
+        eps: float = 1e-7,
+    ) -> None:
+        super().__init__()
+        if not 0.0 <= beta <= 1.0:
+            raise ValueError(f"beta must be in [0, 1], got {beta}")
+        if mode not in ("soft", "hard"):
+            raise ValueError(f"mode must be 'soft' or 'hard', got {mode}")
+        self.beta = beta
+        self.mode = mode
+        self.eps = eps
+
+    def forward(self, predictions: Tensor, targets: Tensor) -> Tensor:
+        """Compute bootstrap loss.
+
+        Args:
+            predictions: Model predictions (probabilities), shape (N,) or (N, 1).
+            targets: Binary targets (0 or 1), shape (N,) or (N, 1).
+
+        Returns:
+            Scalar loss tensor.
+        """
+        # Flatten to 1D
+        predictions = predictions.view(-1)
+        targets = targets.view(-1)
+
+        # Clamp predictions for numerical stability
+        p = predictions.clamp(self.eps, 1 - self.eps)
+
+        # Bootstrap target
+        if self.mode == "hard":
+            # Hard bootstrap: use thresholded predictions
+            p_bootstrap = (predictions >= 0.5).float()
+        else:
+            # Soft bootstrap: use probabilities directly
+            p_bootstrap = predictions
+
+        # Blended target: β * original_label + (1-β) * model_prediction
+        blended_target = self.beta * targets + (1 - self.beta) * p_bootstrap
+
+        # Binary cross-entropy with blended target
+        loss = -(
+            blended_target * torch.log(p)
+            + (1 - blended_target) * torch.log(1 - p)
+        )
+
+        return loss.mean()
+
+
+class ForwardCorrectionLoss(nn.Module):
+    """Forward Correction Loss using estimated noise transition matrix.
+
+    Corrects for label noise by estimating how clean labels are flipped
+    to noisy labels. Uses a transition matrix T where T[i,j] = P(noisy=j|clean=i).
+
+    For binary classification:
+        T = [[1-e0, e0],
+             [e1, 1-e1]]
+    Where e0 = P(noisy=1|clean=0) and e1 = P(noisy=0|clean=1).
+
+    The loss is computed using the forward-corrected probabilities:
+        p_noisy = T^T @ p_clean
+
+    Reference: Patrini et al. "Making Deep Neural Networks Robust to Label
+               Noise: a Loss Correction Approach" (2017)
+
+    Args:
+        noise_rate_0: Probability of clean=0 being labeled as 1. Default 0.1.
+        noise_rate_1: Probability of clean=1 being labeled as 0. Default 0.1.
+        eps: Numerical stability constant. Default 1e-7.
+
+    Example:
+        >>> loss_fn = ForwardCorrectionLoss(noise_rate_0=0.1, noise_rate_1=0.15)
+        >>> predictions = torch.tensor([0.9, 0.8, 0.2, 0.1])
+        >>> targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+        >>> loss = loss_fn(predictions, targets)
+    """
+
+    def __init__(
+        self,
+        noise_rate_0: float = 0.1,
+        noise_rate_1: float = 0.1,
+        eps: float = 1e-7,
+    ) -> None:
+        super().__init__()
+        if not 0.0 <= noise_rate_0 < 0.5:
+            raise ValueError(f"noise_rate_0 must be in [0, 0.5), got {noise_rate_0}")
+        if not 0.0 <= noise_rate_1 < 0.5:
+            raise ValueError(f"noise_rate_1 must be in [0, 0.5), got {noise_rate_1}")
+        self.noise_rate_0 = noise_rate_0
+        self.noise_rate_1 = noise_rate_1
+        self.eps = eps
+
+        # Build transition matrix
+        # T[i,j] = P(noisy=j | clean=i)
+        # T = [[1-e0, e0],
+        #      [e1, 1-e1]]
+        self.register_buffer(
+            "transition_matrix",
+            torch.tensor([
+                [1 - noise_rate_0, noise_rate_0],
+                [noise_rate_1, 1 - noise_rate_1],
+            ]),
+        )
+
+    def forward(self, predictions: Tensor, targets: Tensor) -> Tensor:
+        """Compute forward-corrected loss.
+
+        Args:
+            predictions: Model predictions (probabilities), shape (N,) or (N, 1).
+            targets: Binary targets (0 or 1), shape (N,) or (N, 1).
+
+        Returns:
+            Scalar loss tensor.
+        """
+        # Flatten to 1D
+        predictions = predictions.view(-1)
+        targets = targets.view(-1)
+
+        # Clamp predictions for numerical stability
+        p = predictions.clamp(self.eps, 1 - self.eps)
+
+        # Stack predictions as [P(y=0), P(y=1)]
+        p_clean = torch.stack([1 - p, p], dim=1)  # (N, 2)
+
+        # Forward correction: p_noisy = T^T @ p_clean
+        # This gives P(noisy_label | features)
+        T = self.transition_matrix.to(p.device)
+        p_noisy = torch.matmul(p_clean, T)  # (N, 2)
+
+        # Clamp for stability
+        p_noisy = p_noisy.clamp(self.eps, 1 - self.eps)
+
+        # Cross-entropy with noisy label probabilities
+        # For target y, use p_noisy[:, y]
+        targets_long = targets.long()
+        p_target = p_noisy[torch.arange(len(targets)), targets_long]
+
+        loss = -torch.log(p_target)
+
+        return loss.mean()
+
+
+class ConfidenceLearningLoss(nn.Module):
+    """Confidence Learning Loss for identifying and handling mislabeled samples.
+
+    Uses confident predictions to identify potentially mislabeled samples
+    and either down-weights them or prunes them from the batch.
+
+    The key insight is that a well-trained model will disagree with mislabeled
+    samples more strongly than correctly labeled ones.
+
+    Args:
+        threshold: Confidence threshold for identifying clean samples. Default 0.7.
+            Samples where |prediction - label| > threshold are considered potentially
+            mislabeled.
+        mode: "weight" or "prune". Default "weight".
+            - weight: Down-weight suspected mislabeled samples
+            - prune: Exclude suspected mislabeled samples from loss
+        weight_factor: Weight for suspected mislabeled samples (mode="weight").
+            Default 0.1 (90% down-weighting).
+        warmup_epochs: Number of epochs before applying the correction.
+            Default 5 (allow model to learn before trusting its confidence).
+        eps: Numerical stability constant. Default 1e-7.
+
+    Example:
+        >>> loss_fn = ConfidenceLearningLoss(threshold=0.7, mode="weight")
+        >>> predictions = torch.tensor([0.95, 0.85, 0.15, 0.05])
+        >>> targets = torch.tensor([1.0, 0.0, 0.0, 1.0])  # Second and fourth may be wrong
+        >>> loss = loss_fn(predictions, targets)
+    """
+
+    def __init__(
+        self,
+        threshold: float = 0.7,
+        mode: str = "weight",
+        weight_factor: float = 0.1,
+        warmup_epochs: int = 5,
+        eps: float = 1e-7,
+    ) -> None:
+        super().__init__()
+        self.threshold = threshold
+        self.mode = mode
+        self.weight_factor = weight_factor
+        self.warmup_epochs = warmup_epochs
+        self.eps = eps
+        self._current_epoch = 0
+
+    def set_epoch(self, epoch: int) -> None:
+        """Set current epoch for warmup tracking.
+
+        Args:
+            epoch: Current training epoch.
+        """
+        self._current_epoch = epoch
+
+    def forward(self, predictions: Tensor, targets: Tensor) -> Tensor:
+        """Compute confidence learning loss.
+
+        Args:
+            predictions: Model predictions (probabilities), shape (N,) or (N, 1).
+            targets: Binary targets (0 or 1), shape (N,) or (N, 1).
+
+        Returns:
+            Scalar loss tensor.
+        """
+        # Flatten to 1D
+        predictions = predictions.view(-1)
+        targets = targets.view(-1)
+
+        # Clamp predictions for numerical stability
+        p = predictions.clamp(self.eps, 1 - self.eps)
+
+        # Standard BCE
+        bce = -(targets * torch.log(p) + (1 - targets) * torch.log(1 - p))
+
+        # During warmup, just return standard BCE
+        if self._current_epoch < self.warmup_epochs:
+            return bce.mean()
+
+        # Confidence: how sure is the model about the label?
+        # For correct labels: high prediction for positive, low for negative
+        # Agreement = p if target=1, (1-p) if target=0
+        agreement = predictions * targets + (1 - predictions) * (1 - targets)
+
+        # Low agreement = potential mislabel
+        is_mislabeled = agreement < (1 - self.threshold)
+
+        if self.mode == "prune":
+            # Exclude suspected mislabeled samples
+            is_clean = ~is_mislabeled
+            if is_clean.sum() == 0:
+                # Fallback: keep all if nothing would remain
+                return bce.mean()
+            return bce[is_clean].mean()
+        else:
+            # Weight mode: down-weight suspected mislabeled samples
+            weights = torch.where(
+                is_mislabeled,
+                torch.tensor(self.weight_factor, device=bce.device),
+                torch.tensor(1.0, device=bce.device),
+            )
+            return (bce * weights).sum() / weights.sum()

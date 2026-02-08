@@ -13,6 +13,7 @@ Sub-Chunk 6a (rank 207-230): MA Extended Part 1 (~24 features)
 
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 import sys
 

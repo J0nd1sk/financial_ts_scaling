@@ -73,6 +73,28 @@ class ExperimentSpec:
     # Advanced embedding configuration (Phase 3)
     embedding_type: str | None = None  # "progressive", "bottleneck", "multihead", "gated_residual", "attention"
     embedding_params: dict | None = None  # Type-specific params: {"num_layers": 2}, {"compression_ratio": 0.25}, etc.
+    # =========================================================================
+    # EXTENDED EXPERIMENT CATEGORIES (6 new categories, 114 experiments)
+    # =========================================================================
+    # Curriculum Learning (CL)
+    curriculum_strategy: str | None = None   # "loss", "confidence", "volatility", "anti"
+    curriculum_params: dict | None = None    # {"initial_pct": 0.3, "growth_rate": 0.1}
+    # Multi-Scale Temporal (MS)
+    multiscale_type: str | None = None       # "hierarchical_pool", "multi_patch", "dilated_conv", "cross_attention"
+    multiscale_params: dict | None = None    # {"scales": [1,2,4], "fusion": "concat"}
+    # Regime Detection (RD)
+    regime_strategy: str | None = None       # "volatility", "trend", "cluster"
+    regime_params: dict | None = None        # {"n_regimes": 3, "conditioning": "loss_weight"}
+    # Data Augmentation (DA)
+    augmentation_type: str | None = None     # "jitter", "scale", "mixup", "timewarp", "combined"
+    augmentation_params: dict | None = None  # {"std": 0.01, "prob": 0.5}
+    # Contrastive Pre-training (CP)
+    contrastive_type: str | None = None      # "simclr", "ts2vec", "byol"
+    contrastive_params: dict | None = None   # {"pretrain_epochs": 20, "temperature": 0.1}
+    pretrain_checkpoint: str | None = None   # Path to pre-trained encoder checkpoint
+    # Noise-Robust Training (NR)
+    noise_robust_type: str | None = None     # "bootstrap", "coteaching", "forward_correct", "confidence"
+    noise_robust_params: dict | None = None  # {"beta": 0.8, "forget_rate": 0.2}
 
     def get_config(self, key: str, fixed_config: dict) -> any:
         """Get config value, using override if set, otherwise fixed_config."""
@@ -582,6 +604,396 @@ EXPERIMENTS = [
     ExperimentSpec("AE-21", "AE-P5", "a100", 100, 32, "a100 FE-83 (deep) + Attention h=4",
                    n_layers=8, n_heads=4, dropout=0.6,
                    embedding_type="attention", embedding_params={"num_heads": 4, "use_position": True}),
+    # =========================================================================
+    # EXTENDED EXPERIMENT CATEGORIES (114 experiments)
+    # =========================================================================
+    # =========================================================================
+    # DA-P1: Jitter Augmentation (6 experiments)
+    # Add Gaussian noise to features
+    # =========================================================================
+    ExperimentSpec("DA-01", "DA-P1", "a100", 100, 32, "a100 jitter std=0.005",
+                   augmentation_type="jitter", augmentation_params={"std": 0.005, "prob": 0.5}),
+    ExperimentSpec("DA-02", "DA-P1", "a100", 100, 32, "a100 jitter std=0.01",
+                   augmentation_type="jitter", augmentation_params={"std": 0.01, "prob": 0.5}),
+    ExperimentSpec("DA-03", "DA-P1", "a100", 100, 32, "a100 jitter std=0.02",
+                   augmentation_type="jitter", augmentation_params={"std": 0.02, "prob": 0.5}),
+    ExperimentSpec("DA-04", "DA-P1", "a500", 500, 16, "a500 jitter std=0.005",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="jitter", augmentation_params={"std": 0.005, "prob": 0.5}),
+    ExperimentSpec("DA-05", "DA-P1", "a500", 500, 16, "a500 jitter std=0.01",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="jitter", augmentation_params={"std": 0.01, "prob": 0.5}),
+    ExperimentSpec("DA-06", "DA-P1", "a500", 500, 16, "a500 jitter std=0.02",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="jitter", augmentation_params={"std": 0.02, "prob": 0.5}),
+    # =========================================================================
+    # DA-P2: Scale Augmentation (6 experiments)
+    # Random scaling of features
+    # =========================================================================
+    ExperimentSpec("DA-07", "DA-P2", "a100", 100, 32, "a100 scale range=0.1",
+                   augmentation_type="scale", augmentation_params={"scale_range": 0.1, "prob": 0.5}),
+    ExperimentSpec("DA-08", "DA-P2", "a100", 100, 32, "a100 scale range=0.2",
+                   augmentation_type="scale", augmentation_params={"scale_range": 0.2, "prob": 0.5}),
+    ExperimentSpec("DA-09", "DA-P2", "a100", 100, 32, "a100 scale range=0.1 per_feature",
+                   augmentation_type="scale", augmentation_params={"scale_range": 0.1, "prob": 0.5, "per_feature": True}),
+    ExperimentSpec("DA-10", "DA-P2", "a500", 500, 16, "a500 scale range=0.1",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="scale", augmentation_params={"scale_range": 0.1, "prob": 0.5}),
+    ExperimentSpec("DA-11", "DA-P2", "a500", 500, 16, "a500 scale range=0.2",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="scale", augmentation_params={"scale_range": 0.2, "prob": 0.5}),
+    ExperimentSpec("DA-12", "DA-P2", "a500", 500, 16, "a500 scale range=0.1 per_feature",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="scale", augmentation_params={"scale_range": 0.1, "prob": 0.5, "per_feature": True}),
+    # =========================================================================
+    # DA-P3: Mixup Augmentation (6 experiments)
+    # Interpolate between samples
+    # =========================================================================
+    ExperimentSpec("DA-13", "DA-P3", "a100", 100, 32, "a100 mixup alpha=0.1",
+                   augmentation_type="mixup", augmentation_params={"alpha": 0.1, "prob": 0.5}),
+    ExperimentSpec("DA-14", "DA-P3", "a100", 100, 32, "a100 mixup alpha=0.2",
+                   augmentation_type="mixup", augmentation_params={"alpha": 0.2, "prob": 0.5}),
+    ExperimentSpec("DA-15", "DA-P3", "a100", 100, 32, "a100 mixup alpha=0.4",
+                   augmentation_type="mixup", augmentation_params={"alpha": 0.4, "prob": 0.5}),
+    ExperimentSpec("DA-16", "DA-P3", "a500", 500, 16, "a500 mixup alpha=0.1",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="mixup", augmentation_params={"alpha": 0.1, "prob": 0.5}),
+    ExperimentSpec("DA-17", "DA-P3", "a500", 500, 16, "a500 mixup alpha=0.2",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="mixup", augmentation_params={"alpha": 0.2, "prob": 0.5}),
+    ExperimentSpec("DA-18", "DA-P3", "a500", 500, 16, "a500 mixup alpha=0.4",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="mixup", augmentation_params={"alpha": 0.4, "prob": 0.5}),
+    # =========================================================================
+    # DA-P4: Time Warp Augmentation (4 experiments)
+    # DTW-based temporal warping
+    # =========================================================================
+    ExperimentSpec("DA-19", "DA-P4", "a100", 100, 32, "a100 timewarp factor=0.1",
+                   augmentation_type="timewarp", augmentation_params={"warp_factor": 0.1, "prob": 0.5}),
+    ExperimentSpec("DA-20", "DA-P4", "a100", 100, 32, "a100 timewarp factor=0.2",
+                   augmentation_type="timewarp", augmentation_params={"warp_factor": 0.2, "prob": 0.5}),
+    ExperimentSpec("DA-21", "DA-P4", "a500", 500, 16, "a500 timewarp factor=0.1",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="timewarp", augmentation_params={"warp_factor": 0.1, "prob": 0.5}),
+    ExperimentSpec("DA-22", "DA-P4", "a500", 500, 16, "a500 timewarp factor=0.2",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="timewarp", augmentation_params={"warp_factor": 0.2, "prob": 0.5}),
+    # =========================================================================
+    # DA-P5: Combined Augmentation (2 experiments)
+    # Best jitter + scale combinations
+    # =========================================================================
+    ExperimentSpec("DA-23", "DA-P5", "a100", 100, 32, "a100 combined jitter+scale",
+                   augmentation_type="combined", augmentation_params={"jitter_std": 0.01, "scale_range": 0.1}),
+    ExperimentSpec("DA-24", "DA-P5", "a500", 500, 16, "a500 combined jitter+scale",
+                   d_model=64, n_heads=4, d_ff=256,
+                   augmentation_type="combined", augmentation_params={"jitter_std": 0.01, "scale_range": 0.1}),
+    # =========================================================================
+    # NR-P1: Bootstrap Loss (6 experiments)
+    # Blend predicted labels with targets
+    # =========================================================================
+    ExperimentSpec("NR-01", "NR-P1", "a100", 100, 32, "a100 bootstrap beta=0.6",
+                   noise_robust_type="bootstrap", noise_robust_params={"beta": 0.6, "mode": "soft"}),
+    ExperimentSpec("NR-02", "NR-P1", "a100", 100, 32, "a100 bootstrap beta=0.7",
+                   noise_robust_type="bootstrap", noise_robust_params={"beta": 0.7, "mode": "soft"}),
+    ExperimentSpec("NR-03", "NR-P1", "a100", 100, 32, "a100 bootstrap beta=0.8",
+                   noise_robust_type="bootstrap", noise_robust_params={"beta": 0.8, "mode": "soft"}),
+    ExperimentSpec("NR-04", "NR-P1", "a500", 500, 16, "a500 bootstrap beta=0.6",
+                   d_model=64, n_heads=4, d_ff=256,
+                   noise_robust_type="bootstrap", noise_robust_params={"beta": 0.6, "mode": "soft"}),
+    ExperimentSpec("NR-05", "NR-P1", "a500", 500, 16, "a500 bootstrap beta=0.7",
+                   d_model=64, n_heads=4, d_ff=256,
+                   noise_robust_type="bootstrap", noise_robust_params={"beta": 0.7, "mode": "soft"}),
+    ExperimentSpec("NR-06", "NR-P1", "a500", 500, 16, "a500 bootstrap beta=0.8",
+                   d_model=64, n_heads=4, d_ff=256,
+                   noise_robust_type="bootstrap", noise_robust_params={"beta": 0.8, "mode": "soft"}),
+    # =========================================================================
+    # NR-P2: Co-teaching (6 experiments)
+    # Dual networks teach each other
+    # =========================================================================
+    ExperimentSpec("NR-07", "NR-P2", "a100", 100, 32, "a100 coteaching forget=0.1",
+                   noise_robust_type="coteaching", noise_robust_params={"forget_rate": 0.1}),
+    ExperimentSpec("NR-08", "NR-P2", "a100", 100, 32, "a100 coteaching forget=0.2",
+                   noise_robust_type="coteaching", noise_robust_params={"forget_rate": 0.2}),
+    ExperimentSpec("NR-09", "NR-P2", "a100", 100, 32, "a100 coteaching forget=0.3",
+                   noise_robust_type="coteaching", noise_robust_params={"forget_rate": 0.3}),
+    ExperimentSpec("NR-10", "NR-P2", "a500", 500, 16, "a500 coteaching forget=0.1",
+                   d_model=64, n_heads=4, d_ff=256,
+                   noise_robust_type="coteaching", noise_robust_params={"forget_rate": 0.1}),
+    ExperimentSpec("NR-11", "NR-P2", "a500", 500, 16, "a500 coteaching forget=0.2",
+                   d_model=64, n_heads=4, d_ff=256,
+                   noise_robust_type="coteaching", noise_robust_params={"forget_rate": 0.2}),
+    ExperimentSpec("NR-12", "NR-P2", "a500", 500, 16, "a500 coteaching forget=0.3",
+                   d_model=64, n_heads=4, d_ff=256,
+                   noise_robust_type="coteaching", noise_robust_params={"forget_rate": 0.3}),
+    # =========================================================================
+    # NR-P3: Forward Correction (4 experiments)
+    # Estimate and correct for noise transition matrix
+    # =========================================================================
+    ExperimentSpec("NR-13", "NR-P3", "a100", 100, 32, "a100 forward noise=0.1",
+                   noise_robust_type="forward_correct", noise_robust_params={"noise_rate_0": 0.1, "noise_rate_1": 0.1}),
+    ExperimentSpec("NR-14", "NR-P3", "a100", 100, 32, "a100 forward noise=0.15",
+                   noise_robust_type="forward_correct", noise_robust_params={"noise_rate_0": 0.15, "noise_rate_1": 0.15}),
+    ExperimentSpec("NR-15", "NR-P3", "a500", 500, 16, "a500 forward noise=0.1",
+                   d_model=64, n_heads=4, d_ff=256,
+                   noise_robust_type="forward_correct", noise_robust_params={"noise_rate_0": 0.1, "noise_rate_1": 0.1}),
+    ExperimentSpec("NR-16", "NR-P3", "a500", 500, 16, "a500 forward noise=0.15",
+                   d_model=64, n_heads=4, d_ff=256,
+                   noise_robust_type="forward_correct", noise_robust_params={"noise_rate_0": 0.15, "noise_rate_1": 0.15}),
+    # =========================================================================
+    # NR-P4: Confidence Learning (2 experiments)
+    # Identify and down-weight mislabeled samples
+    # =========================================================================
+    ExperimentSpec("NR-17", "NR-P4", "a100", 100, 32, "a100 confidence thresh=0.7",
+                   noise_robust_type="confidence", noise_robust_params={"threshold": 0.7, "mode": "weight"}),
+    ExperimentSpec("NR-18", "NR-P4", "a500", 500, 16, "a500 confidence thresh=0.7",
+                   d_model=64, n_heads=4, d_ff=256,
+                   noise_robust_type="confidence", noise_robust_params={"threshold": 0.7, "mode": "weight"}),
+    # =========================================================================
+    # CL-P1: Loss-based Curriculum (6 experiments)
+    # Start with low-loss samples
+    # =========================================================================
+    ExperimentSpec("CL-01", "CL-P1", "a100", 100, 32, "a100 curriculum loss init=0.2 grow=0.05",
+                   curriculum_strategy="loss", curriculum_params={"initial_pct": 0.2, "growth_rate": 0.05}),
+    ExperimentSpec("CL-02", "CL-P1", "a100", 100, 32, "a100 curriculum loss init=0.3 grow=0.1",
+                   curriculum_strategy="loss", curriculum_params={"initial_pct": 0.3, "growth_rate": 0.1}),
+    ExperimentSpec("CL-03", "CL-P1", "a100", 100, 32, "a100 curriculum loss init=0.5 grow=0.1",
+                   curriculum_strategy="loss", curriculum_params={"initial_pct": 0.5, "growth_rate": 0.1}),
+    ExperimentSpec("CL-04", "CL-P1", "a500", 500, 16, "a500 curriculum loss init=0.2 grow=0.05",
+                   d_model=64, n_heads=4, d_ff=256,
+                   curriculum_strategy="loss", curriculum_params={"initial_pct": 0.2, "growth_rate": 0.05}),
+    ExperimentSpec("CL-05", "CL-P1", "a500", 500, 16, "a500 curriculum loss init=0.3 grow=0.1",
+                   d_model=64, n_heads=4, d_ff=256,
+                   curriculum_strategy="loss", curriculum_params={"initial_pct": 0.3, "growth_rate": 0.1}),
+    ExperimentSpec("CL-06", "CL-P1", "a500", 500, 16, "a500 curriculum loss init=0.5 grow=0.1",
+                   d_model=64, n_heads=4, d_ff=256,
+                   curriculum_strategy="loss", curriculum_params={"initial_pct": 0.5, "growth_rate": 0.1}),
+    # =========================================================================
+    # CL-P2: Confidence-based Curriculum (6 experiments)
+    # Start with high-confidence predictions
+    # =========================================================================
+    ExperimentSpec("CL-07", "CL-P2", "a100", 100, 32, "a100 curriculum confidence init=0.2",
+                   curriculum_strategy="confidence", curriculum_params={"initial_pct": 0.2, "growth_rate": 0.05}),
+    ExperimentSpec("CL-08", "CL-P2", "a100", 100, 32, "a100 curriculum confidence init=0.3",
+                   curriculum_strategy="confidence", curriculum_params={"initial_pct": 0.3, "growth_rate": 0.1}),
+    ExperimentSpec("CL-09", "CL-P2", "a100", 100, 32, "a100 curriculum confidence init=0.5",
+                   curriculum_strategy="confidence", curriculum_params={"initial_pct": 0.5, "growth_rate": 0.1}),
+    ExperimentSpec("CL-10", "CL-P2", "a500", 500, 16, "a500 curriculum confidence init=0.2",
+                   d_model=64, n_heads=4, d_ff=256,
+                   curriculum_strategy="confidence", curriculum_params={"initial_pct": 0.2, "growth_rate": 0.05}),
+    ExperimentSpec("CL-11", "CL-P2", "a500", 500, 16, "a500 curriculum confidence init=0.3",
+                   d_model=64, n_heads=4, d_ff=256,
+                   curriculum_strategy="confidence", curriculum_params={"initial_pct": 0.3, "growth_rate": 0.1}),
+    ExperimentSpec("CL-12", "CL-P2", "a500", 500, 16, "a500 curriculum confidence init=0.5",
+                   d_model=64, n_heads=4, d_ff=256,
+                   curriculum_strategy="confidence", curriculum_params={"initial_pct": 0.5, "growth_rate": 0.1}),
+    # =========================================================================
+    # CL-P3: Volatility-based Curriculum (4 experiments)
+    # Start with low-volatility periods (financial-specific)
+    # =========================================================================
+    ExperimentSpec("CL-13", "CL-P3", "a100", 100, 32, "a100 curriculum volatility init=0.3",
+                   curriculum_strategy="volatility", curriculum_params={"initial_pct": 0.3, "growth_rate": 0.1}),
+    ExperimentSpec("CL-14", "CL-P3", "a100", 100, 32, "a100 curriculum volatility init=0.5",
+                   curriculum_strategy="volatility", curriculum_params={"initial_pct": 0.5, "growth_rate": 0.1}),
+    ExperimentSpec("CL-15", "CL-P3", "a500", 500, 16, "a500 curriculum volatility init=0.3",
+                   d_model=64, n_heads=4, d_ff=256,
+                   curriculum_strategy="volatility", curriculum_params={"initial_pct": 0.3, "growth_rate": 0.1}),
+    ExperimentSpec("CL-16", "CL-P3", "a500", 500, 16, "a500 curriculum volatility init=0.5",
+                   d_model=64, n_heads=4, d_ff=256,
+                   curriculum_strategy="volatility", curriculum_params={"initial_pct": 0.5, "growth_rate": 0.1}),
+    # =========================================================================
+    # CL-P4: Anti-Curriculum (2 experiments)
+    # Start with hard samples (baseline comparison)
+    # =========================================================================
+    ExperimentSpec("CL-17", "CL-P4", "a100", 100, 32, "a100 anti-curriculum init=0.3",
+                   curriculum_strategy="anti", curriculum_params={"initial_pct": 0.3, "growth_rate": 0.1}),
+    ExperimentSpec("CL-18", "CL-P4", "a500", 500, 16, "a500 anti-curriculum init=0.3",
+                   d_model=64, n_heads=4, d_ff=256,
+                   curriculum_strategy="anti", curriculum_params={"initial_pct": 0.3, "growth_rate": 0.1}),
+    # =========================================================================
+    # RD-P1: Volatility Regime (6 experiments)
+    # High/medium/low volatility regimes
+    # =========================================================================
+    ExperimentSpec("RD-01", "RD-P1", "a100", 100, 32, "a100 regime volatility 3-way loss_weight",
+                   regime_strategy="volatility", regime_params={"thresholds": (0.01, 0.02), "conditioning": "loss_weight"}),
+    ExperimentSpec("RD-02", "RD-P1", "a100", 100, 32, "a100 regime volatility 3-way embedding",
+                   regime_strategy="volatility", regime_params={"thresholds": (0.01, 0.02), "conditioning": "embedding"}),
+    ExperimentSpec("RD-03", "RD-P1", "a100", 100, 32, "a100 regime volatility tight thresholds",
+                   regime_strategy="volatility", regime_params={"thresholds": (0.005, 0.015), "conditioning": "loss_weight"}),
+    ExperimentSpec("RD-04", "RD-P1", "a500", 500, 16, "a500 regime volatility 3-way loss_weight",
+                   d_model=64, n_heads=4, d_ff=256,
+                   regime_strategy="volatility", regime_params={"thresholds": (0.01, 0.02), "conditioning": "loss_weight"}),
+    ExperimentSpec("RD-05", "RD-P1", "a500", 500, 16, "a500 regime volatility 3-way embedding",
+                   d_model=64, n_heads=4, d_ff=256,
+                   regime_strategy="volatility", regime_params={"thresholds": (0.01, 0.02), "conditioning": "embedding"}),
+    ExperimentSpec("RD-06", "RD-P1", "a500", 500, 16, "a500 regime volatility tight thresholds",
+                   d_model=64, n_heads=4, d_ff=256,
+                   regime_strategy="volatility", regime_params={"thresholds": (0.005, 0.015), "conditioning": "loss_weight"}),
+    # =========================================================================
+    # RD-P2: Trend Regime (6 experiments)
+    # Bull/bear/sideways using SMA or ADX
+    # =========================================================================
+    ExperimentSpec("RD-07", "RD-P2", "a100", 100, 32, "a100 regime trend SMA",
+                   regime_strategy="trend", regime_params={"method": "sma", "short_window": 10, "long_window": 30}),
+    ExperimentSpec("RD-08", "RD-P2", "a100", 100, 32, "a100 regime trend ADX",
+                   regime_strategy="trend", regime_params={"method": "adx", "adx_threshold": 25}),
+    ExperimentSpec("RD-09", "RD-P2", "a100", 100, 32, "a100 regime trend SMA fast",
+                   regime_strategy="trend", regime_params={"method": "sma", "short_window": 5, "long_window": 20}),
+    ExperimentSpec("RD-10", "RD-P2", "a500", 500, 16, "a500 regime trend SMA",
+                   d_model=64, n_heads=4, d_ff=256,
+                   regime_strategy="trend", regime_params={"method": "sma", "short_window": 10, "long_window": 30}),
+    ExperimentSpec("RD-11", "RD-P2", "a500", 500, 16, "a500 regime trend ADX",
+                   d_model=64, n_heads=4, d_ff=256,
+                   regime_strategy="trend", regime_params={"method": "adx", "adx_threshold": 25}),
+    ExperimentSpec("RD-12", "RD-P2", "a500", 500, 16, "a500 regime trend SMA fast",
+                   d_model=64, n_heads=4, d_ff=256,
+                   regime_strategy="trend", regime_params={"method": "sma", "short_window": 5, "long_window": 20}),
+    # =========================================================================
+    # RD-P3: Cluster-based Regime (4 experiments)
+    # Learned regime discovery via clustering
+    # =========================================================================
+    ExperimentSpec("RD-13", "RD-P3", "a100", 100, 32, "a100 regime cluster k=2",
+                   regime_strategy="cluster", regime_params={"n_clusters": 2}),
+    ExperimentSpec("RD-14", "RD-P3", "a100", 100, 32, "a100 regime cluster k=4",
+                   regime_strategy="cluster", regime_params={"n_clusters": 4}),
+    ExperimentSpec("RD-15", "RD-P3", "a500", 500, 16, "a500 regime cluster k=2",
+                   d_model=64, n_heads=4, d_ff=256,
+                   regime_strategy="cluster", regime_params={"n_clusters": 2}),
+    ExperimentSpec("RD-16", "RD-P3", "a500", 500, 16, "a500 regime cluster k=4",
+                   d_model=64, n_heads=4, d_ff=256,
+                   regime_strategy="cluster", regime_params={"n_clusters": 4}),
+    # =========================================================================
+    # RD-P4: Regime-Gated (2 experiments)
+    # Different model heads per regime
+    # =========================================================================
+    ExperimentSpec("RD-17", "RD-P4", "a100", 100, 32, "a100 regime-gated volatility",
+                   regime_strategy="volatility", regime_params={"conditioning": "gated_head"}),
+    ExperimentSpec("RD-18", "RD-P4", "a500", 500, 16, "a500 regime-gated volatility",
+                   d_model=64, n_heads=4, d_ff=256,
+                   regime_strategy="volatility", regime_params={"conditioning": "gated_head"}),
+    # =========================================================================
+    # MS-P1: Hierarchical Pool (6 experiments)
+    # Pool patches at multiple scales
+    # =========================================================================
+    ExperimentSpec("MS-01", "MS-P1", "a100", 100, 32, "a100 hierarchical scales=[1,2,4] concat",
+                   multiscale_type="hierarchical_pool", multiscale_params={"scales": [1, 2, 4], "fusion": "concat"}),
+    ExperimentSpec("MS-02", "MS-P1", "a100", 100, 32, "a100 hierarchical scales=[1,2,4] sum",
+                   multiscale_type="hierarchical_pool", multiscale_params={"scales": [1, 2, 4], "fusion": "sum"}),
+    ExperimentSpec("MS-03", "MS-P1", "a100", 100, 32, "a100 hierarchical scales=[1,2,4,8] attention",
+                   multiscale_type="hierarchical_pool", multiscale_params={"scales": [1, 2, 4, 8], "fusion": "attention"}),
+    ExperimentSpec("MS-04", "MS-P1", "a500", 500, 16, "a500 hierarchical scales=[1,2,4] concat",
+                   d_model=64, n_heads=4, d_ff=256,
+                   multiscale_type="hierarchical_pool", multiscale_params={"scales": [1, 2, 4], "fusion": "concat"}),
+    ExperimentSpec("MS-05", "MS-P1", "a500", 500, 16, "a500 hierarchical scales=[1,2,4] sum",
+                   d_model=64, n_heads=4, d_ff=256,
+                   multiscale_type="hierarchical_pool", multiscale_params={"scales": [1, 2, 4], "fusion": "sum"}),
+    ExperimentSpec("MS-06", "MS-P1", "a500", 500, 16, "a500 hierarchical scales=[1,2,4,8] attention",
+                   d_model=64, n_heads=4, d_ff=256,
+                   multiscale_type="hierarchical_pool", multiscale_params={"scales": [1, 2, 4, 8], "fusion": "attention"}),
+    # =========================================================================
+    # MS-P2: Multi-Patch (6 experiments)
+    # Parallel patch embeddings at different sizes
+    # =========================================================================
+    ExperimentSpec("MS-07", "MS-P2", "a100", 100, 32, "a100 multi-patch sizes=[8,16]",
+                   multiscale_type="multi_patch", multiscale_params={"patch_sizes": [8, 16], "fusion": "concat"}),
+    ExperimentSpec("MS-08", "MS-P2", "a100", 100, 32, "a100 multi-patch sizes=[8,16,32]",
+                   multiscale_type="multi_patch", multiscale_params={"patch_sizes": [8, 16, 32], "fusion": "concat"}),
+    ExperimentSpec("MS-09", "MS-P2", "a100", 100, 32, "a100 multi-patch sizes=[5,10,20]",
+                   multiscale_type="multi_patch", multiscale_params={"patch_sizes": [5, 10, 20], "fusion": "concat"}),
+    ExperimentSpec("MS-10", "MS-P2", "a500", 500, 16, "a500 multi-patch sizes=[8,16]",
+                   d_model=64, n_heads=4, d_ff=256,
+                   multiscale_type="multi_patch", multiscale_params={"patch_sizes": [8, 16], "fusion": "concat"}),
+    ExperimentSpec("MS-11", "MS-P2", "a500", 500, 16, "a500 multi-patch sizes=[8,16,32]",
+                   d_model=64, n_heads=4, d_ff=256,
+                   multiscale_type="multi_patch", multiscale_params={"patch_sizes": [8, 16, 32], "fusion": "concat"}),
+    ExperimentSpec("MS-12", "MS-P2", "a500", 500, 16, "a500 multi-patch sizes=[5,10,20]",
+                   d_model=64, n_heads=4, d_ff=256,
+                   multiscale_type="multi_patch", multiscale_params={"patch_sizes": [5, 10, 20], "fusion": "concat"}),
+    # =========================================================================
+    # MS-P3: Dilated Conv (4 experiments)
+    # Dilated temporal convolutions
+    # =========================================================================
+    ExperimentSpec("MS-13", "MS-P3", "a100", 100, 32, "a100 dilated rates=[1,2,4,8]",
+                   multiscale_type="dilated_conv", multiscale_params={"dilation_rates": [1, 2, 4, 8]}),
+    ExperimentSpec("MS-14", "MS-P3", "a100", 100, 32, "a100 dilated rates=[1,2,4,8,16]",
+                   multiscale_type="dilated_conv", multiscale_params={"dilation_rates": [1, 2, 4, 8, 16]}),
+    ExperimentSpec("MS-15", "MS-P3", "a500", 500, 16, "a500 dilated rates=[1,2,4,8]",
+                   d_model=64, n_heads=4, d_ff=256,
+                   multiscale_type="dilated_conv", multiscale_params={"dilation_rates": [1, 2, 4, 8]}),
+    ExperimentSpec("MS-16", "MS-P3", "a500", 500, 16, "a500 dilated rates=[1,2,4,8,16]",
+                   d_model=64, n_heads=4, d_ff=256,
+                   multiscale_type="dilated_conv", multiscale_params={"dilation_rates": [1, 2, 4, 8, 16]}),
+    # =========================================================================
+    # MS-P4: Cross-Scale Attention (2 experiments)
+    # Attention between different temporal scales
+    # =========================================================================
+    ExperimentSpec("MS-17", "MS-P4", "a100", 100, 32, "a100 cross-scale attention h=4",
+                   multiscale_type="cross_attention", multiscale_params={"n_heads": 4}),
+    ExperimentSpec("MS-18", "MS-P4", "a500", 500, 16, "a500 cross-scale attention h=4",
+                   d_model=64, n_heads=4, d_ff=256,
+                   multiscale_type="cross_attention", multiscale_params={"n_heads": 4}),
+    # =========================================================================
+    # CP-P1: SimCLR Pre-training (6 experiments)
+    # Contrastive learning with augmented views
+    # =========================================================================
+    ExperimentSpec("CP-01", "CP-P1", "a100", 100, 32, "a100 simclr temp=0.05",
+                   contrastive_type="simclr", contrastive_params={"temperature": 0.05, "pretrain_epochs": 20}),
+    ExperimentSpec("CP-02", "CP-P1", "a100", 100, 32, "a100 simclr temp=0.1",
+                   contrastive_type="simclr", contrastive_params={"temperature": 0.1, "pretrain_epochs": 20}),
+    ExperimentSpec("CP-03", "CP-P1", "a100", 100, 32, "a100 simclr temp=0.2",
+                   contrastive_type="simclr", contrastive_params={"temperature": 0.2, "pretrain_epochs": 20}),
+    ExperimentSpec("CP-04", "CP-P1", "a500", 500, 16, "a500 simclr temp=0.05",
+                   d_model=64, n_heads=4, d_ff=256,
+                   contrastive_type="simclr", contrastive_params={"temperature": 0.05, "pretrain_epochs": 20}),
+    ExperimentSpec("CP-05", "CP-P1", "a500", 500, 16, "a500 simclr temp=0.1",
+                   d_model=64, n_heads=4, d_ff=256,
+                   contrastive_type="simclr", contrastive_params={"temperature": 0.1, "pretrain_epochs": 20}),
+    ExperimentSpec("CP-06", "CP-P1", "a500", 500, 16, "a500 simclr temp=0.2",
+                   d_model=64, n_heads=4, d_ff=256,
+                   contrastive_type="simclr", contrastive_params={"temperature": 0.2, "pretrain_epochs": 20}),
+    # =========================================================================
+    # CP-P2: TS2Vec Pre-training (6 experiments)
+    # Hierarchical temporal contrastive learning
+    # =========================================================================
+    ExperimentSpec("CP-07", "CP-P2", "a100", 100, 32, "a100 ts2vec hierarchical",
+                   contrastive_type="ts2vec", contrastive_params={"temperature": 0.1, "pretrain_epochs": 20}),
+    ExperimentSpec("CP-08", "CP-P2", "a100", 100, 32, "a100 ts2vec instance-only",
+                   contrastive_type="ts2vec", contrastive_params={"temperature": 0.1, "lambda_temporal": 0, "pretrain_epochs": 20}),
+    ExperimentSpec("CP-09", "CP-P2", "a100", 100, 32, "a100 ts2vec temporal-heavy",
+                   contrastive_type="ts2vec", contrastive_params={"temperature": 0.1, "lambda_temporal": 1.0, "pretrain_epochs": 20}),
+    ExperimentSpec("CP-10", "CP-P2", "a500", 500, 16, "a500 ts2vec hierarchical",
+                   d_model=64, n_heads=4, d_ff=256,
+                   contrastive_type="ts2vec", contrastive_params={"temperature": 0.1, "pretrain_epochs": 20}),
+    ExperimentSpec("CP-11", "CP-P2", "a500", 500, 16, "a500 ts2vec instance-only",
+                   d_model=64, n_heads=4, d_ff=256,
+                   contrastive_type="ts2vec", contrastive_params={"temperature": 0.1, "lambda_temporal": 0, "pretrain_epochs": 20}),
+    ExperimentSpec("CP-12", "CP-P2", "a500", 500, 16, "a500 ts2vec temporal-heavy",
+                   d_model=64, n_heads=4, d_ff=256,
+                   contrastive_type="ts2vec", contrastive_params={"temperature": 0.1, "lambda_temporal": 1.0, "pretrain_epochs": 20}),
+    # =========================================================================
+    # CP-P3: BYOL Pre-training (4 experiments)
+    # Bootstrap Your Own Latent (no negatives)
+    # =========================================================================
+    ExperimentSpec("CP-13", "CP-P3", "a100", 100, 32, "a100 byol default",
+                   contrastive_type="byol", contrastive_params={"pretrain_epochs": 20}),
+    ExperimentSpec("CP-14", "CP-P3", "a100", 100, 32, "a100 byol long pretrain",
+                   contrastive_type="byol", contrastive_params={"pretrain_epochs": 40}),
+    ExperimentSpec("CP-15", "CP-P3", "a500", 500, 16, "a500 byol default",
+                   d_model=64, n_heads=4, d_ff=256,
+                   contrastive_type="byol", contrastive_params={"pretrain_epochs": 20}),
+    ExperimentSpec("CP-16", "CP-P3", "a500", 500, 16, "a500 byol long pretrain",
+                   d_model=64, n_heads=4, d_ff=256,
+                   contrastive_type="byol", contrastive_params={"pretrain_epochs": 40}),
+    # =========================================================================
+    # CP-P4: Fine-tune from Pre-trained (2 experiments)
+    # Load best pre-trained encoder and fine-tune
+    # =========================================================================
+    ExperimentSpec("CP-17", "CP-P4", "a100", 100, 32, "a100 finetune from simclr",
+                   contrastive_type="simclr", contrastive_params={"finetune_only": True},
+                   pretrain_checkpoint="outputs/contrastive/a100_simclr_best.pt"),
+    ExperimentSpec("CP-18", "CP-P4", "a500", 500, 16, "a500 finetune from simclr",
+                   d_model=64, n_heads=4, d_ff=256,
+                   contrastive_type="simclr", contrastive_params={"finetune_only": True},
+                   pretrain_checkpoint="outputs/contrastive/a500_simclr_best.pt"),
 ]
 
 EXPERIMENT_BY_ID = {exp.exp_id: exp for exp in EXPERIMENTS}
@@ -1043,8 +1455,15 @@ Examples:
                         choices=["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11", "P12",
                                  "LF-P1", "LF-P2", "LF-P3", "LF-P4", "LF-P5", "LF-P6",
                                  "LF-P7", "LF-P8", "LF-P9", "LF-P10", "LF-P11",
-                                 "AE-P1", "AE-P2", "AE-P3", "AE-P4", "AE-P5"],
-                        help="Run all experiments with given priority (P1-P12 architecture, LF-P1-P11 loss, AE-P1-P5 embedding)")
+                                 "AE-P1", "AE-P2", "AE-P3", "AE-P4", "AE-P5",
+                                 # Extended experiment categories (114 experiments)
+                                 "DA-P1", "DA-P2", "DA-P3", "DA-P4", "DA-P5",  # Data Augmentation
+                                 "NR-P1", "NR-P2", "NR-P3", "NR-P4",  # Noise-Robust Training
+                                 "CL-P1", "CL-P2", "CL-P3", "CL-P4",  # Curriculum Learning
+                                 "RD-P1", "RD-P2", "RD-P3", "RD-P4",  # Regime Detection
+                                 "MS-P1", "MS-P2", "MS-P3", "MS-P4",  # Multi-Scale Temporal
+                                 "CP-P1", "CP-P2", "CP-P3", "CP-P4"],  # Contrastive Pre-training
+                        help="Run all experiments with given priority (P1-P12 architecture, LF-P1-P11 loss, AE-P1-P5 embedding, DA/NR/CL/RD/MS/CP extended)")
     parser.add_argument("--all", action="store_true", help="Run all experiments")
     parser.add_argument("--dry-run", action="store_true",
                         help="Only estimate params, don't train")
@@ -1086,7 +1505,14 @@ Examples:
         all_priorities = ["P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11", "P12",
                           "LF-P1", "LF-P2", "LF-P3", "LF-P4", "LF-P5", "LF-P6",
                           "LF-P7", "LF-P8", "LF-P9", "LF-P10", "LF-P11",
-                          "AE-P1", "AE-P2", "AE-P3", "AE-P4", "AE-P5"]
+                          "AE-P1", "AE-P2", "AE-P3", "AE-P4", "AE-P5",
+                          # Extended experiment categories
+                          "DA-P1", "DA-P2", "DA-P3", "DA-P4", "DA-P5",
+                          "NR-P1", "NR-P2", "NR-P3", "NR-P4",
+                          "CL-P1", "CL-P2", "CL-P3", "CL-P4",
+                          "RD-P1", "RD-P2", "RD-P3", "RD-P4",
+                          "MS-P1", "MS-P2", "MS-P3", "MS-P4",
+                          "CP-P1", "CP-P2", "CP-P3", "CP-P4"]
         for priority in all_priorities:
             run_experiments_by_priority(priority, dry_run=args.dry_run)
 

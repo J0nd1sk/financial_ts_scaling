@@ -24,8 +24,8 @@ from src.models.patchtst import PatchTST, PatchTSTConfig
 from src.training.thermal import ThermalCallback
 from src.training.tracking import TrackingManager
 
-# Columns that are not features (only Date - OHLCV are valid features)
-NON_FEATURE_COLUMNS = {"Date"}
+# Columns that are not features (Date + OHLCV price data)
+NON_FEATURE_COLUMNS = {"Date", "Open", "High", "Low", "Close", "Volume"}
 
 
 # Task name to threshold mapping

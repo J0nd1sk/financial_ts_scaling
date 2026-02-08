@@ -1,7 +1,7 @@
 # Feature Embedding Experiment Tracker
 
-**Last Updated**: 2025-02-07
-**Status**: LF-P7 In Progress
+**Last Updated**: 2026-02-08
+**Status**: LF-P7 In Progress | Extended Experiments Ready
 
 ---
 
@@ -12,7 +12,15 @@
 | FE (P1-P12) | 92 | Feature embedding architecture experiments |
 | LF (LF-P1 to LF-P11) | 70 | Loss function experiments |
 | AE (AE-P1 to AE-P5) | 21 | Advanced embedding architecture experiments |
-| **Total** | **183** | |
+| **Subtotal (Original)** | **183** | |
+| DA (DA-P1 to DA-P5) | 24 | Data augmentation experiments |
+| NR (NR-P1 to NR-P4) | 18 | Noise-robust training experiments |
+| CL (CL-P1 to CL-P4) | 18 | Curriculum learning experiments |
+| RD (RD-P1 to RD-P4) | 18 | Regime detection experiments |
+| MS (MS-P1 to MS-P4) | 18 | Multi-scale temporal experiments |
+| CP (CP-P1 to CP-P4) | 18 | Contrastive pre-training experiments |
+| **Subtotal (Extended)** | **114** | See `docs/extended_experiments.md` |
+| **Grand Total** | **297** | |
 
 ---
 
@@ -61,7 +69,61 @@
 | AE-P4 | AE-13 to AE-16 | GatedResidual | `caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority AE-P4` |
 | AE-P5 | AE-17 to AE-21 | Attention | `caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority AE-P5` |
 
-**Remaining: 37 experiments** (after LF-P7 completes)
+**Remaining Original: 37 experiments** (after LF-P7 completes)
+
+### Extended Experiments (Pending)
+
+**Full documentation**: `docs/extended_experiments.md`
+
+| Priority | Experiments | Category | Command |
+|----------|-------------|----------|---------|
+| DA-P1 | DA-01 to DA-06 | Jitter Augmentation | `caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority DA-P1` |
+| DA-P2 | DA-07 to DA-12 | Scale Augmentation | `--priority DA-P2` |
+| DA-P3 | DA-13 to DA-18 | Mixup Augmentation | `--priority DA-P3` |
+| DA-P4 | DA-19 to DA-22 | Time Warp | `--priority DA-P4` |
+| DA-P5 | DA-23 to DA-24 | Combined | `--priority DA-P5` |
+| NR-P1 | NR-01 to NR-06 | Bootstrap Loss | `--priority NR-P1` |
+| NR-P2 | NR-07 to NR-12 | Co-teaching | `--priority NR-P2` |
+| NR-P3 | NR-13 to NR-16 | Forward Correction | `--priority NR-P3` |
+| NR-P4 | NR-17 to NR-18 | Confidence Learning | `--priority NR-P4` |
+| CL-P1 | CL-01 to CL-06 | Loss-based Curriculum | `--priority CL-P1` |
+| CL-P2 | CL-07 to CL-12 | Confidence Curriculum | `--priority CL-P2` |
+| CL-P3 | CL-13 to CL-16 | Volatility Curriculum | `--priority CL-P3` |
+| CL-P4 | CL-17 to CL-18 | Anti-curriculum | `--priority CL-P4` |
+| RD-P1 | RD-01 to RD-06 | Volatility Regime | `--priority RD-P1` |
+| RD-P2 | RD-07 to RD-12 | Trend Regime | `--priority RD-P2` |
+| RD-P3 | RD-13 to RD-16 | Cluster Regime | `--priority RD-P3` |
+| RD-P4 | RD-17 to RD-18 | Regime-Gated | `--priority RD-P4` |
+| MS-P1 | MS-01 to MS-06 | Hierarchical Pool | `--priority MS-P1` |
+| MS-P2 | MS-07 to MS-12 | Multi-Patch | `--priority MS-P2` |
+| MS-P3 | MS-13 to MS-16 | Dilated Conv | `--priority MS-P3` |
+| MS-P4 | MS-17 to MS-18 | Cross-Scale Attention | `--priority MS-P4` |
+| CP-P1 | CP-01 to CP-06 | SimCLR Pre-training | `--priority CP-P1` |
+| CP-P2 | CP-07 to CP-12 | TS2Vec Pre-training | `--priority CP-P2` |
+| CP-P3 | CP-13 to CP-16 | BYOL Pre-training | `--priority CP-P3` |
+| CP-P4 | CP-17 to CP-18 | Fine-tune | `--priority CP-P4` |
+
+**Extended Total: 114 experiments**
+
+**Quick Run Commands**:
+```bash
+# Run all extended experiments
+./scripts/run_extended_experiments.sh
+
+# Run by phase
+./scripts/run_extended_experiments.sh --phase 1  # DA + NR (42 experiments)
+./scripts/run_extended_experiments.sh --phase 2  # CL + RD (36 experiments)
+./scripts/run_extended_experiments.sh --phase 3  # MS (18 experiments)
+./scripts/run_extended_experiments.sh --phase 4  # CP (18 experiments)
+
+# Run individual categories
+./scripts/run_da_experiments.sh  # Data Augmentation
+./scripts/run_nr_experiments.sh  # Noise-Robust
+./scripts/run_cl_experiments.sh  # Curriculum Learning
+./scripts/run_rd_experiments.sh  # Regime Detection
+./scripts/run_ms_experiments.sh  # Multi-Scale Temporal
+./scripts/run_cp_experiments.sh  # Contrastive Pre-training
+```
 
 ---
 

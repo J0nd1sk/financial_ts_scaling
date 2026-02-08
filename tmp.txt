@@ -1,3 +1,66 @@
 Informer validation:                                                                                             
   ./venv/bin/python experiments/architectures/hpo_neuralforecast.py --model informer --data-tier a200 --input-size 180 --trials 1                                                                                                   
                        
+
+
+Remaining Experiments (after LF-P8)
+  Priority: LF-P9
+  Type: EntropyReg
+  Experiments: LF-61 to LF-64
+  Command: caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority LF-P9
+  ────────────────────────────────────────
+  Priority: LF-P10
+  Type: VarianceReg
+  Experiments: LF-65 to LF-68
+  Command: caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority LF-P10
+  ────────────────────────────────────────
+  Priority: LF-P11
+  Type: CalibratedFocal
+  Experiments: LF-69 to LF-70
+  Command: caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority LF-P11
+  ────────────────────────────────────────
+  Priority: AE-P1
+  Type: Progressive
+  Experiments: AE-01 to AE-04
+  Command: caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority AE-P1
+  ────────────────────────────────────────
+  Priority: AE-P2
+  Type: Bottleneck
+  Experiments: AE-05 to AE-08
+  Command: caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority AE-P2
+  ────────────────────────────────────────
+  Priority: AE-P3
+  Type: MultiHead
+  Experiments: AE-09 to AE-12
+  Command: caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority AE-P3
+  ────────────────────────────────────────
+  Priority: AE-P4
+  Type: GatedResidual
+  Experiments: AE-13 to AE-16
+  Command: caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority AE-P4
+  ────────────────────────────────────────
+  Priority: AE-P5
+  Type: Attention
+  Experiments: AE-17 to AE-21
+  Command: caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority AE-P5
+  After LF-P8 completes: 31 experiments remaining (4+4+2+4+4+4+4+5)
+
+  ---
+  Other Workstreams
+  ┌─────┬────────────────────┬──────────┬───────────────────────────────┐
+  │ ID  │        Name        │  Status  │         Relationship          │
+  ├─────┼────────────────────┼──────────┼───────────────────────────────┤
+  │ ws1 │ feature_generation │ COMPLETE │ tier_a500 done, independent   │
+  ├─────┼────────────────────┼──────────┼───────────────────────────────┤
+  │ ws2 │ feature_embedding  │ Ready    │ Budget-aware HPO, independent │
+  └─────┴────────────────────┴──────────┴───────────────────────────────┘
+  ---
+  Next Steps (from tracker)
+
+  1. Let LF-P8 complete (currently running)
+  2. Run LF-P9 through LF-P11 (remaining loss functions)
+  3. Run AE-P1 through AE-P5 (advanced embeddings)
+  4. Analyze all results - identify best overall configuration
+  5. Consider committing after experiments complete
+
+

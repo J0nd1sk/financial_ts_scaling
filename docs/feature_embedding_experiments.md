@@ -1,9 +1,9 @@
 # Feature Embedding Experiments
 
 **Phase**: 6C Extension (Feature Embedding Investigation)
-**Status**: P1-P7 Complete, P8-P12 Ready
+**Status**: P1-P12 + LF Complete | Extended Experiments (114) Ready
 **Created**: 2026-02-06
-**Last Updated**: 2026-02-07
+**Last Updated**: 2026-02-08
 
 ---
 
@@ -325,8 +325,34 @@ Rationale:
 
 ---
 
+---
+
+## Extended Experiments
+
+Beyond the core feature embedding experiments (FE/LF/AE), we have implemented **114 additional experiments** testing advanced training techniques:
+
+| Category | Experiments | Focus |
+|----------|-------------|-------|
+| Data Augmentation (DA) | 24 | Jitter, scale, mixup, time warp |
+| Noise-Robust (NR) | 18 | Bootstrap loss, co-teaching, forward correction |
+| Curriculum Learning (CL) | 18 | Loss-based, confidence, volatility curricula |
+| Regime Detection (RD) | 18 | Volatility, trend, cluster-based regimes |
+| Multi-Scale Temporal (MS) | 18 | Hierarchical pooling, multi-patch, dilated conv |
+| Contrastive Pre-training (CP) | 18 | SimCLR, TS2Vec, BYOL |
+
+**Full documentation**: [`docs/extended_experiments.md`](extended_experiments.md)
+
+**Quick run**:
+```bash
+./scripts/run_extended_experiments.sh        # All 114 experiments
+./scripts/run_extended_experiments.sh --phase 1  # DA + NR
+```
+
+---
+
 ## Changelog
 
+- **2026-02-08**: Added 114 extended experiments (DA, NR, CL, RD, MS, CP) - see `docs/extended_experiments.md`
 - **2026-02-07**: Added Phase 2 (Loss Function) experiments LF-01 to LF-48, testing 5 loss functions across best architectures
 - **2026-02-07**: Major update with P1-P7 results, FE-50 breakthrough, P8-P12 experiments added, future research roadmap for context length studies
 - **2026-02-06**: Initial design document created

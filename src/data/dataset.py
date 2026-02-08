@@ -560,8 +560,8 @@ class FinancialDataset(Dataset):
         threshold: percentage threshold for positive label (e.g., 0.01 for 1%)
     """
 
-    # Columns to exclude from features (metadata only - OHLCV are valid features)
-    EXCLUDED_COLUMNS = {"Date"}
+    # Columns to exclude from features (Date + OHLCV price data)
+    EXCLUDED_COLUMNS = {"Date", "Open", "High", "Low", "Close", "Volume"}
     # Numeric dtypes that are valid for features
     NUMERIC_DTYPES = {"float64", "float32", "int64", "int32", "float16", "int16", "int8"}
 

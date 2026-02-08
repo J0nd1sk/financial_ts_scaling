@@ -1,7 +1,7 @@
 {
-  "exp_id": "LF-57",
-  "priority": "LF-P8",
-  "description": "a100 FE-06 + AsymFocal gp=1.0, gn=1.25",
+  "exp_id": "LF-69",
+  "priority": "LF-P11",
+  "description": "a100 FE-06 + CalibratedFocal g=1.0",
   "tier": "a100",
   "num_features": 100,
   "d_embed": 32,
@@ -22,13 +22,13 @@
     "use_revin": true
   },
   "loss_function": {
-    "loss_fn": "asymmetricfocal",
+    "loss_fn": "calibratedfocal",
     "loss_params": {
-      "gamma_pos": 1.0,
-      "gamma_neg": 1.25,
-      "alpha": 0.5
+      "gamma": 1.0,
+      "alpha": 0.25,
+      "lambda_cal": 0.1
     },
-    "early_stopping_metric": "val_auc"
+    "early_stopping_metric": "val_loss"
   },
   "parameters": {
     "estimated": 865889,
@@ -40,27 +40,27 @@
     "test": 156
   },
   "training": {
-    "train_loss": 0.11245042020291612,
-    "val_loss": 0.09434792771935463,
-    "val_auc": 0.7255095832065713,
+    "train_loss": 0.09303154613365207,
+    "val_loss": 0.08472293708473444,
+    "val_auc": 0.7238363249163371,
     "stopped_early": false,
-    "training_time_min": 0.5623907009760539
+    "training_time_min": 0.5254689653714498
   },
   "val_metrics": {
-    "precision": 0.5263157894736842,
-    "recall": 0.13157894736842105,
-    "auc": 0.7255095832065713,
-    "accuracy": 0.8222748815165877,
-    "f1": 0.21052631578947367,
-    "pred_min": 0.08721601963043213,
-    "pred_max": 0.6145368814468384,
-    "pred_mean": 0.2542840242385864,
-    "pred_std": 0.11414562165737152,
-    "pred_range": 0.5273208618164062,
-    "n_positive_preds": 19,
+    "precision": 0.0,
+    "recall": 0.0,
+    "auc": 0.7238363249163371,
+    "accuracy": 0.8199052132701422,
+    "f1": 0.0,
+    "pred_min": 0.026933303102850914,
+    "pred_max": 0.3779348134994507,
+    "pred_mean": 0.10247785598039627,
+    "pred_std": 0.06605318933725357,
+    "pred_range": 0.351001501083374,
+    "n_positive_preds": 0,
     "n_samples": 422,
     "class_balance": 0.18009479343891144,
     "positive_rate": 0.18009478672985782
   },
-  "timestamp": "2026-02-07T21:56:46.795256"
+  "timestamp": "2026-02-07T22:22:05.847609"
 }

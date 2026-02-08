@@ -85,16 +85,68 @@ Without explicit planning:
    - What edge cases need test coverage?
 
 6. **Estimate Scope**
-   
+
    - How many files affected?
    - Approximate lines of change?
    - Should this be decomposed?
 
-7. **Present for Approval**
+7. **Define Subagent Execution Strategy** (for multi-step plans)
+
+   Determine how implementation work will be delegated to preserve director context:
+
+   **A. Delegation Mode Assessment:**
+
+   | Criteria | Mode | When to Use |
+   |----------|------|-------------|
+   | <3 files, <50 lines, single concept | Single-agent | Director implements directly |
+   | 3-10 files, independent tasks | Subagent-per-task | Spawn subagents for each task |
+   | >10 files, >3 domains, complex | Wave orchestration | Multi-phase with specialized agents |
+
+   **B. Task Delegation Table:**
+
+   For each implementation task from the plan:
+
+   | Task | Subagent Type | Run In | Dependencies | Director Checkpoint |
+   |------|---------------|--------|--------------|---------------------|
+   | [name] | general-purpose | foreground | None | Review before next |
+   | [name] | Explore | background | None | Aggregate results |
+   | [name] | general-purpose | foreground | After task 1 | Approve implementation |
+
+   Subagent types: `general-purpose` (implementation), `Explore` (research), `Plan` (design)
+
+   **C. Director vs Subagent Responsibilities:**
+
+   Director (main context) retains:
+   - Approval gates between major phases
+   - Cross-task coordination decisions
+   - Final verification and commit
+   - Memory entity creation/updates
+   - User communication
+
+   Subagents handle:
+   - File exploration and reading
+   - Code writing and editing
+   - Test implementation
+   - Individual task verification
+   - Detailed error investigation
+
+   **D. Context Preservation:**
+
+   Before spawning subagents:
+   - [ ] Store task context in Memory MCP (if complex)
+   - [ ] Update workstream context file with delegation plan
+   - [ ] Define clear success criteria for each subagent task
+
+   After subagent completion:
+   - [ ] Review subagent output before proceeding
+   - [ ] Update context files with results
+   - [ ] Run verification commands (make test, etc.)
+
+8. **Present for Approval**
 
    Format plan and request explicit approval.
 
-8. **Store Finalized Plan in Memory** (after user approval)
+9. **Store Finalized Plan in Memory** (after user approval)
 
    Once user approves the plan, store it in Memory MCP:
 
@@ -169,6 +221,25 @@ Without explicit planning:
 - Files: [N]
 - Lines: ~[N]
 - Complexity: [Low/Medium/High]
+
+### Subagent Execution Strategy
+
+**Delegation Mode:** [Single-agent | Subagent-per-task | Wave orchestration]
+
+**Rationale:** [Why this mode - file count, complexity, independence of tasks]
+
+**Task Delegation:**
+| # | Task | Subagent | Background? | Depends On | Director Action After |
+|---|------|----------|-------------|------------|----------------------|
+| 1 | [task name] | general-purpose | No | - | Review output |
+| 2 | [task name] | Explore | Yes | - | Read results file |
+| 3 | [task name] | general-purpose | No | #1, #2 | Approve, then continue |
+
+**Director Retains:**
+- [What stays in main context - approvals, coordination, commits]
+
+**Subagents Handle:**
+- [What gets delegated - file reads, implementation, tests]
 
 ---
 **Approval Required**
