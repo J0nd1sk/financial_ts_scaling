@@ -1,7 +1,7 @@
 {
-  "exp_id": "LF-69",
-  "priority": "LF-P11",
-  "description": "a100 FE-06 + CalibratedFocal g=1.0",
+  "exp_id": "AE-14",
+  "priority": "AE-P4",
+  "description": "a100 FE-06 + GatedResidual h=128",
   "tier": "a100",
   "num_features": 100,
   "d_embed": 32,
@@ -22,17 +22,13 @@
     "use_revin": true
   },
   "loss_function": {
-    "loss_fn": "calibratedfocal",
-    "loss_params": {
-      "gamma": 1.0,
-      "alpha": 0.25,
-      "lambda_cal": 0.1
-    },
-    "early_stopping_metric": "val_loss"
+    "loss_fn": null,
+    "loss_params": null,
+    "early_stopping_metric": "val_auc"
   },
   "parameters": {
     "estimated": 865889,
-    "actual": 866259
+    "actual": 887273
   },
   "splits": {
     "train": 7204,
@@ -40,27 +36,27 @@
     "test": 156
   },
   "training": {
-    "train_loss": 0.09303154613365207,
-    "val_loss": 0.08472293708473444,
-    "val_auc": 0.7238363249163371,
+    "train_loss": 0.46999015097032515,
+    "val_loss": 0.4645044095814228,
+    "val_auc": 0.7109826589595375,
     "stopped_early": false,
-    "training_time_min": 0.5254689653714498
+    "training_time_min": 0.5512459357579549
   },
   "val_metrics": {
-    "precision": 0.0,
-    "recall": 0.0,
-    "auc": 0.7238363249163371,
-    "accuracy": 0.8199052132701422,
-    "f1": 0.0,
-    "pred_min": 0.026933303102850914,
-    "pred_max": 0.3779348134994507,
-    "pred_mean": 0.10247785598039627,
-    "pred_std": 0.06605318933725357,
-    "pred_range": 0.351001501083374,
-    "n_positive_preds": 0,
+    "precision": 0.5454545454545454,
+    "recall": 0.07894736842105263,
+    "auc": 0.7109826589595375,
+    "accuracy": 0.8222748815165877,
+    "f1": 0.13793103448275862,
+    "pred_min": 0.002165349666029215,
+    "pred_max": 0.7431563138961792,
+    "pred_mean": 0.09344055503606796,
+    "pred_std": 0.13904353976249695,
+    "pred_range": 0.740990936756134,
+    "n_positive_preds": 11,
     "n_samples": 422,
     "class_balance": 0.18009479343891144,
     "positive_rate": 0.18009478672985782
   },
-  "timestamp": "2026-02-07T22:22:05.847609"
+  "timestamp": "2026-02-08T09:23:53.675393"
 }

@@ -1,7 +1,7 @@
 {
-  "exp_id": "LF-70",
-  "priority": "LF-P11",
-  "description": "a500 FE-50 + CalibratedFocal g=1.0",
+  "exp_id": "AE-16",
+  "priority": "AE-P4",
+  "description": "a500 FE-50 + GatedResidual h=64",
   "tier": "a500",
   "num_features": 500,
   "d_embed": 16,
@@ -22,17 +22,13 @@
     "use_revin": true
   },
   "loss_function": {
-    "loss_fn": "calibratedfocal",
-    "loss_params": {
-      "gamma": 1.0,
-      "alpha": 0.25,
-      "lambda_cal": 0.1
-    },
-    "early_stopping_metric": "val_loss"
+    "loss_fn": null,
+    "loss_params": null,
+    "early_stopping_metric": "val_auc"
   },
   "parameters": {
     "estimated": 226353,
-    "actual": 227443
+    "actual": 261497
   },
   "splits": {
     "train": 7159,
@@ -40,27 +36,27 @@
     "test": 156
   },
   "training": {
-    "train_loss": 0.08900849228458745,
-    "val_loss": 0.0868842164054513,
-    "val_auc": 0.72535746881655,
-    "stopped_early": true,
-    "training_time_min": 1.006483801205953
+    "train_loss": 0.4950787419719355,
+    "val_loss": 0.43692219629883766,
+    "val_auc": 0.6840203833282629,
+    "stopped_early": false,
+    "training_time_min": 1.1336783528327943
   },
   "val_metrics": {
-    "precision": 0.0,
-    "recall": 0.0,
-    "auc": 0.72535746881655,
+    "precision": 0.5,
+    "recall": 0.02631578947368421,
+    "auc": 0.6840203833282629,
     "accuracy": 0.8199052132701422,
-    "f1": 0.0,
-    "pred_min": 0.02716735191643238,
-    "pred_max": 0.3750050663948059,
-    "pred_mean": 0.10136650502681732,
-    "pred_std": 0.07154787331819534,
-    "pred_range": 0.3478377163410187,
-    "n_positive_preds": 0,
+    "f1": 0.05,
+    "pred_min": 0.010910321027040482,
+    "pred_max": 0.5676018595695496,
+    "pred_mean": 0.11112046241760254,
+    "pred_std": 0.12444116920232773,
+    "pred_range": 0.5566915273666382,
+    "n_positive_preds": 4,
     "n_samples": 422,
     "class_balance": 0.18009479343891144,
     "positive_rate": 0.18009478672985782
   },
-  "timestamp": "2026-02-07T22:23:06.407923"
+  "timestamp": "2026-02-08T09:25:43.401917"
 }

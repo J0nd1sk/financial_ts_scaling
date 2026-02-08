@@ -405,7 +405,12 @@ class PatchTST(nn.Module):
 
         # Apply feature embedding if enabled
         if hasattr(self, "feature_embed"):
-            x = self.feature_embed(x)
+            embed_out = self.feature_embed(x)
+            # Handle both tensor (simple) and EmbeddingOutput (advanced) returns
+            if hasattr(embed_out, "embedded"):
+                x = embed_out.embedded
+            else:
+                x = embed_out
 
         # Patch embedding: (batch, seq_len, features) -> (batch, num_patches, d_model)
         x = self.patch_embed(x)
