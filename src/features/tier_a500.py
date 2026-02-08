@@ -5814,8 +5814,8 @@ def build_feature_dataframe(raw_df: pd.DataFrame, vix_df: pd.DataFrame) -> pd.Da
     # Reset index to get Date as column
     merged = merged.reset_index()
 
-    # Drop rows with any NaN
-    merged = merged.dropna().reset_index(drop=True)
+    # Forward-fill then backward-fill to handle lookback-induced NaN (e.g., MFDFA 120-day)
+    merged = merged.ffill().bfill().reset_index(drop=True)
 
     # Return columns in correct order: Date + all features
     return merged[["Date"] + list(FEATURE_LIST)]

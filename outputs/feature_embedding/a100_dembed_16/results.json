@@ -1,0 +1,62 @@
+{
+  "exp_id": "FE-90",
+  "priority": "P12",
+  "description": "Apply FE-50 config to a100",
+  "tier": "a100",
+  "num_features": 100,
+  "d_embed": 16,
+  "architecture": {
+    "d_model": 64,
+    "n_layers": 4,
+    "n_heads": 4,
+    "d_ff": 256,
+    "context_length": 80,
+    "patch_length": 16,
+    "stride": 8
+  },
+  "hyperparameters": {
+    "dropout": 0.5,
+    "learning_rate": 0.0001,
+    "batch_size": 128,
+    "epochs": 50,
+    "use_revin": true
+  },
+  "loss_function": {
+    "loss_fn": null,
+    "loss_params": null,
+    "early_stopping_metric": "val_auc"
+  },
+  "parameters": {
+    "estimated": 219953,
+    "actual": 220243
+  },
+  "splits": {
+    "train": 7204,
+    "val": 422,
+    "test": 156
+  },
+  "training": {
+    "train_loss": 0.49993807286546943,
+    "val_loss": 0.46057501435279846,
+    "val_auc": 0.6997261940979617,
+    "stopped_early": false,
+    "training_time_min": 0.5262938380241394
+  },
+  "val_metrics": {
+    "precision": 0.3333333333333333,
+    "recall": 0.013157894736842105,
+    "auc": 0.6997261940979617,
+    "accuracy": 0.8175355450236966,
+    "f1": 0.02531645569620253,
+    "pred_min": 0.015630165114998817,
+    "pred_max": 0.5711777806282043,
+    "pred_mean": 0.09571034461259842,
+    "pred_std": 0.1135769933462143,
+    "pred_range": 0.5555475950241089,
+    "n_positive_preds": 3,
+    "n_samples": 422,
+    "class_balance": 0.18009479343891144,
+    "positive_rate": 0.18009478672985782
+  },
+  "timestamp": "2026-02-07T12:57:14.982045"
+}

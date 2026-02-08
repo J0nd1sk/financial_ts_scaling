@@ -1,0 +1,2124 @@
+Documents/financial_ts_scaling experiment/foundation-decoder-investigation*
+❯ caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority P6
+
+Running 8 experiments with priority P6
+
+[1/8] Starting FE-37...
+======================================================================
+EXPERIMENT: FE-37 - a100 d_embed=16 (aggressive compress)
+======================================================================
+Device: mps
+
+Estimated parameters: 831,473
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 831,763
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.6 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4211
+  RECALL: 0.1053
+  AUC: 0.7184
+  Accuracy: 0.8128
+  F1: 0.1684
+  Pred Range: [0.0116, 0.6825]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_16/results.json
+
+[2/8] Starting FE-38...
+======================================================================
+EXPERIMENT: FE-38 - a100 d_embed=8 (extreme compress)
+======================================================================
+Device: mps
+
+Estimated parameters: 814,265
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=8
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 814,515
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.6 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 1.0000
+  RECALL: 0.0263
+  AUC: 0.7022
+  Accuracy: 0.8246
+  F1: 0.0513
+  Pred Range: [0.0163, 0.5133]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_8/results.json
+
+[3/8] Starting FE-39...
+======================================================================
+EXPERIMENT: FE-39 - a200 d_embed=16 (aggressive compress)
+======================================================================
+Device: mps
+
+Estimated parameters: 833,169
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a200_combined.parquet...
+Data: 7977 rows, 212 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 206 (a200 tier)
+
+Splits: train=7159, val=422, test=156
+Actual parameters: 833,671
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5000
+  RECALL: 0.0921
+  AUC: 0.7092
+  Accuracy: 0.8199
+  F1: 0.1556
+  Pred Range: [0.0047, 0.6519]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a200_dembed_16/results.json
+
+[4/8] Starting FE-40...
+======================================================================
+EXPERIMENT: FE-40 - a200 d_embed=8 (extreme compress)
+======================================================================
+Device: mps
+
+Estimated parameters: 815,113
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a200_combined.parquet...
+Data: 7977 rows, 212 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=8
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 206 (a200 tier)
+
+Splits: train=7159, val=422, test=156
+Actual parameters: 815,575
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4737
+  RECALL: 0.1184
+  AUC: 0.6886
+  Accuracy: 0.8175
+  F1: 0.1895
+  Pred Range: [0.0121, 0.6730]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a200_dembed_8/results.json
+
+[5/8] Starting FE-41...
+======================================================================
+EXPERIMENT: FE-41 - a500 d_embed=8 (maximum compress)
+======================================================================
+Device: mps
+
+Estimated parameters: 817,465
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=8
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Actual parameters: 818,515
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4762
+  RECALL: 0.1316
+  AUC: 0.7262
+  Accuracy: 0.8175
+  F1: 0.2062
+  Pred Range: [0.0030, 0.6792]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_8/results.json
+
+[6/8] Starting FE-42...
+======================================================================
+EXPERIMENT: FE-42 - a100 d_embed=512 expand + huge model
+======================================================================
+Device: mps
+
+Estimated parameters: 58,857,985
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=1024, L=4, h=8, d_ff=4096
+Feature Embedding: d_embed=512
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 58,860,755
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 2.1 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4118
+  RECALL: 0.1842
+  AUC: 0.6665
+  Accuracy: 0.8057
+  F1: 0.2545
+  Pred Range: [0.0000, 0.9995]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_512/results.json
+
+[7/8] Starting FE-43...
+======================================================================
+EXPERIMENT: FE-43 - a500 d_embed=512, d=1024, L=2, h=2
+======================================================================
+Device: mps
+
+Estimated parameters: 33,870,337
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=1024, L=2, h=2, d_ff=4096
+Feature Embedding: d_embed=512
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Actual parameters: 33,873,907
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.0 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.2963
+  RECALL: 0.1053
+  AUC: 0.5991
+  Accuracy: 0.7938
+  F1: 0.1553
+  Pred Range: [0.0000, 0.9999]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_512/results.json
+
+[8/8] Starting FE-44...
+======================================================================
+EXPERIMENT: FE-44 - a100 expand 100->256 then compress to d=128
+======================================================================
+Device: mps
+
+Estimated parameters: 1,347,713
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=256
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 1,349,203
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.4 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4500
+  RECALL: 0.1184
+  AUC: 0.6919
+  Accuracy: 0.8152
+  F1: 0.1875
+  Pred Range: [0.0008, 0.7458]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_256/results.json
+
+~/Documents/financial_ts_scaling experiment/foundation-decoder-investigation* 6m 44s
+❯ caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority P7
+
+Running 6 experiments with priority P7
+
+[1/6] Starting FE-45...
+======================================================================
+EXPERIMENT: FE-45 - a100 d_model=64 (half winner)
+======================================================================
+Device: mps
+
+Estimated parameters: 237,985
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=4, h=8, d_ff=256
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 238,355
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4444
+  RECALL: 0.0526
+  AUC: 0.7119
+  Accuracy: 0.8175
+  F1: 0.0941
+  Pred Range: [0.0108, 0.6090]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[2/6] Starting FE-46...
+======================================================================
+EXPERIMENT: FE-46 - a100 d=64, L=8, h=4 (tiny+deep+fewer heads)
+======================================================================
+Device: mps
+
+Estimated parameters: 437,921
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=8, h=4, d_ff=256
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 438,291
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6667
+  RECALL: 0.0263
+  AUC: 0.7155
+  Accuracy: 0.8223
+  F1: 0.0506
+  Pred Range: [0.0178, 0.5535]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[3/6] Starting FE-47...
+======================================================================
+EXPERIMENT: FE-47 - a100 d_embed=16, d=64, h=4 (tiny everything)
+======================================================================
+Device: mps
+
+Estimated parameters: 219,953
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 220,243
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.6 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3333
+  RECALL: 0.0132
+  AUC: 0.6997
+  Accuracy: 0.8175
+  F1: 0.0253
+  Pred Range: [0.0156, 0.5712]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_16/results.json
+
+[4/6] Starting FE-48...
+======================================================================
+EXPERIMENT: FE-48 - a100 d_model=32, L=8, h=4 (extremely tiny)
+======================================================================
+Device: mps
+
+Estimated parameters: 122,305
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=32, L=8, h=4, d_ff=128
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 122,675
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.0000
+  RECALL: 0.0000
+  AUC: 0.7094
+  Accuracy: 0.8199
+  F1: 0.0000
+  Pred Range: [0.0291, 0.4953]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[5/6] Starting FE-49...
+======================================================================
+EXPERIMENT: FE-49 - a100 d_embed=16, d=64, L=8, h=2
+======================================================================
+Device: mps
+
+Estimated parameters: 419,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=8, h=2, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 420,179
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3333
+  RECALL: 0.0263
+  AUC: 0.7014
+  Accuracy: 0.8152
+  F1: 0.0488
+  Pred Range: [0.0339, 0.5559]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_16/results.json
+
+[6/6] Starting FE-50...
+======================================================================
+EXPERIMENT: FE-50 - a500 d_embed=16, d=64, h=4 (tiny on noisy)
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6000
+  RECALL: 0.1184
+  AUC: 0.7277
+  Accuracy: 0.8270
+  F1: 0.1978
+  Pred Range: [0.0052, 0.6486]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+~/Documents/financial_ts_scaling experiment/foundation-decoder-investigation* 4m 48s
+❯ caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority P8
+
+Running 8 experiments with priority P8
+
+[1/8] Starting FE-51...
+======================================================================
+EXPERIMENT: FE-51 - a100 L=12 (3x depth of winner)
+======================================================================
+Device: mps
+
+Estimated parameters: 2,452,065
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=12, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 2,452,435
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.1 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4762
+  RECALL: 0.1316
+  AUC: 0.7168
+  Accuracy: 0.8175
+  F1: 0.2062
+  Pred Range: [0.0113, 0.7051]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[2/8] Starting FE-52...
+======================================================================
+EXPERIMENT: FE-52 - a100 L=16 (4x depth)
+======================================================================
+Device: mps
+
+Estimated parameters: 3,245,153
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=16, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 3,245,523
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4444
+  RECALL: 0.1053
+  AUC: 0.6993
+  Accuracy: 0.8152
+  F1: 0.1702
+  Pred Range: [0.0053, 0.7143]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[3/8] Starting FE-53...
+======================================================================
+EXPERIMENT: FE-53 - a100 L=12, h=4 (deep + fewer heads)
+======================================================================
+Device: mps
+
+Estimated parameters: 2,452,065
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=12, h=4, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 2,452,435
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.2 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4783
+  RECALL: 0.1447
+  AUC: 0.7134
+  Accuracy: 0.8175
+  F1: 0.2222
+  Pred Range: [0.0100, 0.7535]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[4/8] Starting FE-54...
+======================================================================
+EXPERIMENT: FE-54 - a100 L=16, h=4 (deeper + fewer heads)
+======================================================================
+Device: mps
+
+Estimated parameters: 3,245,153
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=16, h=4, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 3,245,523
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5000
+  RECALL: 0.1053
+  AUC: 0.7021
+  Accuracy: 0.8199
+  F1: 0.1739
+  Pred Range: [0.0053, 0.6802]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[5/8] Starting FE-55...
+======================================================================
+EXPERIMENT: FE-55 - a100 d=64, L=16, h=4 (tiny + very deep)
+======================================================================
+Device: mps
+
+Estimated parameters: 837,793
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=16, h=4, d_ff=256
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 838,163
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.6 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4000
+  RECALL: 0.0789
+  AUC: 0.6965
+  Accuracy: 0.8128
+  F1: 0.1319
+  Pred Range: [0.0344, 0.5729]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[6/8] Starting FE-56...
+======================================================================
+EXPERIMENT: FE-56 - a100 d=64, L=20, h=4 (tiny + extremely deep)
+======================================================================
+Device: mps
+
+Estimated parameters: 1,037,729
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=20, h=4, d_ff=256
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 1,038,099
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 2.0 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5714
+  RECALL: 0.0526
+  AUC: 0.7010
+  Accuracy: 0.8223
+  F1: 0.0964
+  Pred Range: [0.0273, 0.5722]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[7/8] Starting FE-57...
+======================================================================
+EXPERIMENT: FE-57 - a100 d_embed=16, L=12, h=4 (compress + deep)
+======================================================================
+Device: mps
+
+Estimated parameters: 2,417,649
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=12, h=4, d_ff=512
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 2,417,939
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.2 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4286
+  RECALL: 0.0395
+  AUC: 0.7047
+  Accuracy: 0.8175
+  F1: 0.0723
+  Pred Range: [0.0283, 0.5516]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_16/results.json
+
+[8/8] Starting FE-58...
+======================================================================
+EXPERIMENT: FE-58 - a100 d_embed=16, d=64, L=16, h=2 (triple extreme)
+======================================================================
+Device: mps
+
+Estimated parameters: 819,761
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=16, h=2, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 820,051
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.7 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3750
+  RECALL: 0.0395
+  AUC: 0.6991
+  Accuracy: 0.8152
+  F1: 0.0714
+  Pred Range: [0.0448, 0.5693]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_16/results.json
+
+~/Documents/financial_ts_scaling experiment/foundation-decoder-investigation* 11m 54s
+❯ >....
+
+[6/6] Starting FE-50...
+======================================================================
+EXPERIMENT: FE-50 - a500 d_embed=16, d=64, h=4 (tiny on noisy)
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6000
+  RECALL: 0.1184
+  AUC: 0.7277
+  Accuracy: 0.8270
+  F1: 0.1978
+  Pred Range: [0.0052, 0.6486]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+ caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority P9
+
+Running 6 experiments with priority P9
+
+[1/6] Starting FE-59...
+======================================================================
+EXPERIMENT: FE-59 - a100 h=2 (winner config but h=2)
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=2, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5333
+  RECALL: 0.1053
+  AUC: 0.7150
+  Accuracy: 0.8223
+  F1: 0.1758
+  Pred Range: [0.0036, 0.7756]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[2/6] Starting FE-60...
+======================================================================
+EXPERIMENT: FE-60 - a100 h=1 (winner config but h=1)
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=1, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6000
+  RECALL: 0.1184
+  AUC: 0.7185
+  Accuracy: 0.8270
+  F1: 0.1978
+  Pred Range: [0.0036, 0.7784]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[3/6] Starting FE-61...
+======================================================================
+EXPERIMENT: FE-61 - a100 L=8, h=2 (deep + h=2)
+======================================================================
+Device: mps
+
+Estimated parameters: 1,658,977
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=8, h=2, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 1,659,347
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5000
+  RECALL: 0.1053
+  AUC: 0.7210
+  Accuracy: 0.8199
+  F1: 0.1739
+  Pred Range: [0.0077, 0.7276]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[4/6] Starting FE-62...
+======================================================================
+EXPERIMENT: FE-62 - a100 L=8, h=1 (deep + h=1)
+======================================================================
+Device: mps
+
+Estimated parameters: 1,658,977
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=8, h=1, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 1,659,347
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.8 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5714
+  RECALL: 0.1053
+  AUC: 0.7162
+  Accuracy: 0.8246
+  F1: 0.1778
+  Pred Range: [0.0069, 0.7320]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[5/6] Starting FE-63...
+======================================================================
+EXPERIMENT: FE-63 - a100 d=256, h=1 (wider but single head)
+======================================================================
+Device: mps
+
+Estimated parameters: 3,301,345
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=256, L=4, h=1, d_ff=1024
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 3,301,715
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4118
+  RECALL: 0.0921
+  AUC: 0.7295
+  Accuracy: 0.8128
+  F1: 0.1505
+  Pred Range: [0.0010, 0.8239]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[6/6] Starting FE-64...
+======================================================================
+EXPERIMENT: FE-64 - a100 d=64, L=8, h=1 (tiny+deep+single head)
+======================================================================
+Device: mps
+
+Estimated parameters: 437,921
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=8, h=1, d_ff=256
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 438,291
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.8 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5000
+  RECALL: 0.0132
+  AUC: 0.7127
+  Accuracy: 0.8199
+  F1: 0.0256
+  Pred Range: [0.0181, 0.5476]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority P9
+
+Running 6 experiments with priority P9
+
+[1/6] Starting FE-59...
+======================================================================
+EXPERIMENT: FE-59 - a100 h=2 (winner config but h=2)
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=2, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5333
+  RECALL: 0.1053
+  AUC: 0.7150
+  Accuracy: 0.8223
+  F1: 0.1758
+  Pred Range: [0.0036, 0.7756]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[2/6] Starting FE-60...
+======================================================================
+EXPERIMENT: FE-60 - a100 h=1 (winner config but h=1)
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=1, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6000
+  RECALL: 0.1184
+  AUC: 0.7185
+  Accuracy: 0.8270
+  F1: 0.1978
+  Pred Range: [0.0036, 0.7784]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[3/6] Starting FE-61...
+======================================================================
+EXPERIMENT: FE-61 - a100 L=8, h=2 (deep + h=2)
+======================================================================
+Device: mps
+
+Estimated parameters: 1,658,977
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=8, h=2, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 1,659,347
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5000
+  RECALL: 0.1053
+  AUC: 0.7210
+  Accuracy: 0.8199
+  F1: 0.1739
+  Pred Range: [0.0077, 0.7276]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[4/6] Starting FE-62...
+======================================================================
+EXPERIMENT: FE-62 - a100 L=8, h=1 (deep + h=1)
+======================================================================
+Device: mps
+
+Estimated parameters: 1,658,977
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=8, h=1, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 1,659,347
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.8 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5714
+  RECALL: 0.1053
+  AUC: 0.7162
+  Accuracy: 0.8246
+  F1: 0.1778
+  Pred Range: [0.0069, 0.7320]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[5/6] Starting FE-63...
+======================================================================
+EXPERIMENT: FE-63 - a100 d=256, h=1 (wider but single head)
+======================================================================
+Device: mps
+
+Estimated parameters: 3,301,345
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=256, L=4, h=1, d_ff=1024
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 3,301,715
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4118
+  RECALL: 0.0921
+  AUC: 0.7295
+  Accuracy: 0.8128
+  F1: 0.1505
+  Pred Range: [0.0010, 0.8239]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[6/6] Starting FE-64...
+======================================================================
+EXPERIMENT: FE-64 - a100 d=64, L=8, h=1 (tiny+deep+single head)
+======================================================================
+Device: mps
+
+Estimated parameters: 437,921
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=8, h=1, d_ff=256
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 438,291
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.8 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5000
+  RECALL: 0.0132
+  AUC: 0.7127
+  Accuracy: 0.8199
+  F1: 0.0256
+  Pred Range: [0.0181, 0.5476]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+~/Documents/financial_ts_scaling experiment/foundation-decoder-investigation* 4m 10s
+❯ caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority P10
+
+Running 6 experiments with priority P10
+
+[1/6] Starting FE-65...
+======================================================================
+EXPERIMENT: FE-65 - a50 baseline (no embedding)
+======================================================================
+Device: mps
+
+Estimated parameters: 899,457
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a50_combined.parquet...
+Data: 8022 rows, 56 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=None
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 50 (a50 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 909,807
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.4 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4231
+  RECALL: 0.1447
+  AUC: 0.7240
+  Accuracy: 0.8104
+  F1: 0.2157
+  Pred Range: [0.0051, 0.8435]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a50_dembed_none/results.json
+
+[2/6] Starting FE-66...
+======================================================================
+EXPERIMENT: FE-66 - a50 d_embed=16
+======================================================================
+Device: mps
+
+Estimated parameters: 830,673
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a50_combined.parquet...
+Data: 8022 rows, 56 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 50 (a50 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 830,863
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3333
+  RECALL: 0.0395
+  AUC: 0.7206
+  Accuracy: 0.8128
+  F1: 0.0706
+  Pred Range: [0.0113, 0.6138]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a50_dembed_16/results.json
+
+[3/6] Starting FE-67...
+======================================================================
+EXPERIMENT: FE-67 - a50 d_embed=32
+======================================================================
+Device: mps
+
+Estimated parameters: 864,289
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a50_combined.parquet...
+Data: 8022 rows, 56 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 50 (a50 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 864,559
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3000
+  RECALL: 0.0395
+  AUC: 0.7292
+  Accuracy: 0.8104
+  F1: 0.0698
+  Pred Range: [0.0070, 0.6525]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a50_dembed_32/results.json
+
+[4/6] Starting FE-68...
+======================================================================
+EXPERIMENT: FE-68 - a20 baseline (no embedding)
+======================================================================
+Device: mps
+
+Estimated parameters: 838,017
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a20.parquet...
+Data: 8100 rows, 26 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=None
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 20 (a20 tier)
+
+Splits: train=7257, val=422, test=181
+Actual parameters: 848,307
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5000
+  RECALL: 0.0526
+  AUC: 0.7236
+  Accuracy: 0.8199
+  F1: 0.0952
+  Pred Range: [0.0091, 0.6004]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a20_dembed_none/results.json
+
+[5/6] Starting FE-69...
+======================================================================
+EXPERIMENT: FE-69 - a20 d_embed=16 (expansion)
+======================================================================
+Device: mps
+
+Estimated parameters: 830,193
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a20.parquet...
+Data: 8100 rows, 26 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 20 (a20 tier)
+
+Splits: train=7257, val=422, test=181
+Actual parameters: 830,323
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.0000
+  RECALL: 0.0000
+  AUC: 0.7046
+  Accuracy: 0.8199
+  F1: 0.0000
+  Pred Range: [0.0101, 0.4778]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a20_dembed_16/results.json
+
+[6/6] Starting FE-70...
+======================================================================
+EXPERIMENT: FE-70 - a20 d_embed=32 (more expansion)
+======================================================================
+Device: mps
+
+Estimated parameters: 863,329
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a20.parquet...
+Data: 8100 rows, 26 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 20 (a20 tier)
+
+Splits: train=7257, val=422, test=181
+Actual parameters: 863,539
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.0000
+  RECALL: 0.0000
+  AUC: 0.7104
+  Accuracy: 0.8199
+  F1: 0.0000
+  Pred Range: [0.0092, 0.4984]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a20_dembed_32/results.json
+
+❯ caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority P11
+
+Running 14 experiments with priority P11
+
+[1/14] Starting FE-71...
+======================================================================
+EXPERIMENT: FE-71 - a100 d_embed=16, d=64, L=12, h=2 (all good dirs)
+======================================================================
+Device: mps
+
+Estimated parameters: 619,825
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=12, h=2, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 620,115
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.1 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.0000
+  RECALL: 0.0000
+  AUC: 0.6998
+  Accuracy: 0.8199
+  F1: 0.0000
+  Pred Range: [0.0425, 0.4921]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_16/results.json
+
+[2/14] Starting FE-72...
+======================================================================
+EXPERIMENT: FE-72 - a100 d_embed=8, d=64, L=16, h=1 (maximum extreme)
+======================================================================
+Device: mps
+
+Estimated parameters: 810,745
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=16, h=1, d_ff=256
+Feature Embedding: d_embed=8
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 810,995
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.0000
+  RECALL: 0.0000
+  AUC: 0.6873
+  Accuracy: 0.8199
+  F1: 0.0000
+  Pred Range: [0.0452, 0.4942]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_8/results.json
+
+[3/14] Starting FE-73...
+======================================================================
+EXPERIMENT: FE-73 - a100 d_embed=16, L=8, h=2 (balanced extreme)
+======================================================================
+Device: mps
+
+Estimated parameters: 1,624,561
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=8, h=2, d_ff=512
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 1,624,851
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4762
+  RECALL: 0.1316
+  AUC: 0.7012
+  Accuracy: 0.8175
+  F1: 0.2062
+  Pred Range: [0.0200, 0.6399]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_16/results.json
+
+[4/14] Starting FE-74...
+======================================================================
+EXPERIMENT: FE-74 - a200 d_embed=16, d=64, L=12, h=2 (a100 extremes)
+======================================================================
+Device: mps
+
+Estimated parameters: 621,521
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a200_combined.parquet...
+Data: 7977 rows, 212 columns
+
+Architecture: d=64, L=12, h=2, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 206 (a200 tier)
+
+Splits: train=7159, val=422, test=156
+Actual parameters: 622,023
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.0 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6000
+  RECALL: 0.0395
+  AUC: 0.7020
+  Accuracy: 0.8223
+  F1: 0.0741
+  Pred Range: [0.0288, 0.5521]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a200_dembed_16/results.json
+
+[5/14] Starting FE-75...
+======================================================================
+EXPERIMENT: FE-75 - a500 d_embed=8, d=64, L=12, h=2 (extremes on 500)
+======================================================================
+Device: mps
+
+Estimated parameters: 614,009
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=12, h=2, d_ff=256
+Feature Embedding: d_embed=8
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Actual parameters: 615,059
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.6 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3333
+  RECALL: 0.1447
+  AUC: 0.6906
+  Accuracy: 0.7938
+  F1: 0.2018
+  Pred Range: [0.0175, 0.7001]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_8/results.json
+
+[6/14] Starting FE-76...
+======================================================================
+EXPERIMENT: FE-76 - a100 L=8, h=2 (FE-19 but h=2)
+======================================================================
+Device: mps
+
+Estimated parameters: 1,658,977
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=8, h=2, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 1,659,347
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5000
+  RECALL: 0.1053
+  AUC: 0.7210
+  Accuracy: 0.8199
+  F1: 0.1739
+  Pred Range: [0.0077, 0.7276]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[7/14] Starting FE-77...
+======================================================================
+EXPERIMENT: FE-77 - a100 d_embed=16, L=8, h=2 (FE-19 smaller embed)
+======================================================================
+Device: mps
+
+Estimated parameters: 1,624,561
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=8, h=2, d_ff=512
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 1,624,851
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4762
+  RECALL: 0.1316
+  AUC: 0.7012
+  Accuracy: 0.8175
+  F1: 0.2062
+  Pred Range: [0.0200, 0.6399]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_16/results.json
+
+[8/14] Starting FE-78...
+======================================================================
+EXPERIMENT: FE-78 - a100 d=96, L=8, h=4 (odd d_model)
+======================================================================
+Device: mps
+
+Estimated parameters: 950,145
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=96, L=8, h=4, d_ff=384
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 950,515
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.8 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5000
+  RECALL: 0.0789
+  AUC: 0.7268
+  Accuracy: 0.8199
+  F1: 0.1364
+  Pred Range: [0.0138, 0.6597]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[9/14] Starting FE-79...
+======================================================================
+EXPERIMENT: FE-79 - a100 L=6, h=4 (between L=4 and L=8)
+======================================================================
+Device: mps
+
+Estimated parameters: 1,262,433
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=6, h=4, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 1,262,803
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.7 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5000
+  RECALL: 0.0658
+  AUC: 0.7157
+  Accuracy: 0.8199
+  F1: 0.1163
+  Pred Range: [0.0063, 0.6710]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[10/14] Starting FE-80...
+======================================================================
+EXPERIMENT: FE-80 - a100 d_embed=24 (between 16 and 32)
+======================================================================
+Device: mps
+
+Estimated parameters: 848,681
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=24
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 849,011
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5333
+  RECALL: 0.1053
+  AUC: 0.7342
+  Accuracy: 0.8223
+  F1: 0.1758
+  Pred Range: [0.0081, 0.6878]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_24/results.json
+
+[11/14] Starting FE-81...
+======================================================================
+EXPERIMENT: FE-81 - a100 winner + dropout=0.6
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.6, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5000
+  RECALL: 0.0526
+  AUC: 0.7100
+  Accuracy: 0.8199
+  F1: 0.0952
+  Pred Range: [0.0034, 0.6467]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[12/14] Starting FE-82...
+======================================================================
+EXPERIMENT: FE-82 - a100 winner + dropout=0.4
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.4, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5714
+  RECALL: 0.1053
+  AUC: 0.7220
+  Accuracy: 0.8246
+  F1: 0.1778
+  Pred Range: [0.0028, 0.7541]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[13/14] Starting FE-83...
+======================================================================
+EXPERIMENT: FE-83 - a100 L=8, h=4, dropout=0.6 (deep+reg)
+======================================================================
+Device: mps
+
+Estimated parameters: 1,658,977
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=8, h=4, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.6, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 1,659,347
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6667
+  RECALL: 0.1053
+  AUC: 0.7065
+  Accuracy: 0.8294
+  F1: 0.1818
+  Pred Range: [0.0167, 0.6340]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[14/14] Starting FE-84...
+======================================================================
+EXPERIMENT: FE-84 - a100 d_embed=16, d=64, L=12, h=2, drop=0.6
+======================================================================
+Device: mps
+
+Estimated parameters: 619,825
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=64, L=12, h=2, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.6, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Actual parameters: 620,115
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.1 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.0000
+  RECALL: 0.0000
+  AUC: 0.6826
+  Accuracy: 0.8199
+  F1: 0.0000
+  Pred Range: [0.0467, 0.4664]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_16/results.json

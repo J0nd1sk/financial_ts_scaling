@@ -488,3 +488,195 @@ class TestGetMemorySafeBatchConfig:
         assert isinstance(config["micro_batch"], int)
         assert isinstance(config["accumulation_steps"], int)
         assert isinstance(config["effective_batch"], int)
+
+
+class TestEstimateParamCountWithDEmbed:
+    """Test parameter count estimation with d_embed (Feature Embedding layer)."""
+
+    def test_d_embed_none_matches_original(self):
+        """d_embed=None should return identical count to original function."""
+        from src.models.arch_grid import estimate_param_count_with_embedding
+
+        # Without d_embed, should match standard estimation
+        result = estimate_param_count_with_embedding(
+            d_model=128,
+            n_layers=4,
+            n_heads=8,
+            d_ff=512,
+            num_features=100,
+            d_embed=None,
+            context_length=80,
+            patch_len=16,
+            stride=8,
+        )
+
+        # Build actual model to verify
+        config = PatchTSTConfig(
+            num_features=100,
+            context_length=80,
+            patch_length=16,
+            stride=8,
+            d_model=128,
+            n_heads=8,
+            n_layers=4,
+            d_ff=512,
+            dropout=0.1,
+            head_dropout=0.0,
+            d_embed=None,
+        )
+        model = PatchTST(config)
+        actual = sum(p.numel() for p in model.parameters())
+
+        assert abs(result - actual) / actual < 0.001, (
+            f"Estimated {result:,} but actual is {actual:,}"
+        )
+
+    def test_d_embed_reduces_params_for_high_feature_count(self):
+        """d_embed should significantly reduce params for high feature counts."""
+        from src.models.arch_grid import estimate_param_count_with_embedding
+
+        # a500 (500 features) without d_embed
+        params_no_embed = estimate_param_count_with_embedding(
+            d_model=128,
+            n_layers=4,
+            n_heads=8,
+            d_ff=512,
+            num_features=500,
+            d_embed=None,
+            context_length=80,
+            patch_len=16,
+            stride=8,
+        )
+
+        # a500 with d_embed=64
+        params_with_embed = estimate_param_count_with_embedding(
+            d_model=128,
+            n_layers=4,
+            n_heads=8,
+            d_ff=512,
+            num_features=500,
+            d_embed=64,
+            context_length=80,
+            patch_len=16,
+            stride=8,
+        )
+
+        # d_embed=64 should significantly reduce params (expect ~47% reduction)
+        reduction = (params_no_embed - params_with_embed) / params_no_embed
+        assert reduction > 0.4, (
+            f"Expected >40% reduction, got {reduction*100:.1f}%: "
+            f"{params_no_embed:,} -> {params_with_embed:,}"
+        )
+
+    def test_d_embed_matches_actual_model_params(self):
+        """Estimation with d_embed should match actual model parameter count."""
+        from src.models.arch_grid import estimate_param_count_with_embedding
+
+        # Config with d_embed=64
+        config = PatchTSTConfig(
+            num_features=100,
+            context_length=80,
+            patch_length=16,
+            stride=8,
+            d_model=128,
+            n_heads=8,
+            n_layers=4,
+            d_ff=512,
+            dropout=0.5,
+            head_dropout=0.0,
+            d_embed=64,
+        )
+        model = PatchTST(config)
+        actual = sum(p.numel() for p in model.parameters())
+
+        estimated = estimate_param_count_with_embedding(
+            d_model=128,
+            n_layers=4,
+            n_heads=8,
+            d_ff=512,
+            num_features=100,
+            d_embed=64,
+            context_length=80,
+            patch_len=16,
+            stride=8,
+        )
+
+        # Allow 0.1% tolerance
+        assert abs(estimated - actual) / actual < 0.001, (
+            f"Estimated {estimated:,} but actual is {actual:,}"
+        )
+
+    def test_d_embed_large_matches_actual(self):
+        """Estimation with large d_embed (256) should match actual model."""
+        from src.models.arch_grid import estimate_param_count_with_embedding
+
+        config = PatchTSTConfig(
+            num_features=500,
+            context_length=80,
+            patch_length=16,
+            stride=8,
+            d_model=256,
+            n_heads=8,
+            n_layers=4,
+            d_ff=1024,
+            dropout=0.5,
+            head_dropout=0.0,
+            d_embed=256,
+        )
+        model = PatchTST(config)
+        actual = sum(p.numel() for p in model.parameters())
+
+        estimated = estimate_param_count_with_embedding(
+            d_model=256,
+            n_layers=4,
+            n_heads=8,
+            d_ff=1024,
+            num_features=500,
+            d_embed=256,
+            context_length=80,
+            patch_len=16,
+            stride=8,
+        )
+
+        assert abs(estimated - actual) / actual < 0.001, (
+            f"Estimated {estimated:,} but actual is {actual:,}"
+        )
+
+    def test_d_embed_with_revin_params_not_included(self):
+        """RevIN params should not be in base estimate (added separately in model)."""
+        from src.models.arch_grid import estimate_param_count_with_embedding
+
+        # RevIN adds 2 * num_features params (gamma + beta)
+        # But our estimation is for the base architecture without RevIN
+        estimated = estimate_param_count_with_embedding(
+            d_model=128,
+            n_layers=4,
+            n_heads=8,
+            d_ff=512,
+            num_features=100,
+            d_embed=64,
+            context_length=80,
+            patch_len=16,
+            stride=8,
+        )
+
+        # Model without RevIN
+        config = PatchTSTConfig(
+            num_features=100,
+            context_length=80,
+            patch_length=16,
+            stride=8,
+            d_model=128,
+            n_heads=8,
+            n_layers=4,
+            d_ff=512,
+            dropout=0.5,
+            head_dropout=0.0,
+            d_embed=64,
+        )
+        model_no_revin = PatchTST(config, use_revin=False)
+        actual_no_revin = sum(p.numel() for p in model_no_revin.parameters())
+
+        assert abs(estimated - actual_no_revin) / actual_no_revin < 0.001, (
+            f"Estimated {estimated:,} but actual (no RevIN) is {actual_no_revin:,}"
+        )

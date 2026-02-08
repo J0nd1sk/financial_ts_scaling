@@ -1,0 +1,2195 @@
+caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority LF-P1
+
+Running 8 experiments with priority LF-P1
+
+[1/8] Starting LF-01...
+======================================================================
+EXPERIMENT: LF-01 - a100 FE-06 + SoftAUC gamma=1.0
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: softauc {'gamma': 1.0}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.6 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3407
+  RECALL: 0.4079
+  AUC: 0.6768
+  Accuracy: 0.7512
+  F1: 0.3713
+  Pred Range: [0.0000, 0.9999]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[2/8] Starting LF-02...
+======================================================================
+EXPERIMENT: LF-02 - a100 FE-06 + SoftAUC gamma=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: softauc {'gamma': 2.0}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.6 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3295
+  RECALL: 0.3816
+  AUC: 0.6934
+  Accuracy: 0.7488
+  F1: 0.3537
+  Pred Range: [0.0000, 0.9999]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[3/8] Starting LF-03...
+======================================================================
+EXPERIMENT: LF-03 - a100 FE-06 + SoftAUC gamma=3.0
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: softauc {'gamma': 3.0}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.7 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3298
+  RECALL: 0.4079
+  AUC: 0.7028
+  Accuracy: 0.7441
+  F1: 0.3647
+  Pred Range: [0.0000, 1.0000]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[4/8] Starting LF-04...
+======================================================================
+EXPERIMENT: LF-04 - a100 FE-06 + SoftAUC gamma=5.0
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: softauc {'gamma': 5.0}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.6 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3103
+  RECALL: 0.3553
+  AUC: 0.6849
+  Accuracy: 0.7417
+  F1: 0.3313
+  Pred Range: [0.0001, 0.9995]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[5/8] Starting LF-05...
+======================================================================
+EXPERIMENT: LF-05 - a500 FE-50 + SoftAUC gamma=1.0
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: softauc {'gamma': 1.0}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.4 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3333
+  RECALL: 0.3421
+  AUC: 0.6263
+  Accuracy: 0.7583
+  F1: 0.3377
+  Pred Range: [0.0001, 0.9998]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[6/8] Starting LF-06...
+======================================================================
+EXPERIMENT: LF-06 - a500 FE-50 + SoftAUC gamma=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: softauc {'gamma': 2.0}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.8 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3371
+  RECALL: 0.3947
+  AUC: 0.6662
+  Accuracy: 0.7512
+  F1: 0.3636
+  Pred Range: [0.0002, 0.9996]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[7/8] Starting LF-07...
+======================================================================
+EXPERIMENT: LF-07 - a500 FE-50 + SoftAUC gamma=3.0
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: softauc {'gamma': 3.0}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.8 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3500
+  RECALL: 0.3684
+  AUC: 0.6580
+  Accuracy: 0.7630
+  F1: 0.3590
+  Pred Range: [0.0004, 0.9990]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[8/8] Starting LF-08...
+======================================================================
+EXPERIMENT: LF-08 - a500 FE-50 + SoftAUC gamma=5.0
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: softauc {'gamma': 5.0}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.3 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3605
+  RECALL: 0.4079
+  AUC: 0.7094
+  Accuracy: 0.7630
+  F1: 0.3827
+  Pred Range: [0.0004, 0.9985]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+
+caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority LF-P2
+
+Running 12 experiments with priority LF-P2
+
+[1/12] Starting LF-09...
+======================================================================
+EXPERIMENT: LF-09 - a100 FE-06 + Focal g=2.0, a=0.25
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: focal {'gamma': 2.0, 'alpha': 0.25}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.0000
+  RECALL: 0.0000
+  AUC: 0.7203
+  Accuracy: 0.8199
+  F1: 0.0000
+  Pred Range: [0.1612, 0.4519]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[2/12] Starting LF-10...
+======================================================================
+EXPERIMENT: LF-10 - a100 FE-06 + Focal g=2.0, a=0.50
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: focal {'gamma': 2.0, 'alpha': 0.5}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3429
+  RECALL: 0.1579
+  AUC: 0.7210
+  Accuracy: 0.7938
+  F1: 0.2162
+  Pred Range: [0.2319, 0.5762]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[3/12] Starting LF-11...
+======================================================================
+EXPERIMENT: LF-11 - a100 FE-06 + Focal g=2.0, a=0.75
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: focal {'gamma': 2.0, 'alpha': 0.75}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3222
+  RECALL: 0.7632
+  AUC: 0.7221
+  Accuracy: 0.6682
+  F1: 0.4531
+  Pred Range: [0.3235, 0.6897]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[4/12] Starting LF-12...
+======================================================================
+EXPERIMENT: LF-12 - a100 FE-06 + Focal g=3.0, a=0.25
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: focal {'gamma': 3.0, 'alpha': 0.25}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.0000
+  RECALL: 0.0000
+  AUC: 0.7138
+  Accuracy: 0.8199
+  F1: 0.0000
+  Pred Range: [0.2509, 0.4505]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[5/12] Starting LF-13...
+======================================================================
+EXPERIMENT: LF-13 - a100 FE-06 + Focal g=1.0, a=0.50
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: focal {'gamma': 1.0, 'alpha': 0.5}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6000
+  RECALL: 0.1184
+  AUC: 0.7255
+  Accuracy: 0.8270
+  F1: 0.1978
+  Pred Range: [0.0589, 0.6109]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[6/12] Starting LF-14...
+======================================================================
+EXPERIMENT: LF-14 - a100 FE-06 + Focal g=3.0, a=0.75
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: focal {'gamma': 3.0, 'alpha': 0.75}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3373
+  RECALL: 0.7368
+  AUC: 0.7162
+  Accuracy: 0.6919
+  F1: 0.4628
+  Pred Range: [0.3866, 0.6153]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[7/12] Starting LF-15...
+======================================================================
+EXPERIMENT: LF-15 - a500 FE-50 + Focal g=2.0, a=0.25
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: focal {'gamma': 2.0, 'alpha': 0.25}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.0 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.0000
+  RECALL: 0.0000
+  AUC: 0.7265
+  Accuracy: 0.8199
+  F1: 0.0000
+  Pred Range: [0.1180, 0.4556]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[8/12] Starting LF-16...
+======================================================================
+EXPERIMENT: LF-16 - a500 FE-50 + Focal g=2.0, a=0.50
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: focal {'gamma': 2.0, 'alpha': 0.5}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.0 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3929
+  RECALL: 0.1447
+  AUC: 0.7254
+  Accuracy: 0.8057
+  F1: 0.2115
+  Pred Range: [0.1676, 0.5894]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[9/12] Starting LF-17...
+======================================================================
+EXPERIMENT: LF-17 - a500 FE-50 + Focal g=2.0, a=0.75
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: focal {'gamma': 2.0, 'alpha': 0.75}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.0 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3596
+  RECALL: 0.5395
+  AUC: 0.7222
+  Accuracy: 0.7441
+  F1: 0.4316
+  Pred Range: [0.2484, 0.7069]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[10/12] Starting LF-18...
+======================================================================
+EXPERIMENT: LF-18 - a500 FE-50 + Focal g=3.0, a=0.25
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: focal {'gamma': 3.0, 'alpha': 0.25}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.0 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.0000
+  RECALL: 0.0000
+  AUC: 0.7257
+  Accuracy: 0.8199
+  F1: 0.0000
+  Pred Range: [0.2259, 0.4610]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[11/12] Starting LF-19...
+======================================================================
+EXPERIMENT: LF-19 - a500 FE-50 + Focal g=1.0, a=0.50
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: focal {'gamma': 1.0, 'alpha': 0.5}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.0 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4074
+  RECALL: 0.1447
+  AUC: 0.7227
+  Accuracy: 0.8081
+  F1: 0.2136
+  Pred Range: [0.0524, 0.6129]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[12/12] Starting LF-20...
+======================================================================
+EXPERIMENT: LF-20 - a500 FE-50 + Focal g=3.0, a=0.75
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: focal {'gamma': 3.0, 'alpha': 0.75}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.0 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3333
+  RECALL: 0.5921
+  AUC: 0.7207
+  Accuracy: 0.7133
+  F1: 0.4265
+  Pred Range: [0.3612, 0.6407]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+
+ caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority LF-P3
+
+Running 8 experiments with priority LF-P3
+
+[1/8] Starting LF-21...
+======================================================================
+EXPERIMENT: LF-21 - a100 FE-06 + WeightedSum a=0.3, g=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: weightedsum {'alpha': 0.3, 'gamma': 2.0}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.7 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3390
+  RECALL: 0.2632
+  AUC: 0.7022
+  Accuracy: 0.7749
+  F1: 0.2963
+  Pred Range: [0.0011, 0.9664]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[2/8] Starting LF-22...
+======================================================================
+EXPERIMENT: LF-22 - a100 FE-06 + WeightedSum a=0.5, g=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: weightedsum {'alpha': 0.5, 'gamma': 2.0}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.7 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3571
+  RECALL: 0.1974
+  AUC: 0.7132
+  Accuracy: 0.7915
+  F1: 0.2542
+  Pred Range: [0.0018, 0.9156]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[3/8] Starting LF-23...
+======================================================================
+EXPERIMENT: LF-23 - a100 FE-06 + WeightedSum a=0.7, g=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: weightedsum {'alpha': 0.7, 'gamma': 2.0}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.7 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4000
+  RECALL: 0.1316
+  AUC: 0.7181
+  Accuracy: 0.8081
+  F1: 0.1980
+  Pred Range: [0.0026, 0.8458]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[4/8] Starting LF-24...
+======================================================================
+EXPERIMENT: LF-24 - a100 FE-06 + WeightedSum a=0.5, g=3.0
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: weightedsum {'alpha': 0.5, 'gamma': 3.0}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.7 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3409
+  RECALL: 0.1974
+  AUC: 0.7115
+  Accuracy: 0.7867
+  F1: 0.2500
+  Pred Range: [0.0017, 0.9238]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[5/8] Starting LF-25...
+======================================================================
+EXPERIMENT: LF-25 - a500 FE-50 + WeightedSum a=0.3, g=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: weightedsum {'alpha': 0.3, 'gamma': 2.0}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.3 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3051
+  RECALL: 0.2368
+  AUC: 0.7038
+  Accuracy: 0.7654
+  F1: 0.2667
+  Pred Range: [0.0024, 0.9418]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[6/8] Starting LF-26...
+======================================================================
+EXPERIMENT: LF-26 - a500 FE-50 + WeightedSum a=0.5, g=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: weightedsum {'alpha': 0.5, 'gamma': 2.0}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.1 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3636
+  RECALL: 0.1579
+  AUC: 0.7262
+  Accuracy: 0.7986
+  F1: 0.2202
+  Pred Range: [0.0032, 0.8665]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[7/8] Starting LF-27...
+======================================================================
+EXPERIMENT: LF-27 - a500 FE-50 + WeightedSum a=0.7, g=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: weightedsum {'alpha': 0.7, 'gamma': 2.0}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.1 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3571
+  RECALL: 0.1316
+  AUC: 0.7283
+  Accuracy: 0.8009
+  F1: 0.1923
+  Pred Range: [0.0039, 0.7743]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[8/8] Starting LF-28...
+======================================================================
+EXPERIMENT: LF-28 - a500 FE-50 + WeightedSum a=0.5, g=3.0
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: weightedsum {'alpha': 0.5, 'gamma': 3.0}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.1 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3429
+  RECALL: 0.1579
+  AUC: 0.7262
+  Accuracy: 0.7938
+  F1: 0.2162
+  Pred Range: [0.0033, 0.8722]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+
+❯  caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority LF-P4
+
+Running 6 experiments with priority LF-P4
+
+[1/6] Starting LF-29...
+======================================================================
+EXPERIMENT: LF-29 - a100 FE-06 + WeightedBCE pw=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: weightedbce {'pos_weight': 2.0}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3429
+  RECALL: 0.3158
+  AUC: 0.7236
+  Accuracy: 0.7678
+  F1: 0.3288
+  Pred Range: [0.0113, 0.8983]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[2/6] Starting LF-30...
+======================================================================
+EXPERIMENT: LF-30 - a100 FE-06 + WeightedBCE pw=4.0
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: weightedbce {'pos_weight': 4.0}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3333
+  RECALL: 0.5789
+  AUC: 0.7243
+  Accuracy: 0.7156
+  F1: 0.4231
+  Pred Range: [0.0288, 0.9623]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[3/6] Starting LF-31...
+======================================================================
+EXPERIMENT: LF-31 - a100 FE-06 + WeightedBCE pw=8.0
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: weightedbce {'pos_weight': 8.0}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3016
+  RECALL: 0.7500
+  AUC: 0.7186
+  Accuracy: 0.6422
+  F1: 0.4302
+  Pred Range: [0.0551, 0.9854]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[4/6] Starting LF-32...
+======================================================================
+EXPERIMENT: LF-32 - a500 FE-50 + WeightedBCE pw=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: weightedbce {'pos_weight': 2.0}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3438
+  RECALL: 0.2895
+  AUC: 0.7260
+  Accuracy: 0.7725
+  F1: 0.3143
+  Pred Range: [0.0126, 0.8445]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[5/6] Starting LF-33...
+======================================================================
+EXPERIMENT: LF-33 - a500 FE-50 + WeightedBCE pw=4.0
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: weightedbce {'pos_weight': 4.0}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3256
+  RECALL: 0.5526
+  AUC: 0.7247
+  Accuracy: 0.7133
+  F1: 0.4098
+  Pred Range: [0.0295, 0.9280]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[6/6] Starting LF-34...
+======================================================================
+EXPERIMENT: LF-34 - a500 FE-50 + WeightedBCE pw=8.0
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: weightedbce {'pos_weight': 8.0}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3115
+  RECALL: 0.7500
+  AUC: 0.7205
+  Accuracy: 0.6564
+  F1: 0.4402
+  Pred Range: [0.0660, 0.9711]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+~/Documents/financial_ts_scaling experiment/foundation-decoder-investigation* 4m 9s
+❯  caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority LF-P5
+
+Running 6 experiments with priority LF-P5
+
+[1/6] Starting LF-35...
+======================================================================
+EXPERIMENT: LF-35 - a100 FE-06 + LabelSmoothing e=0.05
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: labelsmoothing {'epsilon': 0.05}
+Early stopping: val_loss
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.3 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3333
+  RECALL: 0.0263
+  AUC: 0.7172
+  Accuracy: 0.8152
+  F1: 0.0488
+  Pred Range: [0.0143, 0.6272]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[2/6] Starting LF-36...
+======================================================================
+EXPERIMENT: LF-36 - a100 FE-06 + LabelSmoothing e=0.10
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: labelsmoothing {'epsilon': 0.1}
+Early stopping: val_loss
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.3 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5833
+  RECALL: 0.0921
+  AUC: 0.7157
+  Accuracy: 0.8246
+  F1: 0.1591
+  Pred Range: [0.0475, 0.6149]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[3/6] Starting LF-37...
+======================================================================
+EXPERIMENT: LF-37 - a100 FE-06 + LabelSmoothing e=0.20
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: labelsmoothing {'epsilon': 0.2}
+Early stopping: val_loss
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5294
+  RECALL: 0.1184
+  AUC: 0.7183
+  Accuracy: 0.8223
+  F1: 0.1935
+  Pred Range: [0.1616, 0.5749]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[4/6] Starting LF-38...
+======================================================================
+EXPERIMENT: LF-38 - a500 FE-50 + LabelSmoothing e=0.05
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: labelsmoothing {'epsilon': 0.05}
+Early stopping: val_loss
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.8 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4545
+  RECALL: 0.1316
+  AUC: 0.7271
+  Accuracy: 0.8152
+  F1: 0.2041
+  Pred Range: [0.0167, 0.6289]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[5/6] Starting LF-39...
+======================================================================
+EXPERIMENT: LF-39 - a500 FE-50 + LabelSmoothing e=0.10
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: labelsmoothing {'epsilon': 0.1}
+Early stopping: val_loss
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.8 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4706
+  RECALL: 0.1053
+  AUC: 0.7279
+  Accuracy: 0.8175
+  F1: 0.1720
+  Pred Range: [0.0369, 0.6082]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[6/6] Starting LF-40...
+======================================================================
+EXPERIMENT: LF-40 - a500 FE-50 + LabelSmoothing e=0.20
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: labelsmoothing {'epsilon': 0.2}
+Early stopping: val_loss
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.8 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.8571
+  RECALL: 0.0789
+  AUC: 0.7253
+  Accuracy: 0.8318
+  F1: 0.1446
+  Pred Range: [0.1171, 0.5565]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+
+ caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority LF-P6
+
+Running 8 experiments with priority LF-P6
+
+[1/8] Starting LF-41...
+======================================================================
+EXPERIMENT: LF-41 - a200 FE-04 + SoftAUC g=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 941,505
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a200_combined.parquet...
+Data: 7977 rows, 212 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=64
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 206 (a200 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: softauc {'gamma': 2.0}
+Early stopping: val_auc
+Actual parameters: 942,247
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.8 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3293
+  RECALL: 0.3553
+  AUC: 0.6988
+  Accuracy: 0.7536
+  F1: 0.3418
+  Pred Range: [0.0000, 1.0000]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a200_dembed_64/results.json
+
+[2/8] Starting LF-42...
+======================================================================
+EXPERIMENT: LF-42 - a200 FE-04 + SoftAUC g=3.0
+======================================================================
+Device: mps
+
+Estimated parameters: 941,505
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a200_combined.parquet...
+Data: 7977 rows, 212 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=64
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 206 (a200 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: softauc {'gamma': 3.0}
+Early stopping: val_auc
+Actual parameters: 942,247
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.6 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3483
+  RECALL: 0.4079
+  AUC: 0.7266
+  Accuracy: 0.7559
+  F1: 0.3758
+  Pred Range: [0.0000, 0.9999]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a200_dembed_64/results.json
+
+[3/8] Starting LF-43...
+======================================================================
+EXPERIMENT: LF-43 - a200 FE-04 + Focal g=2.0, a=0.50
+======================================================================
+Device: mps
+
+Estimated parameters: 941,505
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a200_combined.parquet...
+Data: 7977 rows, 212 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=64
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 206 (a200 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: focal {'gamma': 2.0, 'alpha': 0.5}
+Early stopping: val_auc
+Actual parameters: 942,247
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6667
+  RECALL: 0.0526
+  AUC: 0.7300
+  Accuracy: 0.8246
+  F1: 0.0976
+  Pred Range: [0.1013, 0.5738]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a200_dembed_64/results.json
+
+[4/8] Starting LF-44...
+======================================================================
+EXPERIMENT: LF-44 - a200 FE-04 + Focal g=3.0, a=0.75
+======================================================================
+Device: mps
+
+Estimated parameters: 941,505
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a200_combined.parquet...
+Data: 7977 rows, 212 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=64
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 206 (a200 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: focal {'gamma': 3.0, 'alpha': 0.75}
+Early stopping: val_auc
+Actual parameters: 942,247
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4444
+  RECALL: 0.3684
+  AUC: 0.7319
+  Accuracy: 0.8033
+  F1: 0.4029
+  Pred Range: [0.2888, 0.6223]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a200_dembed_64/results.json
+
+[5/8] Starting LF-45...
+======================================================================
+EXPERIMENT: LF-45 - a200 FE-04 + WeightedSum a=0.5, g=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 941,505
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a200_combined.parquet...
+Data: 7977 rows, 212 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=64
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 206 (a200 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: weightedsum {'alpha': 0.5, 'gamma': 2.0}
+Early stopping: val_auc
+Actual parameters: 942,247
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.6 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4167
+  RECALL: 0.1316
+  AUC: 0.7133
+  Accuracy: 0.8104
+  F1: 0.2000
+  Pred Range: [0.0002, 0.8747]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a200_dembed_64/results.json
+
+[6/8] Starting LF-46...
+======================================================================
+EXPERIMENT: LF-46 - a200 FE-04 + WeightedSum a=0.3, g=2.0
+======================================================================
+Device: mps
+
+Estimated parameters: 941,505
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a200_combined.parquet...
+Data: 7977 rows, 212 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=64
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 206 (a200 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: weightedsum {'alpha': 0.3, 'gamma': 2.0}
+Early stopping: val_auc
+Actual parameters: 942,247
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.2979
+  RECALL: 0.1842
+  AUC: 0.7130
+  Accuracy: 0.7749
+  F1: 0.2276
+  Pred Range: [0.0003, 0.9607]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a200_dembed_64/results.json
+
+[7/8] Starting LF-47...
+======================================================================
+EXPERIMENT: LF-47 - a200 FE-04 + WeightedBCE pw=4.0
+======================================================================
+Device: mps
+
+Estimated parameters: 941,505
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a200_combined.parquet...
+Data: 7977 rows, 212 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=64
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 206 (a200 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: weightedbce {'pos_weight': 4.0}
+Early stopping: val_auc
+Actual parameters: 942,247
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.3854
+  RECALL: 0.4868
+  AUC: 0.7333
+  Accuracy: 0.7678
+  F1: 0.4302
+  Pred Range: [0.0034, 0.9694]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a200_dembed_64/results.json
+
+[8/8] Starting LF-48...
+======================================================================
+EXPERIMENT: LF-48 - a200 FE-04 + LabelSmoothing e=0.10
+======================================================================
+Device: mps
+
+Estimated parameters: 941,505
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a200_combined.parquet...
+Data: 7977 rows, 212 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=64
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 206 (a200 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: labelsmoothing {'epsilon': 0.1}
+Early stopping: val_loss
+Actual parameters: 942,247
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.3 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6000
+  RECALL: 0.0789
+  AUC: 0.7227
+  Accuracy: 0.8246
+  F1: 0.1395
+  Pred Range: [0.0160, 0.6778]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a200_dembed_64/results.json
+
+~/Documents/financial_ts_scaling experiment/foundation-decoder-investigation* 4m 24s
+❯  caffeinate ./venv/bin/python experiments/feature_embedding/run_experiments.py --priority LF-P7
+
+Running 6 experiments with priority LF-P7
+
+[1/6] Starting LF-49...
+======================================================================
+EXPERIMENT: LF-49 - a100 FE-06 + MildFocal g=0.5, a=0.5
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: mildfocal {'gamma': 0.5, 'alpha': 0.5}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.6 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6154
+  RECALL: 0.1053
+  AUC: 0.7216
+  Accuracy: 0.8270
+  F1: 0.1798
+  Pred Range: [0.0192, 0.6704]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[2/6] Starting LF-50...
+======================================================================
+EXPERIMENT: LF-50 - a100 FE-06 + MildFocal g=0.75, a=0.5
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: mildfocal {'gamma': 0.75, 'alpha': 0.5}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.5 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6429
+  RECALL: 0.1184
+  AUC: 0.7233
+  Accuracy: 0.8294
+  F1: 0.2000
+  Pred Range: [0.0347, 0.6365]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[3/6] Starting LF-51...
+======================================================================
+EXPERIMENT: LF-51 - a100 FE-06 + MildFocal g=1.0, a=0.5
+======================================================================
+Device: mps
+
+Estimated parameters: 865,889
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a100_combined.parquet...
+Data: 8022 rows, 106 columns
+
+Architecture: d=128, L=4, h=8, d_ff=512
+Feature Embedding: d_embed=32
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 100 (a100 tier)
+
+Splits: train=7204, val=422, test=156
+Loss: mildfocal {'gamma': 1.0, 'alpha': 0.5}
+Early stopping: val_auc
+Actual parameters: 866,259
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.6 min
+Stopped early: False
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.6000
+  RECALL: 0.1184
+  AUC: 0.7255
+  Accuracy: 0.8270
+  F1: 0.1978
+  Pred Range: [0.0589, 0.6109]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a100_dembed_32/results.json
+
+[4/6] Starting LF-52...
+======================================================================
+EXPERIMENT: LF-52 - a500 FE-50 + MildFocal g=0.5, a=0.5
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: mildfocal {'gamma': 0.5, 'alpha': 0.5}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 0.9 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.5333
+  RECALL: 0.1053
+  AUC: 0.7275
+  Accuracy: 0.8223
+  F1: 0.1758
+  Pred Range: [0.0202, 0.5967]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[5/6] Starting LF-53...
+======================================================================
+EXPERIMENT: LF-53 - a500 FE-50 + MildFocal g=0.75, a=0.5
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: mildfocal {'gamma': 0.75, 'alpha': 0.5}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.0 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4138
+  RECALL: 0.1579
+  AUC: 0.7213
+  Accuracy: 0.8081
+  F1: 0.2286
+  Pred Range: [0.0342, 0.6315]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+[6/6] Starting LF-54...
+======================================================================
+EXPERIMENT: LF-54 - a500 FE-50 + MildFocal g=1.0, a=0.5
+======================================================================
+Device: mps
+
+Estimated parameters: 226,353
+
+Loading /Users/alexanderthomson/Documents/financial_ts_scaling/data/processed/v1/SPY_dataset_a500_combined.parquet...
+Data: 7977 rows, 506 columns
+
+Architecture: d=64, L=4, h=4, d_ff=256
+Feature Embedding: d_embed=16
+Training: lr=0.0001, dropout=0.5, wd=0.0, ctx=80
+Features: 500 (a500 tier)
+
+Splits: train=7159, val=422, test=156
+Loss: mildfocal {'gamma': 1.0, 'alpha': 0.5}
+Early stopping: val_auc
+Actual parameters: 227,443
+
+Training for 50 epochs...
+
+======================================================================
+RESULTS
+======================================================================
+Training time: 1.0 min
+Stopped early: True
+
+Validation (2023-2024, 422 samples):
+  PRECISION: 0.4074
+  RECALL: 0.1447
+  AUC: 0.7227
+  Accuracy: 0.8081
+  F1: 0.2136
+  Pred Range: [0.0524, 0.6129]
+  Class Balance: 0.180 (76 positives)
+
+Results saved to /Users/alexanderthomson/Documents/financial_ts_scaling/outputs/feature_embedding/a500_dembed_16/results.json
+
+

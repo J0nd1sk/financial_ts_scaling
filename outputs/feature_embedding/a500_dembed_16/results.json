@@ -1,0 +1,66 @@
+{
+  "exp_id": "LF-60",
+  "priority": "LF-P8",
+  "description": "a500 FE-50 + AsymFocal gp=1.0, gn=1.25",
+  "tier": "a500",
+  "num_features": 500,
+  "d_embed": 16,
+  "architecture": {
+    "d_model": 64,
+    "n_layers": 4,
+    "n_heads": 4,
+    "d_ff": 256,
+    "context_length": 80,
+    "patch_length": 16,
+    "stride": 8
+  },
+  "hyperparameters": {
+    "dropout": 0.5,
+    "learning_rate": 0.0001,
+    "batch_size": 128,
+    "epochs": 50,
+    "use_revin": true
+  },
+  "loss_function": {
+    "loss_fn": "asymmetricfocal",
+    "loss_params": {
+      "gamma_pos": 1.0,
+      "gamma_neg": 1.25,
+      "alpha": 0.5
+    },
+    "early_stopping_metric": "val_auc"
+  },
+  "parameters": {
+    "estimated": 226353,
+    "actual": 227443
+  },
+  "splits": {
+    "train": 7159,
+    "val": 422,
+    "test": 156
+  },
+  "training": {
+    "train_loss": 0.10794151813856193,
+    "val_loss": 0.10166849009692669,
+    "val_auc": 0.7226194097961668,
+    "stopped_early": true,
+    "training_time_min": 0.9993379155794779
+  },
+  "val_metrics": {
+    "precision": 0.36363636363636365,
+    "recall": 0.15789473684210525,
+    "auc": 0.7226194097961668,
+    "accuracy": 0.7985781990521327,
+    "f1": 0.22018348623853212,
+    "pred_min": 0.07131630182266235,
+    "pred_max": 0.6172775626182556,
+    "pred_mean": 0.23305782675743103,
+    "pred_std": 0.13188013434410095,
+    "pred_range": 0.5459612607955933,
+    "n_positive_preds": 33,
+    "n_samples": 422,
+    "class_balance": 0.18009479343891144,
+    "positive_rate": 0.18009478672985782
+  },
+  "timestamp": "2026-02-07T21:59:48.039089"
+}

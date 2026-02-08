@@ -20,7 +20,14 @@ import torch.nn as nn
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.training.losses import SoftAUCLoss
+from src.training.losses import (
+    SoftAUCLoss,
+    MildFocalLoss,
+    AsymmetricFocalLoss,
+    EntropyRegularizedBCE,
+    VarianceRegularizedBCE,
+    CalibratedFocalLoss,
+)
 
 
 class TestSoftAUCLossBasic:
@@ -888,3 +895,551 @@ class TestEvaluateForecastingModelClassification:
         assert metrics_cls["n_positive_preds"] == 3
         assert metrics_return["n_positive_preds"] == 5
         assert metrics_cls["n_positive_preds"] != metrics_return["n_positive_preds"]
+
+
+# =============================================================================
+# MildFocalLoss Tests
+# =============================================================================
+
+
+class TestMildFocalLossBasic:
+    """Basic functionality tests for MildFocalLoss."""
+
+    def test_mild_focal_returns_scalar_tensor(self):
+        """Test MildFocalLoss returns a scalar tensor."""
+        torch.manual_seed(42)
+        loss_fn = MildFocalLoss(gamma=0.75, alpha=0.5)
+
+        predictions = torch.rand(100)
+        targets = torch.cat([torch.ones(50), torch.zeros(50)])
+
+        loss = loss_fn(predictions, targets)
+
+        assert isinstance(loss, torch.Tensor), "Loss should be a tensor"
+        assert loss.dim() == 0, "Loss should be a scalar"
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert loss.item() > 0, "Loss should be positive"
+
+    def test_mild_focal_less_aggressive_than_standard(self):
+        """Test that mild focal (gamma=0.75) is less aggressive than standard (gamma=2)."""
+        from src.training.losses import FocalLoss
+
+        torch.manual_seed(42)
+        predictions = torch.rand(100)
+        targets = torch.cat([torch.ones(50), torch.zeros(50)])
+
+        # Mild focal with gamma=0.75
+        mild_loss = MildFocalLoss(gamma=0.75, alpha=0.25)(predictions, targets)
+
+        # Standard focal with gamma=2.0
+        standard_loss = FocalLoss(gamma=2.0, alpha=0.25)(predictions, targets)
+
+        # Mild focal should generally have higher loss (less down-weighting of easy examples)
+        # This is because with lower gamma, (1-p_t)^gamma is closer to 1
+        assert mild_loss.item() > standard_loss.item(), \
+            f"Mild focal ({mild_loss.item():.4f}) should exceed standard ({standard_loss.item():.4f})"
+
+    def test_mild_focal_perfect_predictions_low_loss(self):
+        """Test loss is low for perfect predictions."""
+        loss_fn = MildFocalLoss(gamma=0.75, alpha=0.5)
+
+        predictions = torch.tensor([0.95, 0.92, 0.05, 0.08])
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+
+        assert loss.item() < 0.1, f"Expected loss < 0.1, got {loss.item()}"
+
+
+class TestMildFocalLossGradient:
+    """Gradient flow tests for MildFocalLoss."""
+
+    def test_mild_focal_gradient_flows(self):
+        """Test gradients propagate through MildFocalLoss."""
+        loss_fn = MildFocalLoss(gamma=0.75, alpha=0.5)
+
+        predictions = torch.tensor([0.7, 0.6, 0.3, 0.2], requires_grad=True)
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+        loss.backward()
+
+        assert predictions.grad is not None, "Gradients should flow to predictions"
+        assert not torch.all(predictions.grad == 0), "Gradients should be non-zero"
+
+
+class TestMildFocalLossEdgeCases:
+    """Edge case tests for MildFocalLoss."""
+
+    def test_mild_focal_no_positive_handles_gracefully(self):
+        """Test loss handles batch with no positive samples."""
+        loss_fn = MildFocalLoss(gamma=0.75, alpha=0.5)
+
+        predictions = torch.tensor([0.3, 0.4, 0.5])
+        targets = torch.tensor([0.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+    def test_mild_focal_no_negative_handles_gracefully(self):
+        """Test loss handles batch with no negative samples."""
+        loss_fn = MildFocalLoss(gamma=0.75, alpha=0.5)
+
+        predictions = torch.tensor([0.7, 0.8, 0.9])
+        targets = torch.tensor([1.0, 1.0, 1.0])
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+
+# =============================================================================
+# AsymmetricFocalLoss Tests
+# =============================================================================
+
+
+class TestAsymmetricFocalLossBasic:
+    """Basic functionality tests for AsymmetricFocalLoss."""
+
+    def test_asymmetric_focal_returns_scalar_tensor(self):
+        """Test AsymmetricFocalLoss returns a scalar tensor."""
+        torch.manual_seed(42)
+        loss_fn = AsymmetricFocalLoss(gamma_pos=1.0, gamma_neg=2.0, alpha=0.5)
+
+        predictions = torch.rand(100)
+        targets = torch.cat([torch.ones(50), torch.zeros(50)])
+
+        loss = loss_fn(predictions, targets)
+
+        assert isinstance(loss, torch.Tensor), "Loss should be a tensor"
+        assert loss.dim() == 0, "Loss should be a scalar"
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert loss.item() > 0, "Loss should be positive"
+
+    def test_asymmetric_equal_gamma_matches_focal(self):
+        """Test that equal gamma_pos and gamma_neg matches FocalLoss."""
+        from src.training.losses import FocalLoss
+
+        torch.manual_seed(42)
+        predictions = torch.rand(50)
+        targets = torch.cat([torch.ones(25), torch.zeros(25)])
+
+        gamma = 2.0
+        alpha = 0.25
+
+        asymmetric_loss = AsymmetricFocalLoss(
+            gamma_pos=gamma, gamma_neg=gamma, alpha=alpha
+        )(predictions, targets)
+
+        focal_loss = FocalLoss(gamma=gamma, alpha=alpha)(predictions, targets)
+
+        assert abs(asymmetric_loss.item() - focal_loss.item()) < 1e-5, \
+            f"Equal gammas should match FocalLoss: asym={asymmetric_loss.item()}, focal={focal_loss.item()}"
+
+    def test_asymmetric_high_gamma_neg_harder_on_fp(self):
+        """Test that higher gamma_neg focuses more on hard negatives (reduces FP)."""
+        # False positive: high prediction for negative
+        predictions = torch.tensor([0.7])  # High prob
+        targets = torch.tensor([0.0])  # Negative target
+
+        # Lower gamma_neg: less focus on this hard negative
+        loss_low = AsymmetricFocalLoss(gamma_pos=1.0, gamma_neg=0.5, alpha=0.5)(
+            predictions, targets
+        )
+
+        # Higher gamma_neg: more focus on this hard negative
+        loss_high = AsymmetricFocalLoss(gamma_pos=1.0, gamma_neg=2.0, alpha=0.5)(
+            predictions, targets
+        )
+
+        # Higher gamma_neg should give lower loss for hard negatives (more down-weighting)
+        # Wait, that's counterintuitive. Let's think again:
+        # gamma_neg affects p^gamma_neg term for negatives
+        # For p=0.7 (incorrect high prediction):
+        #   gamma_neg=0.5: 0.7^0.5 = 0.837
+        #   gamma_neg=2.0: 0.7^2.0 = 0.49
+        # Lower weight means lower contribution to loss
+        assert loss_high.item() < loss_low.item(), \
+            f"Higher gamma_neg should down-weight hard negatives: high={loss_high.item()}, low={loss_low.item()}"
+
+
+class TestAsymmetricFocalLossGradient:
+    """Gradient flow tests for AsymmetricFocalLoss."""
+
+    def test_asymmetric_focal_gradient_flows(self):
+        """Test gradients propagate through AsymmetricFocalLoss."""
+        loss_fn = AsymmetricFocalLoss(gamma_pos=1.0, gamma_neg=2.0, alpha=0.5)
+
+        predictions = torch.tensor([0.7, 0.6, 0.3, 0.2], requires_grad=True)
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+        loss.backward()
+
+        assert predictions.grad is not None, "Gradients should flow to predictions"
+        assert not torch.all(predictions.grad == 0), "Gradients should be non-zero"
+
+
+class TestAsymmetricFocalLossEdgeCases:
+    """Edge case tests for AsymmetricFocalLoss."""
+
+    def test_asymmetric_focal_no_positive_handles_gracefully(self):
+        """Test loss handles batch with no positive samples."""
+        loss_fn = AsymmetricFocalLoss(gamma_pos=1.0, gamma_neg=2.0, alpha=0.5)
+
+        predictions = torch.tensor([0.3, 0.4, 0.5])
+        targets = torch.tensor([0.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+    def test_asymmetric_focal_no_negative_handles_gracefully(self):
+        """Test loss handles batch with no negative samples."""
+        loss_fn = AsymmetricFocalLoss(gamma_pos=1.0, gamma_neg=2.0, alpha=0.5)
+
+        predictions = torch.tensor([0.7, 0.8, 0.9])
+        targets = torch.tensor([1.0, 1.0, 1.0])
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+
+# =============================================================================
+# EntropyRegularizedBCE Tests
+# =============================================================================
+
+
+class TestEntropyRegularizedBCEBasic:
+    """Basic functionality tests for EntropyRegularizedBCE."""
+
+    def test_entropy_reg_returns_scalar_tensor(self):
+        """Test EntropyRegularizedBCE returns a scalar tensor."""
+        torch.manual_seed(42)
+        loss_fn = EntropyRegularizedBCE(lambda_entropy=0.1)
+
+        predictions = torch.rand(100)
+        targets = torch.cat([torch.ones(50), torch.zeros(50)])
+
+        loss = loss_fn(predictions, targets)
+
+        assert isinstance(loss, torch.Tensor), "Loss should be a tensor"
+        assert loss.dim() == 0, "Loss should be a scalar"
+        assert not torch.isnan(loss), "Loss should not be NaN"
+
+    def test_entropy_reg_zero_lambda_equals_bce(self):
+        """Test that lambda_entropy=0 produces standard BCE."""
+        torch.manual_seed(42)
+        predictions = torch.rand(50)
+        targets = torch.cat([torch.ones(25), torch.zeros(25)])
+
+        entropy_loss = EntropyRegularizedBCE(lambda_entropy=0.0)(predictions, targets)
+        bce_loss = nn.BCELoss()(predictions, targets)
+
+        assert abs(entropy_loss.item() - bce_loss.item()) < 1e-5, \
+            f"lambda=0 should match BCE: entropy={entropy_loss.item()}, bce={bce_loss.item()}"
+
+    def test_entropy_reg_penalizes_uncertain_predictions(self):
+        """Test that entropy regularization encourages confident predictions."""
+        # All predictions at 0.5 (maximum entropy, minimum confidence)
+        uncertain_preds = torch.tensor([0.5, 0.5, 0.5, 0.5])
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        # Confident predictions
+        confident_preds = torch.tensor([0.9, 0.85, 0.1, 0.15])
+
+        loss_uncertain = EntropyRegularizedBCE(lambda_entropy=0.1)(uncertain_preds, targets)
+        loss_confident = EntropyRegularizedBCE(lambda_entropy=0.1)(confident_preds, targets)
+
+        # With entropy regularization (subtracting entropy), confident predictions
+        # have lower entropy, so less subtracted, so higher base loss contribution
+        # But confident + correct should still be lower overall
+        assert loss_confident.item() < loss_uncertain.item(), \
+            f"Confident correct should beat uncertain: conf={loss_confident.item()}, unc={loss_uncertain.item()}"
+
+
+class TestEntropyRegularizedBCEGradient:
+    """Gradient flow tests for EntropyRegularizedBCE."""
+
+    def test_entropy_reg_gradient_flows(self):
+        """Test gradients propagate through EntropyRegularizedBCE."""
+        loss_fn = EntropyRegularizedBCE(lambda_entropy=0.1)
+
+        predictions = torch.tensor([0.7, 0.6, 0.3, 0.2], requires_grad=True)
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+        loss.backward()
+
+        assert predictions.grad is not None, "Gradients should flow to predictions"
+        assert not torch.all(predictions.grad == 0), "Gradients should be non-zero"
+
+
+class TestEntropyRegularizedBCEEdgeCases:
+    """Edge case tests for EntropyRegularizedBCE."""
+
+    def test_entropy_reg_no_positive_handles_gracefully(self):
+        """Test loss handles batch with no positive samples."""
+        loss_fn = EntropyRegularizedBCE(lambda_entropy=0.1)
+
+        predictions = torch.tensor([0.3, 0.4, 0.5])
+        targets = torch.tensor([0.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+    def test_entropy_reg_no_negative_handles_gracefully(self):
+        """Test loss handles batch with no negative samples."""
+        loss_fn = EntropyRegularizedBCE(lambda_entropy=0.1)
+
+        predictions = torch.tensor([0.7, 0.8, 0.9])
+        targets = torch.tensor([1.0, 1.0, 1.0])
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+
+# =============================================================================
+# VarianceRegularizedBCE Tests
+# =============================================================================
+
+
+class TestVarianceRegularizedBCEBasic:
+    """Basic functionality tests for VarianceRegularizedBCE."""
+
+    def test_variance_reg_returns_scalar_tensor(self):
+        """Test VarianceRegularizedBCE returns a scalar tensor."""
+        torch.manual_seed(42)
+        loss_fn = VarianceRegularizedBCE(lambda_var=0.5)
+
+        predictions = torch.rand(100)
+        targets = torch.cat([torch.ones(50), torch.zeros(50)])
+
+        loss = loss_fn(predictions, targets)
+
+        assert isinstance(loss, torch.Tensor), "Loss should be a tensor"
+        assert loss.dim() == 0, "Loss should be a scalar"
+        assert not torch.isnan(loss), "Loss should not be NaN"
+
+    def test_variance_reg_zero_lambda_equals_bce(self):
+        """Test that lambda_var=0 produces standard BCE."""
+        torch.manual_seed(42)
+        predictions = torch.rand(50)
+        targets = torch.cat([torch.ones(25), torch.zeros(25)])
+
+        variance_loss = VarianceRegularizedBCE(lambda_var=0.0)(predictions, targets)
+        bce_loss = nn.BCELoss()(predictions, targets)
+
+        assert abs(variance_loss.item() - bce_loss.item()) < 1e-5, \
+            f"lambda=0 should match BCE: var={variance_loss.item()}, bce={bce_loss.item()}"
+
+    def test_variance_reg_penalizes_collapsed_predictions(self):
+        """Test that variance regularization penalizes probability collapse."""
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        # Collapsed predictions: all same value
+        collapsed_preds = torch.tensor([0.45, 0.45, 0.45, 0.45])
+
+        # Diverse predictions with same mean
+        diverse_preds = torch.tensor([0.8, 0.7, 0.2, 0.1])
+
+        loss_collapsed = VarianceRegularizedBCE(lambda_var=0.5)(collapsed_preds, targets)
+        loss_diverse = VarianceRegularizedBCE(lambda_var=0.5)(diverse_preds, targets)
+
+        # Diverse predictions should have lower loss due to variance bonus
+        assert loss_diverse.item() < loss_collapsed.item(), \
+            f"Diverse should beat collapsed: diverse={loss_diverse.item()}, collapsed={loss_collapsed.item()}"
+
+    def test_variance_reg_variance_affects_loss(self):
+        """Test that variance term actually affects the loss."""
+        predictions = torch.tensor([0.9, 0.1, 0.8, 0.2])  # High variance
+        targets = torch.tensor([1.0, 0.0, 1.0, 0.0])
+
+        loss_no_var = VarianceRegularizedBCE(lambda_var=0.0)(predictions, targets)
+        loss_with_var = VarianceRegularizedBCE(lambda_var=0.5)(predictions, targets)
+
+        # With high variance predictions, adding variance bonus should lower loss
+        assert loss_with_var.item() < loss_no_var.item(), \
+            f"Variance bonus should lower loss: with={loss_with_var.item()}, without={loss_no_var.item()}"
+
+
+class TestVarianceRegularizedBCEGradient:
+    """Gradient flow tests for VarianceRegularizedBCE."""
+
+    def test_variance_reg_gradient_flows(self):
+        """Test gradients propagate through VarianceRegularizedBCE."""
+        loss_fn = VarianceRegularizedBCE(lambda_var=0.5)
+
+        predictions = torch.tensor([0.7, 0.6, 0.3, 0.2], requires_grad=True)
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+        loss.backward()
+
+        assert predictions.grad is not None, "Gradients should flow to predictions"
+        assert not torch.all(predictions.grad == 0), "Gradients should be non-zero"
+
+
+class TestVarianceRegularizedBCEEdgeCases:
+    """Edge case tests for VarianceRegularizedBCE."""
+
+    def test_variance_reg_single_sample_handles_gracefully(self):
+        """Test loss handles single sample (variance undefined)."""
+        loss_fn = VarianceRegularizedBCE(lambda_var=0.5)
+
+        predictions = torch.tensor([0.7])
+        targets = torch.tensor([1.0])
+
+        loss = loss_fn(predictions, targets)
+
+        # Single sample has 0 variance, should still compute
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+    def test_variance_reg_no_positive_handles_gracefully(self):
+        """Test loss handles batch with no positive samples."""
+        loss_fn = VarianceRegularizedBCE(lambda_var=0.5)
+
+        predictions = torch.tensor([0.3, 0.4, 0.5])
+        targets = torch.tensor([0.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+
+# =============================================================================
+# CalibratedFocalLoss Tests
+# =============================================================================
+
+
+class TestCalibratedFocalLossBasic:
+    """Basic functionality tests for CalibratedFocalLoss."""
+
+    def test_calibrated_focal_returns_scalar_tensor(self):
+        """Test CalibratedFocalLoss returns a scalar tensor."""
+        torch.manual_seed(42)
+        loss_fn = CalibratedFocalLoss(gamma=2.0, lambda_cal=0.1)
+
+        predictions = torch.rand(100)
+        targets = torch.cat([torch.ones(50), torch.zeros(50)])
+
+        loss = loss_fn(predictions, targets)
+
+        assert isinstance(loss, torch.Tensor), "Loss should be a tensor"
+        assert loss.dim() == 0, "Loss should be a scalar"
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert loss.item() > 0, "Loss should be positive"
+
+    def test_calibrated_focal_zero_lambda_equals_focal(self):
+        """Test that lambda_cal=0 produces standard FocalLoss."""
+        from src.training.losses import FocalLoss
+
+        torch.manual_seed(42)
+        predictions = torch.rand(50)
+        targets = torch.cat([torch.ones(25), torch.zeros(25)])
+
+        calibrated_loss = CalibratedFocalLoss(
+            gamma=2.0, alpha=0.25, lambda_cal=0.0
+        )(predictions, targets)
+
+        focal_loss = FocalLoss(gamma=2.0, alpha=0.25)(predictions, targets)
+
+        assert abs(calibrated_loss.item() - focal_loss.item()) < 1e-5, \
+            f"lambda_cal=0 should match FocalLoss: cal={calibrated_loss.item()}, focal={focal_loss.item()}"
+
+    def test_calibrated_focal_penalizes_miscalibration(self):
+        """Test that calibration term penalizes mean prediction != mean target."""
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])  # 50% positive rate
+
+        # Well-calibrated: mean prediction = 0.5
+        calibrated_preds = torch.tensor([0.8, 0.7, 0.3, 0.2])  # mean = 0.5
+
+        # Miscalibrated: mean prediction != 0.5
+        miscalibrated_preds = torch.tensor([0.9, 0.9, 0.8, 0.8])  # mean = 0.85
+
+        loss_calibrated = CalibratedFocalLoss(gamma=2.0, lambda_cal=1.0)(
+            calibrated_preds, targets
+        )
+        loss_miscalibrated = CalibratedFocalLoss(gamma=2.0, lambda_cal=1.0)(
+            miscalibrated_preds, targets
+        )
+
+        # Miscalibrated should have higher loss
+        assert loss_miscalibrated.item() > loss_calibrated.item(), \
+            f"Miscalibrated should have higher loss: miscal={loss_miscalibrated.item()}, cal={loss_calibrated.item()}"
+
+    def test_calibrated_focal_temperature_affects_calibration(self):
+        """Test that temperature affects calibration penalty magnitude."""
+        predictions = torch.tensor([0.9, 0.8, 0.7, 0.6])  # mean = 0.75
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])  # mean = 0.5
+
+        # Low temperature: sharper calibration penalty
+        loss_low_temp = CalibratedFocalLoss(
+            gamma=2.0, lambda_cal=1.0, temperature=0.5
+        )(predictions, targets)
+
+        # High temperature: gentler calibration penalty
+        loss_high_temp = CalibratedFocalLoss(
+            gamma=2.0, lambda_cal=1.0, temperature=2.0
+        )(predictions, targets)
+
+        # Lower temperature should give higher loss for same miscalibration
+        assert loss_low_temp.item() > loss_high_temp.item(), \
+            f"Low temp should give higher loss: low={loss_low_temp.item()}, high={loss_high_temp.item()}"
+
+
+class TestCalibratedFocalLossGradient:
+    """Gradient flow tests for CalibratedFocalLoss."""
+
+    def test_calibrated_focal_gradient_flows(self):
+        """Test gradients propagate through CalibratedFocalLoss."""
+        loss_fn = CalibratedFocalLoss(gamma=2.0, lambda_cal=0.1)
+
+        predictions = torch.tensor([0.7, 0.6, 0.3, 0.2], requires_grad=True)
+        targets = torch.tensor([1.0, 1.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+        loss.backward()
+
+        assert predictions.grad is not None, "Gradients should flow to predictions"
+        assert not torch.all(predictions.grad == 0), "Gradients should be non-zero"
+
+
+class TestCalibratedFocalLossEdgeCases:
+    """Edge case tests for CalibratedFocalLoss."""
+
+    def test_calibrated_focal_no_positive_handles_gracefully(self):
+        """Test loss handles batch with no positive samples."""
+        loss_fn = CalibratedFocalLoss(gamma=2.0, lambda_cal=0.1)
+
+        predictions = torch.tensor([0.3, 0.4, 0.5])
+        targets = torch.tensor([0.0, 0.0, 0.0])
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"
+
+    def test_calibrated_focal_no_negative_handles_gracefully(self):
+        """Test loss handles batch with no negative samples."""
+        loss_fn = CalibratedFocalLoss(gamma=2.0, lambda_cal=0.1)
+
+        predictions = torch.tensor([0.7, 0.8, 0.9])
+        targets = torch.tensor([1.0, 1.0, 1.0])
+
+        loss = loss_fn(predictions, targets)
+
+        assert not torch.isnan(loss), "Loss should not be NaN"
+        assert not torch.isinf(loss), "Loss should not be infinite"

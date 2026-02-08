@@ -1,5 +1,9 @@
 .PHONY: test test-ws1 test-ws2 test-ws3 test-cov lint type-check clean help
 
+# Python and pytest from virtual environment
+PYTHON := ./venv/bin/python
+PYTEST := ./venv/bin/pytest
+
 # Lock file for preventing parallel test runs
 LOCKFILE := .test.lock
 
@@ -27,45 +31,45 @@ test:
 	fi
 	@touch $(LOCKFILE)
 	@echo "Running full test suite..."
-	@pytest tests/ -v --tb=short && echo "✅ All tests passed" || (rm -f $(LOCKFILE); exit 1)
+	@$(PYTEST) tests/ -v --tb=short && echo "✅ All tests passed" || (rm -f $(LOCKFILE); exit 1)
 	@rm -f $(LOCKFILE)
 
 # Workstream-specific test targets (faster feedback during development)
 # Note: Full 'make test' still required before git operations
 test-ws1:
 	@echo "Running ws1 (feature_generation) tests..."
-	@pytest tests/features/ -v --tb=short
+	@$(PYTEST) tests/features/ -v --tb=short
 	@echo "✅ ws1 tests passed"
 
 test-ws2:
 	@echo "Running ws2 (foundation) tests..."
-	@pytest tests/test_evaluation.py tests/test_context_ablation_nf.py tests/test_hpo_neuralforecast.py -v --tb=short
+	@$(PYTEST) tests/test_evaluation.py tests/test_context_ablation_nf.py tests/test_hpo_neuralforecast.py -v --tb=short
 	@echo "✅ ws2 tests passed"
 
 test-ws3:
-	@echo "Running ws3 (phase6c/HPO) tests..."
-	@pytest tests/test_hpo*.py tests/test_loss*.py -v --tb=short 2>/dev/null || pytest tests/test_loss*.py -v --tb=short
+	@echo "Running ws3 (phase6c/HPO/feature_embedding) tests..."
+	@$(PYTEST) tests/test_hpo*.py tests/test_loss*.py tests/test_feature_embedding_experiments.py -v --tb=short 2>/dev/null || $(PYTEST) tests/test_loss*.py tests/test_feature_embedding_experiments.py -v --tb=short
 	@echo "✅ ws3 tests passed"
 
 # Test with coverage
 test-cov:
 	@echo "Running tests with coverage..."
-	pytest tests/ -v --tb=short --cov=src --cov-report=term-missing --cov-report=html
+	$(PYTEST) tests/ -v --tb=short --cov=src --cov-report=term-missing --cov-report=html
 	@echo "Coverage report: htmlcov/index.html"
 
 verify:
 	@echo "Verifying development environment..."
-	python scripts/verify_environment.py
+	$(PYTHON) scripts/verify_environment.py
 	@echo "Verifying data manifests..."
-	python scripts/manage_data_versions.py verify
+	$(PYTHON) scripts/manage_data_versions.py verify
 
 # Linting
 lint:
-	ruff check src/ tests/
+	./venv/bin/ruff check src/ tests/
 
 # Type checking
 type-check:
-	mypy src/
+	./venv/bin/mypy src/
 
 # Clean artifacts
 clean:

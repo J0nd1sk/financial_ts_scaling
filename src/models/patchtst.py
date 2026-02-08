@@ -110,11 +110,54 @@ class PatchTSTConfig:
     dropout: float  # Dropout rate (e.g., 0.1)
     head_dropout: float  # Dropout for prediction head (e.g., 0.0)
     num_classes: int = 1  # Output classes (1 for binary sigmoid)
+    d_embed: int | None = None  # Feature embedding dimension. None = disabled.
 
     @property
     def num_patches(self) -> int:
         """Calculate number of patches from context length and patch params."""
         return (self.context_length - self.patch_length) // self.stride + 1
+
+    @property
+    def effective_features(self) -> int:
+        """Feature dim for PatchEmbedding (d_embed if set, else num_features)."""
+        return self.d_embed if self.d_embed is not None else self.num_features
+
+
+class FeatureEmbedding(nn.Module):
+    """Project raw features into a learned embedding space.
+
+    This layer transforms the feature dimension, enabling principled scaling
+    of model capacity with feature count. When d_embed < num_features, it
+    compresses features before patching. When d_embed > num_features, it
+    expands the representation.
+
+    Args:
+        num_features: Number of input features.
+        d_embed: Output embedding dimension.
+        dropout: Dropout rate (default: 0.0).
+    """
+
+    def __init__(
+        self, num_features: int, d_embed: int, dropout: float = 0.0
+    ) -> None:
+        super().__init__()
+        self.projection = nn.Linear(num_features, d_embed)
+        self.norm = nn.LayerNorm(d_embed)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Project features to embedding space.
+
+        Args:
+            x: Input tensor of shape (batch, seq_len, num_features)
+
+        Returns:
+            Embedded tensor of shape (batch, seq_len, d_embed)
+        """
+        x = self.projection(x)
+        x = self.norm(x)
+        x = self.dropout(x)
+        return x
 
 
 class PatchEmbedding(nn.Module):
@@ -122,6 +165,9 @@ class PatchEmbedding(nn.Module):
 
     Takes input of shape (batch, seq_len, num_features) and produces
     patch embeddings of shape (batch, num_patches, d_model).
+
+    Note: When feature embedding is used, num_features here refers to
+    the effective feature dimension (d_embed), not the original feature count.
     """
 
     def __init__(self, config: PatchTSTConfig) -> None:
@@ -129,10 +175,11 @@ class PatchEmbedding(nn.Module):
         self.config = config
         self.patch_length = config.patch_length
         self.stride = config.stride
-        self.num_features = config.num_features
+        # Use effective_features (d_embed if set, else num_features)
+        self.num_features = config.effective_features
 
-        # Linear projection from (patch_length * num_features) to d_model
-        patch_dim = config.patch_length * config.num_features
+        # Linear projection from (patch_length * effective_features) to d_model
+        patch_dim = config.patch_length * config.effective_features
         self.projection = nn.Linear(patch_dim, config.d_model)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -314,6 +361,14 @@ class PatchTST(nn.Module):
         if self.use_revin:
             self.revin = RevIN(num_features=config.num_features)
 
+        # Feature embedding layer (optional)
+        if config.d_embed is not None:
+            self.feature_embed = FeatureEmbedding(
+                num_features=config.num_features,
+                d_embed=config.d_embed,
+                dropout=config.dropout,
+            )
+
         # Model components
         self.patch_embed = PatchEmbedding(config)
         self.pos_encoding = PositionalEncoding(
@@ -347,6 +402,10 @@ class PatchTST(nn.Module):
         # Apply RevIN normalization if enabled
         if self.use_revin:
             x = self.revin.normalize(x)
+
+        # Apply feature embedding if enabled
+        if hasattr(self, "feature_embed"):
+            x = self.feature_embed(x)
 
         # Patch embedding: (batch, seq_len, features) -> (batch, num_patches, d_model)
         x = self.patch_embed(x)

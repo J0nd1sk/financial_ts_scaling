@@ -107,6 +107,85 @@ def estimate_param_count(
     return int(total)
 
 
+def estimate_param_count_with_embedding(
+    d_model: int,
+    n_layers: int,
+    n_heads: int,
+    d_ff: int,
+    num_features: int,
+    d_embed: int | None = None,
+    context_length: int = 60,
+    patch_len: int = 10,
+    stride: int = 5,
+    num_classes: int = 1,
+) -> int:
+    """Estimate parameter count for PatchTST with optional Feature Embedding.
+
+    When d_embed is set, adds a FeatureEmbedding layer that projects features
+    before patching. This changes the patch dimension from patch_len * num_features
+    to patch_len * d_embed.
+
+    Args:
+        d_model: Model embedding dimension.
+        n_layers: Number of transformer encoder layers.
+        n_heads: Number of attention heads (for validation).
+        d_ff: Feedforward dimension.
+        num_features: Number of input features.
+        d_embed: Feature embedding dimension. None = no feature embedding.
+        context_length: Input sequence length (default 60).
+        patch_len: Length of each patch (default 10).
+        stride: Stride between patches (default 5).
+        num_classes: Output classes (default 1 for binary).
+
+    Returns:
+        Estimated total parameter count as integer.
+    """
+    # Validate n_heads divides d_model
+    if d_model % n_heads != 0:
+        raise ValueError(f"n_heads={n_heads} must divide d_model={d_model}")
+
+    num_patches = (context_length - patch_len) // stride + 1
+
+    # Feature embedding parameters (optional)
+    if d_embed is not None:
+        # FeatureEmbedding:
+        #   - projection (nn.Linear): num_features * d_embed + d_embed
+        #   - norm (LayerNorm): d_embed + d_embed
+        feature_embed = (num_features * d_embed + d_embed) + (d_embed + d_embed)
+        effective_features = d_embed
+    else:
+        feature_embed = 0
+        effective_features = num_features
+
+    # 1. PatchEmbedding.projection (nn.Linear)
+    #    Uses effective_features (d_embed if set, else num_features)
+    patch_embed = (patch_len * effective_features) * d_model + d_model
+
+    # 2. PositionalEncoding.position_embedding (nn.Parameter)
+    pos_embed = (num_patches + 10) * d_model
+
+    # 3. TransformerEncoderLayer (per layer):
+    #    - norm1 (LayerNorm): 2 * d_model
+    #    - norm2 (LayerNorm): 2 * d_model
+    #    - self_attn (MultiheadAttention): 4 * d_model² + 4 * d_model
+    #    - ffn.0 (Linear d_model→d_ff): d_model * d_ff + d_ff
+    #    - ffn.3 (Linear d_ff→d_model): d_ff * d_model + d_model
+    mha_params = 4 * d_model * d_model + 4 * d_model
+    norm_params = 4 * d_model  # Two LayerNorms
+    ffn_params = 2 * d_model * d_ff + d_ff + d_model
+    per_layer = mha_params + norm_params + ffn_params
+    encoder_layers = n_layers * per_layer
+
+    # 4. TransformerEncoder.norm (final LayerNorm)
+    encoder_final_norm = 2 * d_model
+
+    # 5. PredictionHead.linear (nn.Linear)
+    pred_head = (d_model * num_patches) * num_classes + num_classes
+
+    total = feature_embed + patch_embed + pos_embed + encoder_layers + encoder_final_norm + pred_head
+    return int(total)
+
+
 def generate_architecture_grid(
     num_features: int,
     context_length: int = 60,

@@ -1,0 +1,57 @@
+{
+  "exp_id": "FE-11",
+  "priority": "P3",
+  "description": "a100 with d_embed=128 (expansion)",
+  "tier": "a100",
+  "num_features": 100,
+  "d_embed": 128,
+  "architecture": {
+    "d_model": 128,
+    "n_layers": 4,
+    "n_heads": 8,
+    "d_ff": 512,
+    "context_length": 80,
+    "patch_length": 16,
+    "stride": 8
+  },
+  "hyperparameters": {
+    "dropout": 0.5,
+    "learning_rate": 0.0001,
+    "batch_size": 128,
+    "epochs": 50,
+    "use_revin": true
+  },
+  "parameters": {
+    "estimated": 1072385,
+    "actual": 1073235
+  },
+  "splits": {
+    "train": 7204,
+    "val": 422,
+    "test": 156
+  },
+  "training": {
+    "train_loss": 0.447538903930731,
+    "val_loss": 0.5448022782802582,
+    "val_auc": 0.7002585944630362,
+    "stopped_early": true,
+    "training_time_min": 0.3613056619962057
+  },
+  "val_metrics": {
+    "precision": 0.5555555555555556,
+    "recall": 0.13157894736842105,
+    "auc": 0.7002585944630362,
+    "accuracy": 0.8246445497630331,
+    "f1": 0.2127659574468085,
+    "pred_min": 0.0013773659011349082,
+    "pred_max": 0.8240408897399902,
+    "pred_mean": 0.07668479532003403,
+    "pred_std": 0.14670491218566895,
+    "pred_range": 0.8226635456085205,
+    "n_positive_preds": 18,
+    "n_samples": 422,
+    "class_balance": 0.18009479343891144,
+    "positive_rate": 0.18009478672985782
+  },
+  "timestamp": "2026-02-07T00:49:04.023029"
+}
